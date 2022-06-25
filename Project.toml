@@ -3,6 +3,9 @@ uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
 authors = ["Bowen S. Zhu"]
 version = "0.1.0"
 
+[deps]
+TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
+
 [compat]
 julia = "1.6"
 
