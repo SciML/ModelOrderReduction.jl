@@ -36,6 +36,6 @@ end
 function Base.show(io::IO,pca::PCA)
     print(io,"PCA \n")
     print(io,"Reduction Order = ",pca.nmodes,"\n")
-    print(io,"Snapshot size = ", length(pca.snapshots),",",length(pca.snapshots[1]),"\n")
+    print(io,"Snapshot size = (", length(pca.snapshots),",",length(pca.snapshots[1]),")\n")
     print(io,"Energy = ", pca.energy,"\n")
 end
