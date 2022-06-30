@@ -1,9 +1,11 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu"]
+authors = ["Bowen S. Zhu","Rahul Manavalan"]
 version = "0.1.0"
 
 [deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
