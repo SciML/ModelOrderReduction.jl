@@ -5,7 +5,7 @@ function matricize(VoV::Vector{Vector{FT}}) where {FT}
 end
 
 mutable struct PCA{FT,IT} <: AbstractDRProblem
-    snapshots::Vector{Vector{FT}}
+    snapshots::Union{Vector{Vector{FT}},Matrix{FT}}
     nmodes::IT
     rbasis::Vector{Vector{FT}}
     energy::FT
@@ -22,9 +22,9 @@ mutable struct PCA{FT,IT} <: AbstractDRProblem
 end
 
 function reduce!(pca::PCA{FT,IT}) where {FT,IT}
-    op_matrix = snapshots
-    if typeof(snapshots) == Vector{Vector{FT}}
-        op_matrix = matricize(snapshots)
+    op_matrix = pca.snapshots
+    if typeof(pca.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pca.snapshots)
     end
     u,s,v = svd(op_matrix)
     vr = v[:,1:pca.nmodes]
@@ -34,8 +34,8 @@ function reduce!(pca::PCA{FT,IT}) where {FT,IT}
 end
 
 function Base.show(io::IO,pca::PCA)
-    print(io,"PCA")
-    print(io,"Reduction Order = ",length(pca.snapshots))
-    print(io,"Snapshot size = ", length(pca.snapshots),length(pca.snapshots[1]))
-    print(io,"Energy = ", pca.energy)
+    print(io,"PCA \n")
+    print(io,"Reduction Order = ",pca.nmodes,"\n")
+    print(io,"Snapshot size = ", length(pca.snapshots),",",length(pca.snapshots[1]),"\n")
+    print(io,"Energy = ", pca.energy,"\n")
 end
