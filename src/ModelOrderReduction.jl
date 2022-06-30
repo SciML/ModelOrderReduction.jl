@@ -6,6 +6,8 @@ module ModelOrderReduction
     include("DataReduction/PCA.jl")
     include("DataReduction/DifussionMaps.jl")
     include("DataReduction/VAE.jl")
+
+    export PCA, reduce, matricize
 #========================Model Reduction========================================#
 
 #===============================================================================#

@@ -1,7 +1,7 @@
 # Leverage PCA from MultivariateStats.jl ?
 
 function matricize(VoV::Vector{Vector{FT}}) where {FT}
-    Matrix(reduce(hcat,VOV)')
+    Matrix(reduce(hcat,VoV)')
 end
 
 mutable struct PCA{FT,IT} <: AbstractDRProblem
@@ -21,7 +21,7 @@ mutable struct PCA{FT,IT} <: AbstractDRProblem
     end
 end
 
-function Base.reduce!(pca::PCA{FT,IT}) where {FT,IT}
+function reduce!(pca::PCA{FT,IT}) where {FT,IT}
     op_matrix = snapshots
     if typeof(snapshots) == Vector{Vector{FT}}
         op_matrix = matricize(snapshots)
@@ -34,5 +34,8 @@ function Base.reduce!(pca::PCA{FT,IT}) where {FT,IT}
 end
 
 function Base.show(io::IO,pca::PCA)
-
+    print(io,"PCA")
+    print(io,"Reduction Order = ",length(pca.snapshots))
+    print(io,"Snapshot size = ", length(pca.snapshots),length(pca.snapshots[1]))
+    print(io,"Energy = ", pca.energy)
 end
