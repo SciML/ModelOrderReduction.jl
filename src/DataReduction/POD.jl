@@ -31,14 +31,29 @@ function reduce!(pod::POD{FT,IT},::SVD) where {FT,IT}
     sr = s[1:pod.nmodes]
     pod.energy = sum(sr)/sum(s)
     pod.rbasis = [vr[:,i] for i=1:pod.nmodes]
+    nothing
 end
 
 function reduce!(pod::POD{FT,IT},::TSVD) where {FT,IT}
-
+    op_matrix = pod.snapshots
+    if typeof(pod.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pod.snapshots)
+    end
+    u,s,v = tsvd(op_matrix,pod.nmodes)
+    pod.energy = NaN
+    pod.rbasis = [v[:,i] for i=1:pod.nmodes]
+    nothing
 end
 
 function reduce!(pod::POD{FT,IT},::RSVD) where {FT,IT}
-
+    op_matrix = pod.snapshots
+    if typeof(pod.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pod.snapshots)
+    end
+    u,s,v = rsvd(op_matrix,pod.nmodes)
+    pod.energy = NaN
+    pod.rbasis = [v[:,i] for i=1:pod.nmodes]
+    nothing
 end
 
 function Base.show(io::IO,pod::POD)
