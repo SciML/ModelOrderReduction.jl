@@ -3,11 +3,12 @@ module ModelOrderReduction
     include("Types.jl")
     include("ErrorHandle.jl")
     using LinearAlgebra
-    include("DataReduction/PCA.jl")
+    include("DataReduction/POD.jl")
     include("DataReduction/DifussionMaps.jl")
     include("DataReduction/VAE.jl")
 
-    export PCA, reduce!, matricize
+    export SVD, TSVD, RSVD
+    export POD, reduce!, matricize
 #========================Model Reduction========================================#
 
 #===============================================================================#
