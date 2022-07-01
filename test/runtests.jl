@@ -2,9 +2,8 @@ using ModelOrderReduction
 using Test
 using OrdinaryDiffEq
 
-
 #--------- Data Reduction -----------------#
-@testset "PCA" begin
+@testset "POD" begin
     function lorenz_prob()
         function lorenz!(du,u,p,t)
             du[1] = p[1]*(u[2]-u[1])
@@ -24,13 +23,15 @@ using OrdinaryDiffEq
     solution = Matrix(reduce(hcat,sol.u)')
 
     order = 2
-    reducer = PCA(solution,order)
-    reduce!(reducer)
+    solver = SVD()
+    reducer = POD(solution,order)
+    reduce!(reducer,solver)
 
     # Ad-hoc tests. To be checked with Chris.
     @test length(reducer.rbasis) == reducer.nmodes
     @test length(reducer.rbasis[1]) == size(solution,2)
     @test reducer.energy > 0.9
+
 end
 
 #---------- Model Reduction ----------------#
