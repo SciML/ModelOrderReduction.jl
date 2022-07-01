@@ -1,5 +1,5 @@
 module ModelOrderReduction
 
-# Write your package code here.
+include("proper_orthogonal_decomposition.jl")
 
 end

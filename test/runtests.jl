@@ -1,6 +1,3 @@
-using ModelOrderReduction
-using Test
+using SafeTestsets
 
-@testset "ModelOrderReduction.jl" begin
-    # Write your tests here.
-end
+@safetestset "Proper Orthogonal Decomposition Test" begin include("proper_orthogonal_decomposition_test.jl") end
