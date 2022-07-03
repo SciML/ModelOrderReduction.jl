@@ -1,5 +1,6 @@
 #--------- Data Reduction -----------------#
-@testset "POD" begin
+
+@testset "POD - Attractor Test" begin
     function lorenz_prob()
         function lorenz!(du,u,p,t)
             du[1] = p[1]*(u[2]-u[1])
@@ -24,8 +25,8 @@
     reduce!(reducer,solver)
 
     # Ad-hoc tests. To be checked with Chris.
-    @test length(reducer.rbasis) == reducer.nmodes
-    @test length(reducer.rbasis[1]) == size(solution,2)
+    @test size(reducer.rbasis,2) == reducer.nmodes
+    @test size(reducer.rbasis,1) == size(solution,1)
     @test reducer.energy > 0.9
 
     order = 2
@@ -34,8 +35,8 @@
     reduce!(reducer,solver)
 
     # Ad-hoc tests. To be checked with Chris.
-    @test length(reducer.rbasis) == reducer.nmodes
-    @test length(reducer.rbasis[1]) == size(solution,2)
+    @test size(reducer.rbasis,2) == reducer.nmodes
+    @test size(reducer.rbasis,1) == size(solution,1)
 
     order = 2
     solver = RSVD()
@@ -43,6 +44,6 @@
     reduce!(reducer,solver)
 
     # Ad-hoc tests. To be checked with Chris.
-    @test length(reducer.rbasis) == reducer.nmodes
-    @test length(reducer.rbasis[1]) == size(solution,2)
+    @test size(reducer.rbasis,2) == reducer.nmodes
+    @test size(reducer.rbasis,1) == size(solution,1)
 end
