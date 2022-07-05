@@ -2,5 +2,5 @@
 ```
 
 ```@docs
-proper_orthogonal_decomposition(snapshots::AbstractMatrix, dim::Integer)
+pod(snapshots::AbstractMatrix, dim::Integer)
 ```

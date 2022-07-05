@@ -122,7 +122,7 @@ Then we compute the POD with dimension, say, 3.
 ```@example pod
 using ModelOrderReduction
 pod_dim = 3
-pod_basis, singular_vals = proper_orthogonal_decomposition(snapshots, pod_dim); nothing
+pod_basis, singular_vals = pod(snapshots, pod_dim); nothing
 ```
 
 As an illustration, let's see the first 3 POD modes.
