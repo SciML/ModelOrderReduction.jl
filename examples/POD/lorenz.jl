@@ -18,8 +18,8 @@ function lorenz_prob()
 end
 
 sol = lorenz_prob()
-solution = Matrix(reduce(hcat,sol.u)')
-plot(solution[:,1],solution[:,2],solution[:,3])
+solution = Array(sol)
+plot(solution[1,:],solution[2,:],solution[3,:])
 # savefig("lorenz_attractor.png")
 
 ## Two way POD
