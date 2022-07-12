@@ -8,13 +8,10 @@ module ModelOrderReduction
     using RandomizedLinAlg
 
     include("DataReduction/POD.jl")
-    include("DataReduction/DiffusionMaps.jl")
-    include("DataReduction/VAE.jl")
 
     export SVD, TSVD, RSVD
     export POD, reduce!, matricize
 #========================Model Reduction========================================#
-    include("ModelReduction/LiftAndLearn.jl")
 
 #===============================================================================#
 end
