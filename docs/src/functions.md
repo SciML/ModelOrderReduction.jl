@@ -2,5 +2,5 @@
 ```
 
 ```@docs
-pod(snapshots::AbstractMatrix, dim::Integer)
+pod
 ```

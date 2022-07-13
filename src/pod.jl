@@ -1,7 +1,7 @@
 using LinearAlgebra
 
 """
-    pod(snapshots::AbstractMatrix, dim::Integer)
+$(TYPEDSIGNATURES)
 
 Compute the Proper Orthogonal Decomposition (POD) for a model with a snapshot matrix and a
 POD dimension. Return the POD basis and singular values.
@@ -33,7 +33,7 @@ julia> size(singular_vals)
 (3,)
 ```
 """
-function pod(snapshots::AbstractMatrix, dim::Integer)
+function pod(snapshots::AbstractMatrix, dim::Integer)::Tuple{AbstractMatrix, AbstractVector}
     eigen_vecs, singuler_vals = svd(snapshots)
     if size(snapshots, 2) < dim
         @warn "The POD dimension is larger than the number of snapshots"
