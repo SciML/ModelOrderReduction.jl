@@ -86,8 +86,8 @@ follows.
 ```@example pod
 using Statistics
 time_averaged = dropdims(mean(curls; dims = 3); dims = 3)
-heatmap(X_INTERVAL, Y_INTERVAL, time_averaged', aspect_ratio = :equal, size = (1700, 1600),
-        xlabel = "x", ylabel = "y")
+heatmap(X_INTERVAL, Y_INTERVAL, time_averaged', aspect_ratio = :equal, xlabel = "x", 
+        ylabel = "y")
 ```
 
 We subtract the time-averaged field from each individual snapshot and change the shape to 
@@ -139,7 +139,7 @@ for dim in 1:pod_dim
           plot(vec((@view pod_basis[:, dim])' * snapshots), ylim = (-15, 15),
                title = "mode $dim", xlabel = "t", ylabel = "a", lw = 3))
 end
-plot(mode_plots..., layout = (pod_dim, 2), legend = false, size = (3000, 2000))
+plot(mode_plots..., layout = (pod_dim, 2), legend = false)
 ```
 
 The figures on the right show the time coefficient of the first 3 POD modes.
