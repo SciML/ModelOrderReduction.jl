@@ -3,4 +3,5 @@
 
 ```@docs
 pod
+deim
 ```

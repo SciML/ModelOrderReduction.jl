@@ -1,5 +1,12 @@
 using Symbolics, ModelingToolkit
 
+"""
+$(TYPEDSIGNATURES)
+
+Compute the DEIM interpolation indices for the given projection basis.
+
+`basis` should not be a sparse matrix.
+"""
 function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
     indices = Vector{Int}(undef, dim)
@@ -17,6 +24,56 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Reduce an ODESystem using the Discrete Empirical Interpolation Method (DEIM).
+
+The DEIM relies on the Proper Orthogonal Decomposition (POD).  The given `pod_basis` is a
+basis matrix with POD modes in the columns.
+
+The LHS of `sys` are all assumed to be 1st order derivatives. Use
+`ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
+
+`sys` should not include parameters. The number of parameters is generally
+proportional to the number of variables ``n``. If parameters are included, the complexity
+for evaluating nonlinear part of the new system may still be in ``\\mathcal O(n)`` space.
+As a result, solving the reduced system might still be as costly as solving the original
+system.
+
+The DEIM basis `deim_basis` is default to be the same as `pod_basis`, as the POD basis is
+normally a suitable choice for the DEIM index selection algorithm.
+
+```jldoctest
+julia> const N = 10; # number of variables
+
+julia> using ModelingToolkit; @variables t u[1:N](t);
+
+julia> D = Differential(t);
+
+julia> using SparseArrays; A = sprand(N, N, 0.3);
+
+julia> f(x) = sin(x);
+
+julia> @named sys = ODESystem(D.(u) .~ A * u + f.(u));
+
+julia> const n_snapshot = 2N; # random number for POD snapshots for illustration
+
+julia> const pod_dim = 5; # random number for POD dimension
+
+julia> using LinearAlgebra
+
+julia> pod_basis = @view svd(rand(N, n_snapshot)).U[:, 1:pod_dim]; # random orthormal basis
+
+julia> deim_sys = deim(sys, pod_basis); # DEIM reduced system
+
+julia> length(states(deim_sys)) # number of variables
+5
+
+julia> length(equations(deim_sys)) # number of equations
+5
+```
+"""
 function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
