@@ -90,7 +90,8 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     deim_nonlinear = substitute.(F[indices], (pod_dict,))
     deim_nonlinear = projector * deim_nonlinear # DEIM approximation for nonlinear func F
     ODESystem(D.(y_pod) .~ simplify.(pod_basis' * (reduced_polynomial + deim_nonlinear));
-              observed = [observed(sys); pod_eqs], name = name)
+              observed = [observed(sys); pod_eqs], name = name,
+              defaults = merge(ModelingToolkit.defaults(sys), pod_dict))
 end
 
 export deim
