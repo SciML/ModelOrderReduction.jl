@@ -1,6 +1,6 @@
 using ModelOrderReduction
 using Test
+using OrdinaryDiffEq
 
-@testset "ModelOrderReduction.jl" begin
-    # Write your tests here.
-end
+include("DataReduction.jl")
+#---------- Model Reduction ----------------#
