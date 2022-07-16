@@ -1,21 +1,24 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu"]
+authors = ["Chris Rackauckas <accounts@chrisrackauckas.com>"]
 version = "0.1.0"
 
 [deps]
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+RandomizedLinAlg = "0448d7d9-159c-5637-8537-fd72090fea46"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
 julia = "1.6"
 
 [extras]
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "SafeTestsets", "SparseArrays"]
+test = ["Test", "OrdinaryDiffEq", "SafeTestsets", "SparseArrays"]

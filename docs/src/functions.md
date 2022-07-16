@@ -2,6 +2,5 @@
 ```
 
 ```@docs
-pod
 deim
 ```

@@ -1,21 +1,61 @@
-using ModelOrderReduction, Test
+using Test
+using ModelOrderReduction
+using OrdinaryDiffEq
 
-@testset "POD $T" for T in (Float32, Float64)
-    n_eq = 10 # number of equations
-    n_snapshot = 6 # number of snapshots
-    snapshots = rand(T, n_eq, n_snapshot)
+function lorenz_prob()
+    function lorenz!(du, u, p, t)
+        du[1] = p[1] * (u[2] - u[1])
+        du[2] = u[1] * (p[2] - u[3]) - u[2]
+        du[3] = u[1] * u[2] - p[3] * u[3]
+    end
 
-    dim₁ = 3 # POD dimension
-    pod_basis₁, singular_vals₁ = pod(snapshots, dim₁)
-    @test size(pod_basis₁) == (n_eq, dim₁)
-    @test size(singular_vals₁, 1) == dim₁
-    @test eltype(pod_basis₁) == T
-    @test eltype(singular_vals₁) == T
+    u0 = [1, 0, 0]
+    p = [10, 28, 8 / 3]
+    tspan = (0, 100)
+    prob = ODEProblem(lorenz!, u0, tspan, p)
+    sol = solve(prob, Tsit5())
+    sol
+end
 
-    dim₂ = 8 # larger than the number of snapshots
-    pod_basis₂, singular_vals₂ = @test_logs (:warn,) pod(snapshots, dim₂)
-    @test size(pod_basis₂) == (n_eq, n_snapshot)
-    @test size(singular_vals₂, 1) == n_snapshot
-    @test eltype(pod_basis₂) == T
-    @test eltype(singular_vals₂) == T
+@testset "POD-Utils" begin
+    solution = lorenz_prob()
+    VoV = solution.u
+    M = matricize(VoV)
+    @test size(M, 1) == length(VoV[1]) # Parameters
+    @test size(M, 2) == length(VoV) # Time
+end
+
+@testset "POD - Attractor Test" begin
+    sol = lorenz_prob()
+    solution = Array(sol)
+
+    order = 2
+    solver = SVD()
+    reducer = POD(solution, order)
+    reduce!(reducer, solver)
+
+    reducer.renergy
+
+    # Ad-hoc tests. To be checked with Chris.
+    @test size(reducer.rbasis, 2) == reducer.nmodes
+    @test size(reducer.rbasis, 1) == size(solution, 1)
+    @test reducer.renergy > 0.9
+
+    order = 2
+    solver = TSVD()
+    reducer = POD(solution, order)
+    reduce!(reducer, solver)
+
+    # Ad-hoc tests. To be checked with Chris.
+    @test size(reducer.rbasis, 2) == reducer.nmodes
+    @test size(reducer.rbasis, 1) == size(solution, 1)
+
+    order = 2
+    solver = RSVD()
+    reducer = POD(solution, order)
+    reduce!(reducer, solver)
+
+    # Ad-hoc tests. To be checked with Chris.
+    @test size(reducer.rbasis, 2) == reducer.nmodes
+    @test size(reducer.rbasis, 1) == size(solution, 1)
 end

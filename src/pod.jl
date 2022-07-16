@@ -1,46 +1,80 @@
 using LinearAlgebra
+using TSVD
+using RandomizedLinAlg
 
-"""
-$(TYPEDSIGNATURES)
+function errorhandle(data::Matrix{FT}, modes::IT) where {FT, IT}
+    @assert size(data, 1)>1 "State vector is expected to be vector valued."
+    s = size(data, 2)
+    @assert (modes > 0)&(modes < s) "Number of modes should be in {1,2,...,$(s-1)}."
+end
 
-Compute the Proper Orthogonal Decomposition (POD) for a model with a snapshot matrix and a
-POD dimension. Return the POD basis and singular values.
+function matricize(VoV::Vector{Vector{FT}}) where {FT}
+    Matrix(reduce(hcat, VoV))
+end
 
-The results are sorted in descending order of singular values.
+mutable struct POD{FT} <: AbstractDRProblem
+    snapshots::Union{Vector{Vector{FT}}, Matrix{FT}}
+    nmodes::Int
+    rbasis::Matrix{FT}
+    renergy::FT
 
-The POD dimension should be smaller than the number of snapshots.
+    function POD(snaps::Vector{Vector{FT}}, nmodes::Int) where {FT}
+        errorhandle(matricize(snaps), nmodes)
+        new{eltype(snaps[1])}(snaps, nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes),
+                              FT(0))
+    end
 
-# Arguments
-- `snapshots::AbstractMatrix`: a matrix with snapshots in the columns.
-- `dim::Integer`: the POD dimension.
+    function POD(snaps::Matrix{FT}, nmodes::Int) where {FT}
+        errorhandle(snaps, nmodes)
+        new{eltype(snaps)}(snaps, nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes),
+                           FT(0))
+    end
 
-# Examples
-```jldoctest
-julia> n_eq = 10; # number of equations
-
-julia> n_snapshot = 6; # number of snapshots
-
-julia> snapshots = rand(n_eq, n_snapshot);
-
-julia> dim = 3; # POD dimension
-
-julia> pod_basis, singular_vals = pod(snapshots, dim);
-
-julia> size(pod_basis)
-(10, 3)
-
-julia> size(singular_vals)
-(3,)
-```
-"""
-function pod(snapshots::AbstractMatrix, dim::Integer)::Tuple{AbstractMatrix, AbstractVector}
-    eigen_vecs, singuler_vals = svd(snapshots)
-    if size(snapshots, 2) < dim
-        @warn "The POD dimension is larger than the number of snapshots"
-        return eigen_vecs, singuler_vals
-    else
-        return (@view eigen_vecs[:, 1:dim]), (@view singuler_vals[1:dim])
+    function POD(snaps::Adjoint{FT, Matrix{FT}}, nmodes::Int) where {FT}
+        POD(Matrix(snaps), nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes), FT(0))
     end
 end
 
-export pod
+function reduce!(pod::POD{FT}, ::SVD) where {FT}
+    op_matrix = pod.snapshots
+    if typeof(pod.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pod.snapshots)
+    end
+    u, s, v = svd(op_matrix)
+    pod.rbasis .= u[:, 1:(pod.nmodes)]
+    sr = s[1:(pod.nmodes)]
+    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
+    nothing
+end
+
+function reduce!(pod::POD{FT}, ::TSVD) where {FT}
+    op_matrix = pod.snapshots
+    if typeof(pod.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pod.snapshots)
+    end
+    u, s, v = tsvd(op_matrix, pod.nmodes)
+    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
+    pod.rbasis .= u
+    nothing
+end
+
+function reduce!(pod::POD{FT}, ::RSVD) where {FT}
+    op_matrix = pod.snapshots
+    if typeof(pod.snapshots) == Vector{Vector{FT}}
+        op_matrix = matricize(pod.snapshots)
+    end
+    u, s, v = rsvd(op_matrix, pod.nmodes)
+    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
+    pod.rbasis .= u
+    nothing
+end
+
+function Base.show(io::IO, pod::POD)
+    print(io, "POD \n")
+    print(io, "Reduction Order = ", pod.nmodes, "\n")
+    print(io, "Snapshot size = (", size(pod.snapshots, 1), ",", size(pod.snapshots[1], 2),
+          ")\n")
+    print(io, "Relative Energy = ", pod.renergy, "\n")
+end
+
+export POD, reduce!, matricize
