@@ -78,11 +78,9 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
-    rhs = [eq.rhs for eq in equations(sys)]
-    # rhs = A * vars + F
-    # A is the coefficient matrix of the linear part
-    # F is the remaining nonlinear vector function
-    A, F = semilinear_form(rhs, states(sys))
+    rhs = Symbolics.rhss(equations(sys))
+    F = polynomial_coeffs(rhs, states(sys))[2] # non-polynomial nonlinear part
+    polynomial = rhs - F # polynomial terms
     U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
     indices = deim_interpolation_indices(U) # DEIM interpolation indices
     t = ModelingToolkit.get_iv(sys) # the single independent variable
@@ -91,13 +89,13 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     @variables y_pod[1:pod_dim](t) # new variables from POD reduction
     pod_projection = Symbolics.scalarize(states(sys) .~ pod_basis * y_pod)
     pod_reduction = Dict(eq.lhs => eq.rhs for eq in pod_projection) # POD reduction dict
+    reduced_polynomial = simplify.(substitute.(polynomial, (pod_reduction,)))
     # the DEIM projector (not DEIM basis) satisfies
     # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
     projector = ((@view U[indices, :])' \ U')'
-    deim_nonlinear = map(f -> substitute(f, pod_reduction), F[indices])
+    deim_nonlinear = substitute.(F[indices], (pod_reduction,))
     deim_nonlinear = projector * deim_nonlinear # DEIM approximation for nonlinear func F
-    A_pod = pod_basis' * A * pod_basis
-    ODESystem(D.(y_pod) .~ A_pod * y_pod + pod_basis' * deim_nonlinear;
+    ODESystem(D.(y_pod) .~ simplify.(pod_basis' * (reduced_polynomial + deim_nonlinear));
               observed = [observed(sys); pod_projection], name = name)
 end
 
