@@ -66,9 +66,11 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     deim_nonlinear = substitute.(F[indices], (pod_dict,))
     deim_nonlinear = projector * deim_nonlinear # DEIM approximation for nonlinear func F
     inv_dict = Dict(collect(y_pod) .=> pod_basis' * dvs) # reduced vars to orignial vars
-    ODESystem(D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear);
+    deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
+    ODESystem(Symbolics.scalarize(deqs), iv, y_pod, parameters(sys);
               observed = [observed(sys); pod_eqs], name = name,
-              defaults = merge(ModelingToolkit.defaults(sys), inv_dict))
+              defaults = merge(ModelingToolkit.defaults(sys), inv_dict),
+              continuous_events = ModelingToolkit.continuous_events(sys), checks = false)
 end
 
 export deim
