@@ -5,7 +5,7 @@ $(TYPEDSIGNATURES)
 
 Compute the DEIM interpolation indices for the given projection basis.
 
-`basis` should not be a sparse matrix.
+The orthonormal `basis` should not be a sparse matrix.
 """
 function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
@@ -29,44 +29,19 @@ $(TYPEDSIGNATURES)
 
 Reduce an ODESystem using the Discrete Empirical Interpolation Method (DEIM).
 
-The DEIM relies on the Proper Orthogonal Decomposition (POD).  The given `pod_basis` is a
-basis matrix with POD modes in the columns.
+The DEIM relies on the Proper Orthogonal Decomposition (POD). The given `pod_basis` should
+be an orthonormal basis matrix with POD modes in the columns.
 
 The LHS of `sys` are all assumed to be 1st order derivatives. Use
 `ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
 
-The DEIM basis `deim_basis` is default to be the same as `pod_basis`, as the POD basis is
-normally a suitable choice for the DEIM index selection algorithm.
+`sys` is assumed to have no internal systems. End users are encouraged to call
+`ModelingToolkit.structural_simplify` beforehand, which calls
+`ModelingToolkit.expand_connections` internally.
 
-```jldoctest
-julia> const N = 10; # number of variables
-
-julia> using ModelingToolkit; @variables t u[1:N](t);
-
-julia> D = Differential(t);
-
-julia> using SparseArrays; A = sprand(N, N, 0.3);
-
-julia> f(x) = sin(x);
-
-julia> @named sys = ODESystem(D.(u) .~ A * u + f.(u));
-
-julia> const n_snapshot = 2N; # random number for POD snapshots for illustration
-
-julia> const pod_dim = 5; # random number for POD dimension
-
-julia> using LinearAlgebra
-
-julia> pod_basis = @view svd(rand(N, n_snapshot)).U[:, 1:pod_dim]; # random orthormal basis
-
-julia> deim_sys = deim(sys, pod_basis); # DEIM reduced system
-
-julia> length(states(deim_sys)) # number of variables
-5
-
-julia> length(equations(deim_sys)) # number of equations
-5
-```
+`deim_basis` is default to be the same as `pod_basis`, as the POD basis is normally a
+suitable choice for the DEIM index selection algorithm. Users can also provide their own
+DEIM basis and/or choose a lower dimension for DEIM than POD.
 """
 function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,

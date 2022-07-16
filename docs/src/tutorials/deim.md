@@ -72,7 +72,7 @@ The plot for the numerical solution of the reduced model is shown as follows.
 plot(sol_deim)
 ```
 
-To calculate the approximate solution the original model, one needs to request it
+To calculate the approximate solution to the original model, one needs to request it
 explicitly.
 
 ```@example deim-pleiades
