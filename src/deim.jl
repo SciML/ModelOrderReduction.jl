@@ -72,16 +72,17 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
+    iv = ModelingToolkit.get_iv(sys) # the single independent variable
+    dvs = states(sys) # dependent variables
     rhs = Symbolics.rhss(equations(sys))
-    F = polynomial_coeffs(rhs, states(sys))[2] # non-polynomial nonlinear part
+    F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
     polynomial = rhs - F # polynomial terms
     U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
     indices = deim_interpolation_indices(U) # DEIM interpolation indices
-    t = ModelingToolkit.get_iv(sys) # the single independent variable
-    D = Differential(t)
+    D = Differential(iv)
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
-    @variables y_pod[1:pod_dim](t) # new variables from POD reduction
-    pod_eqs = Symbolics.scalarize(states(sys) .~ pod_basis * y_pod)
+    @variables y_pod[1:pod_dim](iv) # new variables from POD reduction
+    pod_eqs = Symbolics.scalarize(dvs .~ pod_basis * y_pod)
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # POD reduction dict
     reduced_polynomial = substitute.(polynomial, (pod_dict,))
     # the DEIM projector (not DEIM basis) satisfies
