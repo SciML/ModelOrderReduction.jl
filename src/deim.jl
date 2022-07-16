@@ -35,12 +35,6 @@ basis matrix with POD modes in the columns.
 The LHS of `sys` are all assumed to be 1st order derivatives. Use
 `ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
 
-`sys` should not include parameters. The number of parameters is generally
-proportional to the number of variables ``n``. If parameters are included, the complexity
-for evaluating nonlinear part of the new system may still be in ``\\mathcal O(n)`` space.
-As a result, solving the reduced system might still be as costly as solving the original
-system.
-
 The DEIM basis `deim_basis` is default to be the same as `pod_basis`, as the POD basis is
 normally a suitable choice for the DEIM index selection algorithm.
 
