@@ -81,16 +81,16 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     D = Differential(t)
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
     @variables y_pod[1:pod_dim](t) # new variables from POD reduction
-    pod_projection = Symbolics.scalarize(states(sys) .~ pod_basis * y_pod)
-    pod_reduction = Dict(eq.lhs => eq.rhs for eq in pod_projection) # POD reduction dict
-    reduced_polynomial = simplify.(substitute.(polynomial, (pod_reduction,)))
+    pod_eqs = Symbolics.scalarize(states(sys) .~ pod_basis * y_pod)
+    pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # POD reduction dict
+    reduced_polynomial = simplify.(substitute.(polynomial, (pod_dict,)))
     # the DEIM projector (not DEIM basis) satisfies
     # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
     projector = ((@view U[indices, :])' \ U')'
-    deim_nonlinear = substitute.(F[indices], (pod_reduction,))
+    deim_nonlinear = substitute.(F[indices], (pod_dict,))
     deim_nonlinear = projector * deim_nonlinear # DEIM approximation for nonlinear func F
     ODESystem(D.(y_pod) .~ simplify.(pod_basis' * (reduced_polynomial + deim_nonlinear));
-              observed = [observed(sys); pod_projection], name = name)
+              observed = [observed(sys); pod_eqs], name = name)
 end
 
 export deim
