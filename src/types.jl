@@ -6,3 +6,5 @@ abstract type AbstractSVD end
 struct SVD <: AbstractSVD end
 struct TSVD <: AbstractSVD end
 struct RSVD <: AbstractSVD end
+
+export SVD, TSVD, RSVD

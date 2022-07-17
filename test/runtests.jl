@@ -1,6 +1,4 @@
-using ModelOrderReduction
-using Test
-using OrdinaryDiffEq
+using SafeTestsets
 
-include("DataReduction.jl")
-#---------- Model Reduction ----------------#
+@safetestset "POD" begin include("pod.jl") end
+@safetestset "DEIM" begin include("deim.jl") end

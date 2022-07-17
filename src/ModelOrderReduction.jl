@@ -1,17 +1,10 @@
 module ModelOrderReduction
-#========================Data Reduction=========================================#
-include("Types.jl")
-include("ErrorHandle.jl")
 
-using LinearAlgebra
-using TSVD
-using RandomizedLinAlg
+using DocStringExtensions
 
-include("DataReduction/POD.jl")
+include("types.jl")
+include("pod.jl")
 
-export SVD, TSVD, RSVD
-export POD, reduce!, matricize
-#========================Model Reduction========================================#
+include("deim.jl")
 
-#===============================================================================#
 end

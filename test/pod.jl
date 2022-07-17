@@ -1,4 +1,6 @@
-#--------- Data Reduction -----------------#
+using Test
+using ModelOrderReduction
+using OrdinaryDiffEq
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
