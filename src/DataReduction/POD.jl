@@ -7,6 +7,11 @@ function svd(data::AbstractVector{T}) where T <: AbstractVector
     return svd(mat_data)
 end
 
+function svd(data::Vector{T}) where T <: AbstractVector
+    mat_data = matricize(data)
+    return svd(mat_data)
+end
+
 function tsvd(data::AbstractVector{T}, n::Int) where T <: AbstractVector 
     mat_data = matricize(data)
     return tsvd(mat_data, n)
@@ -22,23 +27,37 @@ mutable struct POD{snapType} <: AbstractDRProblem
     nmodes::Int
     rbasis
     renergy
-
-    function POD(snaps::AbstractVector{T}, nmodes::Int) where {T <: AbstractVector}
-        errorhandle(snaps, nmodes)
-        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0)
+    max_renergy 
+    min_nmodes::Int
+    max_nmodes::Int 
+    function POD(snaps::AbstractVector{T}, nmodes::Int; max_renergy = 1.0,
+                 max_nmodes::Int = nmodes) where {T <: AbstractVector}
+        errorhandle(snaps, nmodes, max_renergy, nmodes, max_nmodes)
+        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0, max_renergy, nmodes, max_nmodes)
     end
 
-    function POD(snaps::AbstractMatrix, nmodes::Int)
-        errorhandle(snaps, nmodes)
-        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0)
+    function POD(snaps::AbstractMatrix, nmodes::Int = 1; max_renergy = 1.0,
+                 max_nmodes::Int = nmodes) 
+        errorhandle(snaps, nmodes, max_renergy, nmodes, max_nmodes)
+        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0, max_renergy, nmodes, max_nmodes)
     end
+end
+
+function determine_truncation(s, min_nmodes, max_renergy, max_nmodes)
+    nmodes = min_nmodes
+    overall_energy = sum(s)
+    energy = sum(s[1:nmodes])/overall_energy
+    while energy < max_renergy && nmodes <= max_nmodes
+        nmodes += 1
+        energy += s[nmodes+1]/overall_energy
+    end
+    return nmodes, energy
 end
 
 function reduce!(pod::POD, ::SVD)
     u, s, v = svd(pod.snapshots)
+    pod.nmodes, pod.renergy = determine_truncation(s, pod.min_nmodes, pod.max_nmodes, pod.max_renergy)
     pod.rbasis = u[:, 1:(pod.nmodes)]
-    sr = s[1:(pod.nmodes)]
-    pod.renergy = sum(sr) / sum(s)
     nothing
 end
 
