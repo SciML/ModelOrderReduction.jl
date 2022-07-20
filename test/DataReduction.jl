@@ -36,7 +36,7 @@ end
 
     @test all(matrix_reducer.rbasis .≈ snapshot_reducer.rbasis)
     @test matrix_reducer.renergy ≈ snapshot_reducer.renergy
-    
+
     @test size(matrix_reducer.rbasis, 2) == matrix_reducer.nmodes
     @test size(matrix_reducer.rbasis, 1) == size(solution, 1)
     @test matrix_reducer.renergy > 0.9
