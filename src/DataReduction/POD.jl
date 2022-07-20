@@ -1,61 +1,60 @@
-function matricize(VoV::Vector{Vector{FT}}) where {FT}
+function matricize(VoV::AbstractVector{T}) where T <: AbstractVector
     Matrix(reduce(hcat, VoV))
 end
 
-mutable struct POD{FT} <: AbstractDRProblem
-    snapshots::Union{Vector{Vector{FT}}, Matrix{FT}}
+function svd(data::AbstractVector{T}) where T <: AbstractVector 
+    mat_data = matricize(data)
+    return svd(mat_data)
+end
+
+function tsvd(data::AbstractVector{T}, n::Int) where T <: AbstractVector 
+    mat_data = matricize(data)
+    return tsvd(mat_data, n)
+end
+
+function rsvd(data::AbstractVector{T}, n::Int, p::Int) where T <: AbstractVector 
+    mat_data = matricize(data)
+    return rsvd(mat_data, n, p)
+end
+
+mutable struct POD{snapType} <: AbstractDRProblem
+    snapshots::snapType
     nmodes::Int
-    rbasis::Matrix{FT}
-    renergy::FT
+    rbasis
+    renergy
 
-    function POD(snaps::Vector{Vector{FT}}, nmodes::Int) where {FT}
-        errorhandle(matricize(snaps), nmodes)
-        new{eltype(snaps[1])}(snaps, nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes),
-                              FT(0))
-    end
-
-    function POD(snaps::Matrix{FT}, nmodes::Int) where {FT}
+    function POD(snaps::AbstractVector{T}, nmodes::Int) where {T <: AbstractVector}
         errorhandle(snaps, nmodes)
-        new{eltype(snaps)}(snaps, nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes),
-                           FT(0))
+        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0)
     end
 
-    function POD(snaps::Adjoint{FT, Matrix{FT}}, nmodes::Int) where {FT}
-        POD(Matrix(snaps), nmodes, Array{FT, 2}(undef, size(snaps, 1), nmodes), FT(0))
+    function POD(snaps::AbstractMatrix, nmodes::Int)
+        errorhandle(snaps, nmodes)
+        new{typeof(snaps)}(snaps, nmodes, nothing, 0.0)
     end
 end
 
-function reduce!(pod::POD{FT}, ::SVD) where {FT}
-    op_matrix = pod.snapshots
-    if typeof(pod.snapshots) == Vector{Vector{FT}}
-        op_matrix = matricize(pod.snapshots)
-    end
-    u, s, v = svd(op_matrix)
-    pod.rbasis .= u[:, 1:(pod.nmodes)]
+function reduce!(pod::POD, ::SVD)
+    u, s, v = svd(pod.snapshots)
+    pod.rbasis = u[:, 1:(pod.nmodes)]
     sr = s[1:(pod.nmodes)]
-    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
+    pod.renergy = sum(sr) / sum(s)
     nothing
 end
 
-function reduce!(pod::POD{FT}, ::TSVD) where {FT}
-    op_matrix = pod.snapshots
-    if typeof(pod.snapshots) == Vector{Vector{FT}}
-        op_matrix = matricize(pod.snapshots)
-    end
-    u, s, v = tsvd(op_matrix, pod.nmodes)
-    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
-    pod.rbasis .= u
+function reduce!(pod::POD, ::TSVD)
+    u, s, v = tsvd(pod.snapshots, pod.nmodes)
+    n_max = min(size(u,1), size(v,1))
+    pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
+    pod.rbasis = u
     nothing
 end
 
-function reduce!(pod::POD{FT}, ::RSVD) where {FT}
-    op_matrix = pod.snapshots
-    if typeof(pod.snapshots) == Vector{Vector{FT}}
-        op_matrix = matricize(pod.snapshots)
-    end
-    u, s, v = rsvd(op_matrix, pod.nmodes)
-    pod.renergy = sum(s) / (sum(s) + (size(op_matrix, 1) - pod.nmodes) * s[end])
-    pod.rbasis .= u
+function reduce!(pod::POD, rsvd_alg::RSVD)
+    u, s, v = rsvd(pod.snapshots, pod.nmodes, rsvd_alg.p)
+    n_max = min(size(u,1), size(v,1))
+    pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
+    pod.rbasis = u
     nothing
 end
 
