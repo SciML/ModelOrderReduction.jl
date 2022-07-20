@@ -1,5 +1,4 @@
 module ModelOrderReduction
-#========================Data Reduction=========================================#
 include("Types.jl")
 include("ErrorHandle.jl")
 
@@ -11,7 +10,7 @@ include("DataReduction/POD.jl")
 
 export SVD, TSVD, RSVD
 export POD, reduce!, matricize
-#========================Model Reduction========================================#
 
-#===============================================================================#
+include("lift_learn.jl")
+
 end
