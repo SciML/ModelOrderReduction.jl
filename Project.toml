@@ -3,6 +3,11 @@ uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
 authors = ["Bowen S. Zhu"]
 version = "0.1.0"
 
+[deps]
+PolyChaos = "8d666b04-775d-5f6e-b778-5ac7c70f65a3"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+
 [compat]
 julia = "1.6"
 
