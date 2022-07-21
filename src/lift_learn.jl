@@ -2,68 +2,79 @@ using SymbolicUtils, Symbolics, ModelingToolkit, Bijections
 
 function polynomialization(sys::ODESystem)
     deqs = ModelingToolkit.get_eqs(sys)
-    dvs = ModelingToolkit.get_states(sys)
+    rhs = Symbolics.rhss(deqs)
+    lhs = Symbolics.lhss(deqs)
+    dvs = map(only ∘ arguments, lhs) # TODO
     iv = ModelingToolkit.get_iv(sys)
     D = Differential(iv)
-    rhs = Symbolics.rhss(deqs)
 
-    new_deqs = Equation[]
-    new_dvs = copy(dvs)
+    deqs = Equation[]
     new_vars = Term[]
     transformation = Bijection()
 
     function create_var()
         new_var_i += 1
-        new_var = Symbolics.variable(:y, new_var_i; T = SymbolicUtils.FnType{Tuple, Real})(iv)
+        new_var = Symbolics.variable(:y, new_var_i;
+                                     T = SymbolicUtils.FnType{Tuple, Real})(iv)
         push!(new_vars, new_var)
         return new_var
     end
     new_var_i = 0
 
-    coeff1, coeff2, monomials2, residual = semiquadratic_form(rhs, new_dvs)
-    for (eq_i, (deq, nonquadratic)) in enumerate(zip(deqs, residual))
-        if !Symbolics.iszero(nonquadratic)
-            if SymbolicUtils.isadd(nonquadratic.val)
-                new_residual = Dict()
-                for (term, coeff) in nonquadratic.val.dict
-                    var = get!(create_var, transformation, term)
-                    new_residual[var] = coeff
-                end
-                residual[eq_i] = SymbolicUtils.Add(Real, 0, new_residual)
-            elseif SymbolicUtils.ismul(nonquadratic.val)
-                term = SymbolicUtils.Mul(Real, 1, nonquadratic.val.dict)
-                var = get!(create_var, transformation, term)
-                residual[eq_i] = nonquadratic.val.coeff * var
-            elseif nonquadratic.val isa Term
-                var = get!(create_var, transformation, nonquadratic.val)
-                residual[eq_i] = var
-            else
-                # TODO
+    while true
+        coeff1, coeff2, monomials2, residuals = semiquadratic_form(rhs, dvs)
+        # TODO mocking test for semiquadratic_form
+
+        if iszero(residuals)
+            append!(deqs, lhs .~ rhs)
+            break
+        end
+
+        for (m_i, monomial) in enumerate(monomials2)
+            if !iszero(monomial)
+                monomials2[m_i] = get!(create_var, transformation, monomial)
             end
         end
-    end
-    lhs = Symbolics.lhss(deqs)
-    lhs_x = map(only ∘ arguments, lhs)
-    rhs = coeff1 * new_dvs + coeff2 * monomials2 + residual
-    append!(new_deqs, lhs .~ rhs)
 
-    g = transformation.(new_vars)
-    gₓ = Symbolics.sparsejacobian(g, lhs_x)
-    sub_gₓ = substitute.(gₓ, (transformation,))
-    rhs = sub_gₓ * rhs
+        for (eq_i, residual) in enumerate(residuals)
+            if !Symbolics.iszero(residual)
+                val = Symbolics.unwrap(residual)
+                if SymbolicUtils.isadd(val)
+                    new_residual = Dict()
+                    for (term, coeff) in val.dict
+                        var = get!(create_var, transformation, term)
+                        new_residual[var] = coeff
+                    end
+                    residuals[eq_i] = SymbolicUtils.Add(Real, 0, new_residual)
+                elseif SymbolicUtils.ismul(val)
+                    # TODO
+                    term = SymbolicUtils.Mul(Real, 1, val.dict)
+                    var = get!(create_var, transformation, term)
+                    residuals[eq_i] = val.coeff * var
+                elseif SymbolicUtils.isterm(val)
+                    var = get!(create_var, transformation, val)
+                    residuals[eq_i] = var
+                elseif SymbolicUtils.ispow(val)
+                    # TODO
+                else
+                    # TODO Div, PolyForm
+                end
+            end
+        end
+        rhs = coeff1 * dvs + coeff2 * monomials2 + residuals
+        append!(deqs, lhs .~ rhs)
 
-    append!(new_dvs, new_vars)
+        g = transformation.(new_vars)
+        gₓ = Symbolics.sparsejacobian(g, dvs)
+        sub_gₓ = substitute.(Symbolics.unwrap.(gₓ), (transformation,))
+        rhs = sub_gₓ * Symbolics.rhss(deqs)
 
-    coeff1, coeff2, monomials2, residual = semiquadratic_form(rhs, new_dvs)
-    # TODO: edge cases from semiquadratic_form
-
-    # TODO: while loop
-    if iszero(residual)
         lhs = D.(new_vars)
-        append!(new_deqs, lhs .~ rhs)
+        append!(dvs, new_vars)
         empty!(new_vars)
     end
-    # TODO: variable transformation for new system construction
-    ODESystem(new_deqs, iv, new_dvs, parameters(sys);
+
+    # TODO
+    ODESystem(deqs, iv, dvs, parameters(sys);
               name = Symbol(nameof(sys), "_polynomialized"))
 end
