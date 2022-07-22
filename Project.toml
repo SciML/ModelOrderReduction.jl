@@ -1,6 +1,6 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu", "Rahul Manavalan"]
+authors = ["Bowen S. Zhu"]
 version = "0.1.0"
 
 [deps]
@@ -12,7 +12,9 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 julia = "1.6"
 
 [extras]
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["OrdinaryDiffEq", "SafeTestsets", "Test"]

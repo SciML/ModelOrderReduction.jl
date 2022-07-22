@@ -1,4 +1,5 @@
-#--------- Data Reduction -----------------#
+using Test, ModelOrderReduction
+using OrdinaryDiffEq
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
@@ -32,9 +33,6 @@ end
     reducer = POD(solution, order)
     reduce!(reducer, solver)
 
-    reducer.renergy
-
-    # Ad-hoc tests. To be checked with Chris.
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
     @test reducer.renergy > 0.9
@@ -44,7 +42,6 @@ end
     reducer = POD(solution, order)
     reduce!(reducer, solver)
 
-    # Ad-hoc tests. To be checked with Chris.
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
 
@@ -53,7 +50,6 @@ end
     reducer = POD(solution, order)
     reduce!(reducer, solver)
 
-    # Ad-hoc tests. To be checked with Chris.
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
 end
