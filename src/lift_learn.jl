@@ -102,7 +102,7 @@ function polynomialization(sys::ODESystem)::ODESystem
 
         polynomials = map(dict -> SymbolicUtils.Add(Real, 0, dict), polynomial_dicts)
 
-        residuals = convert(Vector{SymbolicUtils.Symbolic}, residuals)
+        residuals = convert(Vector{Union{Real, SymbolicUtils.Symbolic}}, residuals)
         for (eq_i, residual) in enumerate(residuals)
             if !isz[eq_i]
                 residuals[eq_i] = change_variables(residual)
