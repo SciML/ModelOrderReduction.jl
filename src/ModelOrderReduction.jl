@@ -13,4 +13,6 @@ export POD, reduce!, matricize
 
 include("lift_learn.jl")
 
+export polynomialization
+
 end
