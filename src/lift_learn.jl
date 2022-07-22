@@ -71,14 +71,18 @@ function polynomialization(sys::ODESystem)::ODESystem
         return SymbolicUtils.Pow(var, pow.exp)
     end
 
-    function change_variables(term::SymbolicUtils.Term)::SymbolicUtils.Term
+    function change_variables(term::SymbolicUtils.Term)::SymbolicUtils.Symbolic
         if term in dvs_set
             return term
         end
-        var = get!(create_var, transformation, term)
-        args = arguments(term)
-        map(change_variables, args)
         op = operation(term)
+        args = arguments(term)
+        if op == (*) && isone(-first(args))
+            var = change_variables(args[2])
+            return -var
+        end
+        map(change_variables, args)
+        var = get!(create_var, transformation, term)
 
         if op == sin
             t = SymbolicUtils.Term(cos, args)
