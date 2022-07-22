@@ -77,9 +77,8 @@ function polynomialization(sys::ODESystem)::ODESystem
         end
         op = operation(term)
         args = arguments(term)
-        if op == (*) && isone(-first(args))
-            var = change_variables(args[2])
-            return -var
+        if op == (+) || op == (*) || op == (^) || op == (/)
+            return mapreduce(change_variables, op, args)
         end
         map(change_variables, args)
         var = get!(create_var, transformation, term)
