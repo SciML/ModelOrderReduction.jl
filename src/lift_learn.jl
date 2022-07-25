@@ -32,11 +32,12 @@ function polynomialization(sys::ODESystem)::ODESystem
     end
 
     function change_variables(sym::SymbolicUtils.Sym)
-        throw(ArgumentError("the expression contains independent variable $sym"))
+        throw(ArgumentError("the expression contains the independent variable $sym"))
     end
 
     function change_variables(add::SymbolicUtils.Add)::SymbolicUtils.Symbolic
         add_dict = Dict()
+        sizehint!(add_dict, length(add.dict))
         for (term, coeff) in add.dict
             var = change_variables(term)
             add_dict[var] = coeff
@@ -46,6 +47,7 @@ function polynomialization(sys::ODESystem)::ODESystem
 
     function change_variables(mul::SymbolicUtils.Mul)::SymbolicUtils.Symbolic
         mul_dict = Dict()
+        sizehint!(mul_dict, length(mul.dict))
         for (base, exp) in mul.dict
             var = change_variables(base)
             mul_dict[var] = exp
@@ -148,9 +150,3 @@ function polynomialization(sys::ODESystem)::ODESystem
     ODESystem(deqs, iv, dvs, parameters(sys);
               name = Symbol(nameof(sys), "_polynomialized"))
 end
-
-# @variables t x(t)
-# D = Differential(t)
-# eqs = [D(x) ~ x + sin(x)^tan(x)]
-# @named sys = ODESystem(eqs, t, [x], []; checks = false)
-# polynomialization(sys)
