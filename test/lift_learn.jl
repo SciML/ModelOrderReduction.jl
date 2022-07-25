@@ -64,8 +64,14 @@ end
     @test_throws ArgumentError polynomialization(sys)
 end
 
-@testset "float exponent" begin
+@testset "floating-point exponent" begin
     eqs = [D(x) ~ x + x^3.4]
+    @named sys = ODESystem(eqs, t, [x], []; checks = false)
+    @test_throws ArgumentError polynomialization(sys)
+end
+
+@testset "include independent variable" begin
+    eqs = [D(x) ~ x + t]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
     @test_throws ArgumentError polynomialization(sys)
 end

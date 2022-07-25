@@ -31,8 +31,8 @@ function polynomialization(sys::ODESystem)::ODESystem
         return r
     end
 
-    function change_variables(sym::SymbolicUtils.Sym)::SymbolicUtils.Sym
-        return sym
+    function change_variables(sym::SymbolicUtils.Sym)
+        throw(ArgumentError("the expression contains independent variable $sym"))
     end
 
     function change_variables(add::SymbolicUtils.Add)::SymbolicUtils.Symbolic
