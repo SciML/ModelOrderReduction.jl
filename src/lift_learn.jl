@@ -46,13 +46,9 @@ function polynomialization(sys::ODESystem)::ODESystem
 
     function change_variables(mul::SymbolicUtils.Mul)::SymbolicUtils.Symbolic
         mul_dict = Dict()
-        for (base, exponent) in mul.dict
-            # TODO negative exponent
-            if exponent < zero(exponent)
-                error("unimplemented")
-            end
+        for (base, exp) in mul.dict
             var = change_variables(base)
-            mul_dict[var] = exponent
+            mul_dict[var] = exp
         end
         return SymbolicUtils.Mul(Real, mul.coeff, mul_dict)
     end
@@ -63,12 +59,30 @@ function polynomialization(sys::ODESystem)::ODESystem
     end
 
     function change_variables(pow::SymbolicUtils.Pow)::SymbolicUtils.Symbolic
-        # TODO negative exponent
-        if pow.exp < zero(pow.exp)
-            error("unimplemented")
+        base = pow.base
+        exp = pow.exp
+        if base isa Number
+            if exp isa Number
+                return base^exp
+            else
+                var = change_variables(exp)
+                return SymbolicUtils.Pow(base, var)
+            end
+        else
+            if exp isa Integer
+                var = change_variables(base)
+                return SymbolicUtils.Pow(var, exp)
+            elseif exp isa Rational
+                # TODO
+                error("unimplemented")
+            elseif exp isa Union{AbstractFloat, AbstractIrrational}
+                throw(ArgumentError("""cannot handle $pow with the floating-point exponent \
+                                    $exp, please consider changing to a rational number"""))
+            else
+                throw(ArgumentError("""cannot handle $pow where both \
+                                    base $base and exponent $exp are variables"""))
+            end
         end
-        var = get!(create_var, transformation, pow.base)
-        return SymbolicUtils.Pow(var, pow.exp)
     end
 
     function change_variables(term::SymbolicUtils.Term)::SymbolicUtils.Symbolic
@@ -95,7 +109,6 @@ function polynomialization(sys::ODESystem)::ODESystem
 
     while true
         polynomial_dicts, residuals = polynomial_coeffs(rhs, dvs)
-        # TODO mocking test for semipolynomial
 
         isz = Symbolics._iszero.(residuals)
         if all(isz)
@@ -135,3 +148,9 @@ function polynomialization(sys::ODESystem)::ODESystem
     ODESystem(deqs, iv, dvs, parameters(sys);
               name = Symbol(nameof(sys), "_polynomialized"))
 end
+
+# @variables t x(t)
+# D = Differential(t)
+# eqs = [D(x) ~ x + sin(x)^tan(x)]
+# @named sys = ODESystem(eqs, t, [x], []; checks = false)
+# polynomialization(sys)

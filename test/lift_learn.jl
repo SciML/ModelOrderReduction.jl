@@ -57,3 +57,15 @@ end
     new_dvs = ModelingToolkit.get_states(new_sys)
     @test length(new_dvs) == 1
 end
+
+@testset "f^g" begin
+    eqs = [D(x) ~ x + sin(x)^tan(x)]
+    @named sys = ODESystem(eqs, t, [x], []; checks = false)
+    @test_throws ArgumentError polynomialization(sys)
+end
+
+@testset "float exponent" begin
+    eqs = [D(x) ~ x + x^3.4]
+    @named sys = ODESystem(eqs, t, [x], []; checks = false)
+    @test_throws ArgumentError polynomialization(sys)
+end
