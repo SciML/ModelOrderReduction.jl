@@ -49,8 +49,14 @@ function polynomialization(sys::ODESystem)::ODESystem
         mul_dict = Dict()
         sizehint!(mul_dict, length(mul.dict))
         for (base, exp) in mul.dict
-            var = change_variables(base)
-            mul_dict[var] = exp
+            # use `Pow(base, exp)` as a light version of `Mul(1, Dict(base => exp))`
+            pow = SymbolicUtils.Pow(base, exp)
+            var = change_variables(pow)
+            if var isa SymbolicUtils.Pow
+                mul_dict[var.base] = var.exp
+            else
+                mul_dict[var] = 1
+            end
         end
         return SymbolicUtils.Mul(Real, mul.coeff, mul_dict)
     end
@@ -69,6 +75,10 @@ function polynomialization(sys::ODESystem)::ODESystem
         end
         if exp isa Number
             if exp isa Integer
+                # TODO negative exponent
+                if exp < zero(exp)
+                    error("unimplemented")
+                end
                 var = change_variables(base)
                 return SymbolicUtils.Pow(var, exp)
             elseif exp isa Rational
@@ -76,8 +86,8 @@ function polynomialization(sys::ODESystem)::ODESystem
                 error("unimplemented")
             end # e.g. AbstractFloat, AbstractIrrational
             throw(ArgumentError(string("polynomialization cannot handle $pow with the ",
-                                       "exponent $(typeof(exp)) $exp. Try changing it to ",
-                                       "Integer or Rational.")))
+                                       "exponent $(typeof(exp)) $exp. Try Integer or ",
+                                       "Rational exponent.")))
         end
         throw(ArgumentError(string("polynomialization cannot handle $pow whose base $base ",
                                    "and exponent $exp are both variables.")))
@@ -92,7 +102,9 @@ function polynomialization(sys::ODESystem)::ODESystem
         if op == (+) || op == (*) || op == (^) || op == (/)
             return mapreduce(change_variables, op, args)
         end
-        map(change_variables, args)
+        for arg in args
+            change_variables(arg)
+        end
         var = get!(create_var, transformation, term)
 
         if op == sin

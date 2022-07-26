@@ -47,7 +47,26 @@ end
     @test iszero(residual) # check if all equations are polynomials
 end
 
-@testset "polynomial" begin
+@testset "sqrt(x)" begin
+    eqs = [D(x) ~ sqrt(x)]
+    @named sys = ODESystem(eqs, t, [x], []; checks = false)
+    new_sys = polynomialization(sys)
+    # expect
+    # dx/dt = y
+    # dy/dt = 1//2
+
+    # with
+    # y = sqrt(x)
+    # dy/dt = (dy/dx)(dx/dt) = (1//2)(sqrt(x)^-1)(sqrt(x)) = 1//2
+    new_eqs = ModelingToolkit.get_eqs(new_sys)
+    @test length(new_eqs) == 2
+    new_dvs = ModelingToolkit.get_states(new_sys)
+    @test length(new_dvs) == 2
+    new_rhs = Symbolics.rhss(new_eqs)
+    @test new_rhs[2] == 1//2
+end
+
+@testset "x²" begin
     eqs = [D(x) ~ x^2]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
     new_sys = polynomialization(sys)
