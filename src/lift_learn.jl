@@ -64,27 +64,23 @@ function polynomialization(sys::ODESystem)::ODESystem
         base = pow.base
         exp = pow.exp
         if base isa Number
-            if exp isa Number
-                return base^exp
-            else
-                var = change_variables(exp)
-                return SymbolicUtils.Pow(base, var)
-            end
-        else
+            var = change_variables(exp)
+            return SymbolicUtils.Pow(base, var)
+        end
+        if exp isa Number
             if exp isa Integer
                 var = change_variables(base)
                 return SymbolicUtils.Pow(var, exp)
             elseif exp isa Rational
                 # TODO
                 error("unimplemented")
-            elseif exp isa Union{AbstractFloat, AbstractIrrational}
-                throw(ArgumentError("cannot handle $pow with the floating-point exponent " *
-                                    "$exp, please consider changing to a rational number"))
-            else
-                throw(ArgumentError("cannot handle $pow where both base $base and " *
-                                    "exponent $exp are variables"))
-            end
+            end # e.g. AbstractFloat, AbstractIrrational
+            throw(ArgumentError(string("polynomialization cannot handle $pow with the ",
+                                       "exponent $(typeof(exp)) $exp. Try changing it to ",
+                                       "Integer or Rational.")))
         end
+        throw(ArgumentError(string("polynomialization cannot handle $pow whose base $base ",
+                                   "and exponent $exp are both variables.")))
     end
 
     function change_variables(term::SymbolicUtils.Term)::SymbolicUtils.Symbolic
