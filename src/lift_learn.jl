@@ -78,11 +78,11 @@ function polynomialization(sys::ODESystem)::ODESystem
                 # TODO
                 error("unimplemented")
             elseif exp isa Union{AbstractFloat, AbstractIrrational}
-                throw(ArgumentError("""cannot handle $pow with the floating-point exponent \
-                                    $exp, please consider changing to a rational number"""))
+                throw(ArgumentError("cannot handle $pow with the floating-point exponent " *
+                                    "$exp, please consider changing to a rational number"))
             else
-                throw(ArgumentError("""cannot handle $pow where both \
-                                    base $base and exponent $exp are variables"""))
+                throw(ArgumentError("cannot handle $pow where both base $base and " *
+                                    "exponent $exp are variables"))
             end
         end
     end
