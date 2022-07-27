@@ -63,7 +63,7 @@ end
     new_dvs = ModelingToolkit.get_states(new_sys)
     @test length(new_dvs) == 2
     new_rhs = Symbolics.rhss(new_eqs)
-    @test new_rhs[2] == 1//2
+    @test new_rhs[2] == 1 // 2
 end
 
 @testset "x²" begin
