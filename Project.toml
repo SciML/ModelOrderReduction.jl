@@ -15,7 +15,7 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
 Bijections = "0.1.4"
-DocStringExtensions = "0.9"
+DocStringExtensions = "0.8"
 ModelingToolkit = "8.18.0"
 RandomizedLinAlg = "0.1"
 SymbolicUtils = "0.19"
