@@ -25,21 +25,22 @@ end
 mutable struct POD{snapType} <: AbstractDRProblem
     # specified 
     snapshots::snapType
-    min_renergy
+    min_renergy::Any
     min_nmodes::Int
     max_nmodes::Int
     # computed
     nmodes::Int
-    rbasis
-    renergy
-    spectrum
-    function POD(snaps; 
+    rbasis::Any
+    renergy::Any
+    spectrum::Any
+    function POD(snaps;
                  min_renergy = 1.0,
-                 min_nmodes::Int = 1, 
+                 min_nmodes::Int = 1,
                  max_nmodes::Int = length(snaps[1]))
-        nmodes = min_nmodes 
+        nmodes = min_nmodes
         errorhandle(snaps, nmodes, min_renergy, min_nmodes, max_nmodes)
-        new{typeof(snaps)}(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0, missing)
+        new{typeof(snaps)}(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0,
+                           missing)
     end
     function POD(snaps, nmodes::Int)
         errorhandle(snaps, nmodes, 0.0, nmodes, nmodes)
