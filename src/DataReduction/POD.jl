@@ -1,30 +1,30 @@
-function matricize(VoV::AbstractVector{T}) where {T <: AbstractVector}
+function matricize(VoV::Vector{Vector{T}}) where {T}
     Matrix(reduce(hcat, VoV))
 end
 
-function svd(data::AbstractVector{T}) where {T <: AbstractVector}
+function svd(data::Vector{Vector{T}}) where {T}
     mat_data = matricize(data)
     return svd(mat_data)
 end
 
-function svd(data::Vector{T}) where {T <: AbstractVector}
+function svd(data::Vector{Vector{T}}) where {T}
     mat_data = matricize(data)
     return svd(mat_data)
 end
 
-function tsvd(data::AbstractVector{T}, n::Int) where {T <: AbstractVector}
+function tsvd(data::Vector{Vector{T}}, n::Int) where {T}
     mat_data = matricize(data)
     return tsvd(mat_data, n)
 end
 
-function rsvd(data::AbstractVector{T}, n::Int, p::Int) where {T <: AbstractVector}
+function rsvd(data::Vector{Vector{T}}, n::Int, p::Int) where {T}
     mat_data = matricize(data)
     return rsvd(mat_data, n, p)
 end
 
-mutable struct POD{snapType} <: AbstractDRProblem
+mutable struct POD <: AbstractDRProblem
     # specified 
-    snapshots::snapType
+    snapshots::Any
     min_renergy::Any
     min_nmodes::Int
     max_nmodes::Int
@@ -33,18 +33,18 @@ mutable struct POD{snapType} <: AbstractDRProblem
     rbasis::Any
     renergy::Any
     spectrum::Any
+    # constructers
     function POD(snaps;
                  min_renergy = 1.0,
                  min_nmodes::Int = 1,
                  max_nmodes::Int = length(snaps[1]))
         nmodes = min_nmodes
         errorhandle(snaps, nmodes, min_renergy, min_nmodes, max_nmodes)
-        new{typeof(snaps)}(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0,
-                           missing)
+        new(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0, missing)
     end
     function POD(snaps, nmodes::Int)
         errorhandle(snaps, nmodes, 0.0, nmodes, nmodes)
-        new{typeof(snaps)}(snaps, 0.0, nmodes, nmodes, nmodes, missing, 1.0, missing)
+        new(snaps, 0.0, nmodes, nmodes, nmodes, missing, 1.0, missing)
     end
 end
 
