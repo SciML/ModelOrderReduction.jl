@@ -41,7 +41,7 @@ end
     @test size(matrix_reducer.rbasis, 1) == size(solution, 1)
     @test matrix_reducer.renergy > 0.9
 
-    reducer = POD(solution, 1, max_nmodes = 2, max_renergy = 0.1)
+    reducer = POD(solution, min_nmodes=1, max_nmodes = 2, min_renergy = 0.1)
     reduce!(reducer, solver)
     @test reducer.renergy > 0.1
     @test reducer.nmodes == 1
