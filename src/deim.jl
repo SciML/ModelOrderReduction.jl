@@ -61,8 +61,8 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
-    dvs = states(sys) # dependent variables
-    rhs = Symbolics.rhss(equations(sys))
+    dvs = ModelingToolkit.get_states(sys) # dependent variables
+    rhs = Symbolics.rhss(ModelingToolkit.get_eqs(sys))
     F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
     polynomial = rhs - F # polynomial terms
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
