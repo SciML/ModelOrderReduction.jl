@@ -24,6 +24,18 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
+# 1. compute DEIM interpolation indices
+# 2. compute DEMI projector
+# 3. transform the nonlinear functions F
+function deim_project(basis::AbstractMatrix, pod_dict::Dict, F)
+    indices = deim_interpolation_indices(basis) # DEIM interpolation indices
+    # the DEIM projector (not DEIM basis) satisfies
+    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
+    projector = ((@view basis[indices, :])' \ basis')'
+    temp = substitute.(F[indices], (pod_dict,))
+    projector * temp # DEIM approximation for nonlinear func F
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -48,24 +60,20 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
+    D = Differential(iv)
     dvs = states(sys) # dependent variables
     rhs = Symbolics.rhss(equations(sys))
     F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
     polynomial = rhs - F # polynomial terms
-    U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
-    indices = deim_interpolation_indices(U) # DEIM interpolation indices
-    D = Differential(iv)
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
     @variables y_pod[1:pod_dim](iv) # new variables from POD reduction
     pod_eqs = Symbolics.scalarize(dvs .~ pod_basis * y_pod)
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
     reduced_polynomial = substitute.(polynomial, (pod_dict,))
-    # the DEIM projector (not DEIM basis) satisfies
-    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
-    projector = ((@view U[indices, :])' \ U')'
-    deim_nonlinear = substitute.(F[indices], (pod_dict,))
-    deim_nonlinear = projector * deim_nonlinear # DEIM approximation for nonlinear func F
     inv_dict = Dict(collect(y_pod) .=> pod_basis' * dvs) # reduced vars to orignial vars
+
+    U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
+    deim_nonlinear = deim_project(U, pod_dict, F)
     deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
     ODESystem(Symbolics.scalarize(deqs), iv, y_pod, parameters(sys);
               observed = [observed(sys); pod_eqs], name = name,
