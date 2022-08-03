@@ -66,7 +66,10 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
     polynomial = rhs - F # polynomial terms
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
-    @variables y_pod[1:pod_dim](iv) # new variables from POD reduction
+
+    y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = SymbolicUtils.FnType)
+    y_pod = map(y -> y(iv), y_pod) # new variables from POD reduction
+
     pod_eqs = Symbolics.scalarize(dvs .~ pod_basis * y_pod)
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
     reduced_polynomial = substitute.(polynomial, (pod_dict,))
