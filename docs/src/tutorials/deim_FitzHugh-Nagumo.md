@@ -41,10 +41,12 @@ grid_v = grid[v(x, t)]
 grid_w = grid[w(x, t)]
 
 len_t = length(sol[t])
-plt = plot()
+plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
+           ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+           camera = (50, 30), titlefont = 10,
+           title = "Phase−Space diagram of full $(nameof(pdesys)) system")
 for (xᵢ, vᵢ, wᵢ) in zip(grid_x, grid_v, grid_w)
     plot!(plt, sol[vᵢ], fill(xᵢ, len_t), sol[wᵢ])
 end
-plot!(plt, xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-      ylims = (0.0, L), zlims = (0.0, 0.25), legend = false)
+display(plt)
 ```
