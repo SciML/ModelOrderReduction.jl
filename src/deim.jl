@@ -60,12 +60,14 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
     dvs = ModelingToolkit.get_states(sys) # dependent variables
-    rhs = Symbolics.rhss(ModelingToolkit.get_eqs(sys))
+    deqs, eqs = get_deqs(sys) # differential and non-differential equations
+
+    rhs = Symbolics.rhss(deqs)
     F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
     polynomial = rhs - F # polynomial terms
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
 
-    y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = SymbolicUtils.FnType)
+    y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = Symbolics.FnType)
     y_pod = map(y -> y(iv), y_pod) # new variables from POD reduction
 
     pod_eqs = Symbolics.scalarize(dvs .~ pod_basis * y_pod)
