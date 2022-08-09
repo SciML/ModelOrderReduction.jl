@@ -4,7 +4,7 @@ end
 
 function _svd(data::Vector{Vector{T}}; kwargs...) where {T}
     mat_data = matricize(data)
-    return svd(mat_data; kwargs...)
+    return _svd(mat_data; kwargs...)
 end
 
 _svd(data; kwargs...) = svd(data; kwargs...)
