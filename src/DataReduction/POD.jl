@@ -2,25 +2,26 @@ function matricize(VoV::Vector{Vector{T}}) where {T}
     reduce(hcat, VoV)
 end
 
-function svd(data::Vector{Vector{T}}) where {T}
+function _svd(data::Vector{Vector{T}}; kwargs...) where {T}
     mat_data = matricize(data)
-    return svd(mat_data)
+    return svd(mat_data; kwargs...)
 end
 
-function svd(data::Vector{Vector{T}}) where {T}
+_svd(data; kwargs...) = svd(data; kwargs...)
+
+function _tsvd(data::Vector{Vector{T}}, n::Int = 1; kwargs...) where {T}
     mat_data = matricize(data)
-    return svd(mat_data)
+    return _tsvd(mat_data, n; kwargs...)
 end
 
-function tsvd(data::Vector{Vector{T}}, n::Int) where {T}
+_tsvd(data, n::Int = 1; kwargs...) = tsvd(data, n; kwargs...)
+
+function _rsvd(data::Vector{Vector{T}}, n::Int, p::Int) where {T}
     mat_data = matricize(data)
-    return tsvd(mat_data, n)
+    return _rsvd(mat_data, n, p)
 end
 
-function rsvd(data::Vector{Vector{T}}, n::Int, p::Int) where {T}
-    mat_data = matricize(data)
-    return rsvd(mat_data, n, p)
-end
+_rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
 
 mutable struct POD <: AbstractDRProblem
     # specified 
@@ -59,8 +60,8 @@ function determine_truncation(s, min_nmodes, min_renergy, max_nmodes)
     return nmodes, energy
 end
 
-function reduce!(pod::POD, ::SVD)
-    u, s, v = svd(pod.snapshots)
+function reduce!(pod::POD, alg::SVD)
+    u, s, v = _svd(pod.snapshots; alg.kwargs...)
     pod.nmodes, pod.renergy = determine_truncation(s, pod.min_nmodes, pod.max_nmodes,
                                                    pod.min_renergy)
     pod.rbasis = u[:, 1:(pod.nmodes)]
@@ -68,8 +69,8 @@ function reduce!(pod::POD, ::SVD)
     nothing
 end
 
-function reduce!(pod::POD, ::TSVD)
-    u, s, v = tsvd(pod.snapshots, pod.nmodes)
+function reduce!(pod::POD, alg::TSVD)
+    u, s, v = _tsvd(pod.snapshots, pod.nmodes; alg.kwargs...)
     n_max = min(size(u, 1), size(v, 1))
     pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
     pod.rbasis = u
@@ -77,8 +78,8 @@ function reduce!(pod::POD, ::TSVD)
     nothing
 end
 
-function reduce!(pod::POD, rsvd_alg::RSVD)
-    u, s, v = rsvd(pod.snapshots, pod.nmodes, rsvd_alg.p)
+function reduce!(pod::POD, alg::RSVD)
+    u, s, v = _rsvd(pod.snapshots, pod.nmodes, alg.p)
     n_max = min(size(u, 1), size(v, 1))
     pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
     pod.rbasis = u
