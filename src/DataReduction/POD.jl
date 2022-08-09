@@ -1,5 +1,5 @@
 function matricize(VoV::Vector{Vector{T}}) where {T}
-    Matrix(reduce(hcat, VoV))
+    reduce(hcat, VoV)
 end
 
 function svd(data::Vector{Vector{T}}) where {T}
