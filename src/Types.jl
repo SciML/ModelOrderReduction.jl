@@ -4,15 +4,15 @@ abstract type AbstractDRProblem <: AbstractReductionProblem end
 
 abstract type AbstractSVD end
 
-struct SVD <: AbstractSVD 
-    kwargs
+struct SVD <: AbstractSVD
+    kwargs::Any
     function SVD(; kwargs...)
         new(kwargs)
     end
 end
 
 struct TSVD <: AbstractSVD
-    kwargs
+    kwargs::Any
     function TSVD(; kwargs...)
         new(kwargs)
     end
