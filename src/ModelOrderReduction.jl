@@ -15,10 +15,10 @@ using TSVD
 using RandomizedLinAlg
 
 include("DataReduction/POD.jl")
-
 export SVD, TSVD, RSVD
 export POD, reduce!
 
 include("deim.jl")
+export deim
 
 end

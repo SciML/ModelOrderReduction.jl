@@ -88,5 +88,3 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               defaults = new_defaults,
               continuous_events = ModelingToolkit.continuous_events(sys), checks = false)
 end
-
-export deim
