@@ -39,7 +39,6 @@ grid = get_discrete(pdesys, discretization)
 grid_x = grid[x]
 grid_v = grid[v(x, t)]
 grid_w = grid[w(x, t)]
-len_t = length(sol[t])
 
 using Plots, LaTeXStrings
 plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
@@ -47,7 +46,7 @@ plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5,
            camera = (50, 30), titlefont = 10,
            title = "Phase−Space diagram of full $(nameof(pdesys)) system")
 for (xᵢ, vᵢ, wᵢ) in zip(grid_x, grid_v, grid_w)
-    plot!(plt, sol[vᵢ], fill(xᵢ, len_t), sol[wᵢ])
+    plot!(plt, sol[vᵢ], _ -> xᵢ, sol[wᵢ])
 end
 display(plt)
 ```
