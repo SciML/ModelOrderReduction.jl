@@ -1,5 +1,5 @@
 using Test, ModelOrderReduction
-using OrdinaryDiffEq
+using DifferentialEquations
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
@@ -30,12 +30,22 @@ end
 
     order = 2
     solver = SVD()
-    reducer = POD(solution, order)
-    reduce!(reducer, solver)
+    matrix_reducer = POD(solution, order)
+    snapshot_reducer = POD(sol.u, order)
+    reduce!(matrix_reducer, solver)
+    reduce!(snapshot_reducer, solver)
 
-    @test size(reducer.rbasis, 2) == reducer.nmodes
-    @test size(reducer.rbasis, 1) == size(solution, 1)
-    @test reducer.renergy > 0.9
+    @test all(matrix_reducer.rbasis .≈ snapshot_reducer.rbasis)
+    @test matrix_reducer.renergy ≈ snapshot_reducer.renergy
+
+    @test size(matrix_reducer.rbasis, 2) == matrix_reducer.nmodes
+    @test size(matrix_reducer.rbasis, 1) == size(solution, 1)
+    @test matrix_reducer.renergy > 0.9
+
+    reducer = POD(solution, min_nmodes = 1, max_nmodes = 2, min_renergy = 0.1)
+    reduce!(reducer, solver)
+    @test reducer.renergy > 0.1
+    @test reducer.nmodes == 1
 
     order = 2
     solver = TSVD()
@@ -44,6 +54,7 @@ end
 
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
+    @test reducer.renergy > 0.7
 
     order = 2
     solver = RSVD()
@@ -52,4 +63,5 @@ end
 
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
+    @test reducer.renergy > 0.7
 end
