@@ -19,7 +19,7 @@ end
 @testset "POD-Utils" begin
     solution = lorenz_prob()
     VoV = solution.u
-    M = matricize(VoV)
+    M = reduce(hcat, VoV)
     @test size(M, 1) == length(VoV[1]) # Parameters
     @test size(M, 2) == length(VoV) # Time
 end
