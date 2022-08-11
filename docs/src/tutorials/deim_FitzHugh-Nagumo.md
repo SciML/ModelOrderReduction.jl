@@ -40,7 +40,20 @@ grid_x = grid[x]
 grid_v = grid[v(x, t)]
 grid_w = grid[w(x, t)]
 
+using LinearAlgebra
+snapshot_v = reduce(hcat, sol[grid_v])
+snapshot_w = reduce(hcat, sol[grid_w])
+snapshot_fv = f.(snapshot_v)
+svdval_v = svdvals(snapshot_v)
+svdval_w = svdvals(snapshot_w)
+svdval_fv = svdvals(snapshot_fv)
 using Plots, LaTeXStrings
+svd_plt = plot(yscale = :log10, xticks = eachindex(svdval_v), titlefont = 11,
+               legendfont = 10, title = "Singular values of the snapshots")
+plot!(svd_plt, svdval_v, markershape = :circle, label = L"Singular Val of $v$")
+plot!(svd_plt, svdval_w, markershape = :circle, label = L"Singular Val of $w$")
+plot!(svd_plt, svdval_fv, markershape = :circle, label = L"Singular Val of $f(v)$")
+
 plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
            ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
            camera = (50, 30), titlefont = 10,
