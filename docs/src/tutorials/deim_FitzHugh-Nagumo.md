@@ -62,4 +62,6 @@ for (xᵢ, vᵢ, wᵢ) in zip(grid_x, grid_v, grid_w)
     plot!(plt, sol[vᵢ], _ -> xᵢ, sol[wᵢ])
 end
 display(plt)
+
+snapshot_simpsys = Array(sol)
 ```
