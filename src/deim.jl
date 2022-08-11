@@ -8,7 +8,7 @@ The orthonormal `basis` should not be a sparse matrix.
 function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
     indices = Vector{Int}(undef, dim)
-    @views begin
+    @inbounds @views begin
         r = abs.(basis[:, 1])
         indices[1] = argmax(r)
         for l in 2:dim
