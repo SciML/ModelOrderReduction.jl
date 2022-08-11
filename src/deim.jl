@@ -9,7 +9,8 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
     indices = Vector{Int}(undef, dim)
     @views begin
-        indices[1] = argmax(abs.(basis[:, 1]))
+        r = abs.(basis[:, 1])
+        indices[1] = argmax(r)
         for l in 2:dim
             U = basis[:, 1:(l - 1)]
             P = indices[1:(l - 1)]
@@ -17,8 +18,9 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
             uₗ = basis[:, l]
             Pᵀuₗ = uₗ[P, :]
             c = PᵀU \ Pᵀuₗ
-            r = vec(uₗ - U * c)
-            indices[l] = argmax(abs.(r))
+            r .= U * c
+            @. r = abs(uₗ - r)
+            indices[l] = argmax(r)
         end
     end
     return indices
