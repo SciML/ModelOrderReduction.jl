@@ -4,13 +4,13 @@ using DocStringExtensions
 
 using Symbolics
 using ModelingToolkit
+using LinearAlgebra
 
 include("utils.jl")
 
 include("Types.jl")
 include("ErrorHandle.jl")
 
-using LinearAlgebra
 using TSVD
 using RandomizedLinAlg
 

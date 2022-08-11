@@ -17,8 +17,8 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
             PᵀU = U[P, :]
             uₗ = basis[:, l]
             Pᵀuₗ = uₗ[P, :]
-            c = PᵀU \ Pᵀuₗ
-            r .= U * c
+            c = vec(PᵀU \ Pᵀuₗ)
+            mul!(r, U, c)
             @. r = abs(uₗ - r)
             indices[l] = argmax(r)
         end
