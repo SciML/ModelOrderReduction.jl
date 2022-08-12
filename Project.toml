@@ -1,6 +1,6 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu <bszhu@fas.harvard.edu>"]
+authors = ["Bowen S. Zhu <bszhu@fas.harvard.edu> and contributors"]
 version = "0.1.0"
 
 [deps]
