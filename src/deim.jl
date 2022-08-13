@@ -88,7 +88,5 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     new_defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
 
     ODESystem(new_eqs, iv, y_pod, parameters(sys);
-              observed = new_oberved, name = name,
-              defaults = new_defaults,
-              continuous_events = ModelingToolkit.continuous_events(sys), checks = false)
+              observed = new_oberved, defaults = new_defaults, name = name)
 end
