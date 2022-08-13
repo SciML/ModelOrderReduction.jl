@@ -63,5 +63,11 @@ for (xᵢ, vᵢ, wᵢ) in zip(grid_x, grid_v, grid_w)
 end
 display(plt)
 
+using ModelOrderReduction
 snapshot_simpsys = Array(sol)
+pod_reducer = POD(snapshot_simpsys, 5)
+reduce!(pod_reducer, TSVD())
+pod_basis = pod_reducer.rbasis
+deimsys = deim(simpsys, pod_basis)
+deimprob = ODEProblem(deimsys, nothing, tspan)
 ```
