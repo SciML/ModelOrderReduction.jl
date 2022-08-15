@@ -83,10 +83,9 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     deim_nonlinear = deim_project(U, pod_dict, F)
     deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
 
-    new_eqs = [Symbolics.scalarize(deqs); eqs]
-    new_oberved = [observed(sys); pod_eqs]
-    new_defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
-
-    ODESystem(new_eqs, iv, y_pod, parameters(sys);
-              observed = new_oberved, defaults = new_defaults, name = name)
+    @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
+    @set! sys.states = y_pod
+    @set! sys.observed = [sys.observed; pod_eqs]
+    @set! sys.defaults = merge(sys.defaults, inv_dict)
+    @set! sys.name = name
 end

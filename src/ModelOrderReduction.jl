@@ -6,6 +6,8 @@ using Symbolics
 using ModelingToolkit
 using LinearAlgebra
 
+using Setfield
+
 include("utils.jl")
 
 include("Types.jl")
