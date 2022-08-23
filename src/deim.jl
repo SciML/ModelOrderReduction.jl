@@ -61,6 +61,8 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
+    # handle ODESystem.substitutions
+    # https://github.com/SciML/ModelingToolkit.jl/issues/1754
     sys = tearing_substitution(sys)
 
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
