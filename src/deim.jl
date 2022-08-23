@@ -73,12 +73,14 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     ŷ = @variables ŷ(iv)[1:pod_dim] # new variables from POD reduction
     @set! sys.states = ŷ
 
-    dvs = ModelingToolkit.get_states(sys) # dependent variables
-    deqs, eqs = get_deqs(sys) # differential and non-differential equations
+    dvs = sys.states # dependent variables
+    deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
 
     rhs = Symbolics.rhss(deqs)
-    F = polynomial_coeffs(rhs, dvs)[2] # non-polynomial nonlinear part
-    polynomial = rhs - F # polynomial terms
+    # a sparse matrix of coefficients for the linear part,
+    # a vector of constant terms and a vector of nonlinear terms about dvs
+    A, g, F = linear_terms(rhs, dvs)
+
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
 
     y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = Symbolics.FnType)
