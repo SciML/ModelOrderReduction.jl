@@ -61,6 +61,8 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
+    @set! sys.name = name
+    
     # handle ODESystem.substitutions
     # https://github.com/SciML/ModelingToolkit.jl/issues/1754
     sys = tearing_substitution(sys)
@@ -81,6 +83,12 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     # a vector of constant terms and a vector of nonlinear terms about dvs
     A, g, F = linear_terms(rhs, dvs)
 
+    pod_eqs = Symbolics.scalarize(dvs .~ V * ŷ)
+    @set! sys.observed = [sys.observed; pod_eqs]
+
+    inv_dict = Dict(ŷ .=> V' * dvs) # reduced vars to orignial vars
+    @set! sys.defaults = merge(sys.defaults, inv_dict)
+
     pod_dim = size(pod_basis, 2) # the dimension of POD basis
 
     y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = Symbolics.FnType)
@@ -96,7 +104,4 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
 
     @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
-    @set! sys.observed = [sys.observed; pod_eqs]
-    @set! sys.defaults = merge(sys.defaults, inv_dict)
-    @set! sys.name = name
 end
