@@ -89,22 +89,20 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     inv_dict = Dict(ŷ .=> V' * dvs) # reduced vars to orignial vars
     @set! sys.defaults = merge(sys.defaults, inv_dict)
 
-    pod_dim = size(pod_basis, 2) # the dimension of POD basis
-
-    y_pod = Symbolics.variables(:y_pod, 1:pod_dim; T = Symbolics.FnType)
-    y_pod = map(y -> y(iv), y_pod) # new variables from POD reduction
-
-    pod_eqs = Symbolics.scalarize(dvs .~ pod_basis * y_pod)
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
-    reduced_polynomial = substitute.(polynomial, (pod_dict,))
-    inv_dict = Dict(collect(y_pod) .=> pod_basis' * dvs) # reduced vars to orignial vars
 
     U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
-    deim_nonlinear = deim_project(U, pod_dict, F)
+
+    indices = deim_interpolation_indices(U) # DEIM interpolation indices
+    # the DEIM projector (not DEIM basis) satisfies
+    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
+    projector = ((@view U[indices, :])' \ (U' * V))'
+    temp = substitute.(F[indices], (pod_dict,))
+    F̂ = projector * temp # DEIM approximation for nonlinear func F
 
     Â = V' * A * V
     ĝ = V' * g
-    deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
+    deqs = D.(ŷ) ~ Â * ŷ + ĝ + F̂
 
     @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
 end
