@@ -62,7 +62,7 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_dim::Integer = size(pod_basis, 2),
               name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
     @set! sys.name = name
-    
+
     # handle ODESystem.substitutions
     # https://github.com/SciML/ModelingToolkit.jl/issues/1754
     sys = tearing_substitution(sys)
@@ -101,6 +101,9 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
 
     U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
     deim_nonlinear = deim_project(U, pod_dict, F)
+
+    Â = V' * A * V
+    ĝ = V' * g
     deqs = D.(y_pod) .~ pod_basis' * (reduced_polynomial + deim_nonlinear)
 
     @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
