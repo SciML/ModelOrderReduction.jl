@@ -67,7 +67,7 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     # https://github.com/SciML/ModelingToolkit.jl/issues/1754
     sys = tearing_substitution(sys)
 
-    iv = sys.iv # the single independent variable
+    iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
 
     V = pod_basis
@@ -75,7 +75,7 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     ŷ = @variables ŷ(iv)[1:pod_dim] # new variables from POD reduction
     @set! sys.states = ŷ
 
-    dvs = sys.states # dependent variables
+    dvs = ModelingToolkit.get_states(sys) # dependent variables
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
 
     rhs = Symbolics.rhss(deqs)
