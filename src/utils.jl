@@ -39,7 +39,7 @@ function linear_terms(exprs::AbstractVector, vars)
     exprs = Symbolics.unwrap.(exprs)
     linear_I = Int[] # row idx for sparse matrix
     linear_J = Int[] # col idx for sparse matrix
-    linear_V = Real[] # values
+    linear_V = Float64[] # values
     idxmap = Dict(v => i for (i, v) in enumerate(vars))
 
     # (a function used to avoid code duplication)
