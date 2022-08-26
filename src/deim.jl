@@ -26,18 +26,6 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
-# 1. compute DEIM interpolation indices
-# 2. compute DEMI projector
-# 3. transform the nonlinear functions F
-function deim_project(basis::AbstractMatrix, pod_dict::Dict, F)
-    indices = deim_interpolation_indices(basis) # DEIM interpolation indices
-    # the DEIM projector (not DEIM basis) satisfies
-    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
-    projector = ((@view basis[indices, :])' \ basis')'
-    temp = substitute.(F[indices], (pod_dict,))
-    projector * temp # DEIM approximation for nonlinear func F
-end
-
 """
 $(TYPEDSIGNATURES)
 
