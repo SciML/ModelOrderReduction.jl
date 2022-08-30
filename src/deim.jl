@@ -97,8 +97,4 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     deqs = D.(ŷ) ~ Â * ŷ + ĝ + F̂
 
     @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
-
-    ODESystem(sys.eqs, sys.iv, sys.states, sys.ps;
-              observed = ModelingToolkit.get_observed(sys), name = sys.name,
-              defaults = sys.defaults)
 end
