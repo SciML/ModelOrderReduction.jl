@@ -71,7 +71,11 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     A, g, F = linear_terms(rhs, dvs)
 
     pod_eqs = Symbolics.scalarize(dvs .~ V * ŷ)
-    @set! sys.observed = [sys.observed; pod_eqs]
+    old_observed = ModelingToolkit.get_observed(sys)
+    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
+    new_observed = [old_observed; pod_eqs]
+    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates)
+    @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
     @set! sys.defaults = merge(sys.defaults, inv_dict)
