@@ -1,4 +1,5 @@
 [deps]
+CatViews = "81a5f4ea-a946-549a-aa7e-2a7f63a27d31"
 DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
