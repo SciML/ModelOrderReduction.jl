@@ -63,7 +63,7 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     pod_dim = size(V, 2) # the dimension of POD basis
     @variables ŷ(iv)[1:pod_dim] # a symbolic array
     @set! sys.states = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
-    sys.var_to_name[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
+    ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
     rhs = Symbolics.rhss(deqs)
@@ -79,7 +79,7 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
-    @set! sys.defaults = merge(sys.defaults, inv_dict)
+    @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
 
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
 
