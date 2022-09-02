@@ -13,9 +13,6 @@ include("utils.jl")
 include("Types.jl")
 include("ErrorHandle.jl")
 
-using TSVD
-using RandomizedLinAlg
-
 include("DataReduction/POD.jl")
 export SVD, TSVD, RSVD
 export POD, reduce!
