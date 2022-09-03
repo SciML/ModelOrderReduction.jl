@@ -48,7 +48,7 @@ DEIM basis and/or choose a lower dimension for DEIM than POD.
 function deim(sys::ODESystem, pod_basis::AbstractMatrix;
               deim_basis::AbstractMatrix = pod_basis,
               deim_dim::Integer = size(pod_basis, 2),
-              name::Symbol = Symbol(nameof(sys), "_deim"))::ODESystem
+              name::Symbol = Symbol(nameof(sys), :_deim))::ODESystem
     @set! sys.name = name
 
     # handle ODESystem.substitutions
@@ -61,7 +61,8 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
 
     V = pod_basis
     pod_dim = size(V, 2) # the dimension of POD basis
-    @variables ŷ(iv)[1:pod_dim] # a symbolic array
+    var_name = gensym(:ŷ)
+    ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
     @set! sys.states = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
     ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
