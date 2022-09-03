@@ -38,8 +38,7 @@ The LHS of `sys` are all assumed to be 1st order derivatives. Use
 `ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
 
 `sys` is assumed to have no internal systems. End users are encouraged to call
-`ModelingToolkit.structural_simplify` beforehand, which calls
-`ModelingToolkit.expand_connections` internally.
+`ModelingToolkit.structural_simplify` beforehand.
 
 `deim_basis` is default to be the same as `pod_basis`, as the POD basis is normally a
 suitable choice for the DEIM index selection algorithm. Users can also provide their own
