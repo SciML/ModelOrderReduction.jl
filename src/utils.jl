@@ -32,7 +32,7 @@ returns a sparse coefficient matrix `A`, constant terms `c` and nonlinear terms 
 such that `exprs = A * vars + c + n`,
 where the constant terms do not contain any variables in `vars`.
 
-Varaibles in `vars` must be unique.
+Variables in `vars` must be unique.
 """
 function linear_terms(exprs::AbstractVector, vars)
     vars = OrderedSet(Symbolics.unwrap.(vars))
