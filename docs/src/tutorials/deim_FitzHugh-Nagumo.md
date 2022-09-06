@@ -29,8 +29,16 @@ where the parameters are ``L=1``, ``\varepsilon=0.015``, ``b=0.5``, ``\gamma =2`
 ``c=0.05``. The stimulus is ``i_0(t)=50000t^3\exp(-15t)``. The variables ``v`` and ``w`` 
 are voltage and recovery of voltage, respectively.
 
-Firstly, we construct a 
-[`ModelingToolkit.PDESystem`](https://mtk.sciml.ai/stable/systems/PDESystem/).
+In order to generate a POD-DEIM reduced-order model, we need to work through the following 
+steps:
+
+1. Collect data on full-order model trajectories and the nonlinear terms describing its evolution equation along the way.
+1. Based on the collected data, use POD to identify a low dimensional linear subspace of the system's state space that allows for embedding the full-order model's trajectories with minimal error.
+1. Project the model onto the identified subspace using DEIM to approximate nonlinear terms.
+
+For step 1, we first construct a 
+[`ModelingToolkit.PDESystem`](https://mtk.sciml.ai/stable/systems/PDESystem/) 
+describing the original FitzHugh-Nagumo model.
 
 ```@example deim_FitzHugh_Nagumo
 using ModelingToolkit
@@ -59,7 +67,7 @@ pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = Symbol("FitzHugh-Nagumo"
 nothing # hide
 ```
 
-Next, we apply finite difference disretize discretization using 
+Next, we apply finite difference discretization using 
 [MethodOfLines.jl](https://github.com/SciML/MethodOfLines.jl).
 
 ```@example deim_FitzHugh_Nagumo
@@ -80,7 +88,7 @@ ode_prob = ODEProblem(simp_sys, nothing, tspan)
 nothing # hide
 ```
 
-The snapshots are obtained by solving the full-order system. 
+The snapshot trajectories are obtained by solving the full-order system. 
 
 ```@example deim_FitzHugh_Nagumo
 using DifferentialEquations
@@ -137,7 +145,8 @@ end
 plot!(full_plt)
 ```
 
-Then, we apply POD-DEIM of dimension, say, 5 and solve the reduced system.
+Then, we use POD to construct a linear subspace of dimension, say, 5 for the system's state
+space.
 
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction
@@ -146,6 +155,13 @@ pod_dim = deim_dim = 5
 pod_reducer = POD(snapshot_simpsys, pod_dim)
 reduce!(pod_reducer, TSVD())
 pod_basis = pod_reducer.rbasis
+nothing # hide
+```
+
+In the final step, we project the model onto the identified subspace and employ DEIM to
+approximate nonlinear terms using the same POD basis.
+
+```@example deim_FitzHugh_Nagumo
 deim_sys = deim(simp_sys, pod_basis)
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
 deim_sol = solve(deim_prob)
