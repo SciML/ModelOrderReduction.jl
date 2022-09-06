@@ -37,18 +37,12 @@ sol = solve(ode_prob)
 
 snapshot_simpsys = Array(sol)
 pod_dim = 3
-pod_reducer = POD(snapshot_simpsys, pod_dim)
-reduce!(pod_reducer, TSVD())
-pod_basis = pod_reducer.rbasis
-deim_sys = @test_nowarn deim(simp_sys, pod_basis)
+deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
 # check the number of dependent variables in the new system
 @test length(ModelingToolkit.get_states(deim_sys)) == pod_dim
 
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
-
-# check projection for initial values
-@test pod_basis' * ode_prob.u0 ≈ deim_prob.u0
 
 deim_sol = solve(deim_prob)
 

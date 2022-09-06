@@ -146,23 +146,14 @@ plot!(full_plt)
 ```
 
 Then, we use POD to construct a linear subspace of dimension, say, 5 for the system's state
-space.
+space and project te model onto the subspace. DEIM is employed to approximate nonlinear 
+terms. This can be done by simply calling [`deim`](@ref).
 
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction
 snapshot_simpsys = Array(sol)
 pod_dim = deim_dim = 5
-pod_reducer = POD(snapshot_simpsys, pod_dim)
-reduce!(pod_reducer, TSVD())
-pod_basis = pod_reducer.rbasis
-nothing # hide
-```
-
-In the final step, we project the model onto the identified subspace and employ DEIM to
-approximate nonlinear terms using the same POD basis.
-
-```@example deim_FitzHugh_Nagumo
-deim_sys = deim(simp_sys, pod_basis)
+deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
 deim_sol = solve(deim_prob)
 n_t_deim = length(deim_sol.t)

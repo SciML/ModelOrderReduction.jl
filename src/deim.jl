@@ -29,24 +29,22 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Reduce an ODESystem using the Discrete Empirical Interpolation Method (DEIM).
+Reduce an `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
+the Discrete Empirical Interpolation Method (DEIM).
 
-The DEIM relies on the Proper Orthogonal Decomposition (POD). The given `pod_basis` should
-be an orthonormal basis matrix with POD modes in the columns.
+`snapshot` should be a matrix with the data of each time instance as a column.
 
-The LHS of `sys` are all assumed to be 1st order derivatives. Use
+The LHS of equations in `sys` are all assumed to be 1st order derivatives. Use
 `ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
 
 `sys` is assumed to have no internal systems. End users are encouraged to call
 `ModelingToolkit.structural_simplify` beforehand.
 
-`deim_basis` is default to be the same as `pod_basis`, as the POD basis is normally a
-suitable choice for the DEIM index selection algorithm. Users can also provide their own
-DEIM basis and/or choose a lower dimension for DEIM than POD.
+The POD basis used for DEIM interpolation is obtained from the snapshot matrix of the
+nonlinear terms, which is computed by executing the runtime-generated function for
+nonlinear expressions.
 """
-function deim(sys::ODESystem, pod_basis::AbstractMatrix;
-              deim_basis::AbstractMatrix = pod_basis,
-              deim_dim::Integer = size(pod_basis, 2),
+function deim(sys::ODESystem, snapshot, pod_dim::Integer; deim_dim::Integer = pod_dim,
               name::Symbol = Symbol(nameof(sys), :_deim))::ODESystem
     @set! sys.name = name
 
@@ -58,8 +56,10 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
     D = Differential(iv)
     dvs = ModelingToolkit.get_states(sys) # dependent variables
 
-    V = pod_basis
-    pod_dim = size(V, 2) # the dimension of POD basis
+    pod_reducer = POD(snapshot, pod_dim)
+    reduce!(pod_reducer, TSVD())
+    V = pod_reducer.rbasis # POD basis
+
     var_name = gensym(:ŷ)
     ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
     @set! sys.states = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
@@ -83,7 +83,17 @@ function deim(sys::ODESystem, pod_basis::AbstractMatrix;
 
     pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
 
-    U = @view deim_basis[:, 1:deim_dim] # DEIM projection basis
+    # generate an in-place function from the symbolic expression of the nonlinear functions
+    F_expr = build_function(F, dvs; expression = Val{false})[2]
+    F_func! = eval(F_expr)
+    nonlinear_snapshot = similar(snapshot) # snapshot matrix of nonlinear terms
+    for i in 1:size(snapshot, 2) # iterate through time instances
+        F_func!(view(nonlinear_snapshot, :, i), view(snapshot, :, i))
+    end
+
+    deim_reducer = POD(nonlinear_snapshot, deim_dim)
+    reduce!(deim_reducer, TSVD())
+    U = deim_reducer.rbasis # DEIM projection basis
 
     indices = deim_interpolation_indices(U) # DEIM interpolation indices
     # the DEIM projector (not DEIM basis) satisfies
