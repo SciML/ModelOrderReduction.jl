@@ -1,8 +1,9 @@
 # Discrete Empirical Interpolation Method (DEIM)
 
-This section illustrates the application of the Proper Orthogonal Decomposition (POD) with 
-the Discrete Empirical Interpolation Method (DEIM) on a nonlinear 1-D PDE arising in neuron
-modeling with finite difference discretization. 
+This section illustrates how ModelOrderReduction.jl can be used to build a reduced order 
+model via Petrov-Galerkin projection using the Proper Orthogonal Decomposition (POD) and 
+the Discrete Empirical Interpolation Method (DEIM). As an illustrative example, we consider 
+a nonlinear 1-D PDE from the realm of neuroscience.
 
 The FitzHugh-Nagumo system used in neuron modeling is a simplified version of the 
 Hodgkin-Huxley model, which describes in a detailed manner activation and deactivation 
