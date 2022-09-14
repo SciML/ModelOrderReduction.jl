@@ -29,7 +29,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Reduce an `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
+Reduce a `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
 the Discrete Empirical Interpolation Method (DEIM).
 
 `snapshot` should be a matrix with the data of each time instance as a column.

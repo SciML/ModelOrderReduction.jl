@@ -146,7 +146,7 @@ plot!(full_plt)
 ```
 
 Then, we use POD to construct a linear subspace of dimension, say, 5 for the system's state
-space and project te model onto the subspace. DEIM is employed to approximate nonlinear 
+space and project the model onto the subspace. DEIM is employed to approximate nonlinear 
 terms. This can be done by simply calling [`deim`](@ref).
 
 ```@example deim_FitzHugh_Nagumo
