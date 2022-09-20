@@ -1,5 +1,4 @@
 [deps]
-CatViews = "81a5f4ea-a946-549a-aa7e-2a7f63a27d31"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"

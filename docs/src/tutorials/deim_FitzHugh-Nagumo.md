@@ -77,11 +77,6 @@ dx = (L - 0.0) / N
 dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
-grid = get_discrete(pde_sys, discretization)
-grid_x = grid[x]
-grid_v = grid[v(x, t)]
-grid_w = grid[w(x, t)]
-n_x = length(grid_x) # number of discretization points in x
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = structural_simplify(ode_sys)
 ode_prob = ODEProblem(simp_sys, nothing, tspan)
@@ -92,8 +87,10 @@ The snapshot trajectories are obtained by solving the full-order system.
 
 ```@example deim_FitzHugh_Nagumo
 using DifferentialEquations
-sol = solve(ode_prob)
-n_t = length(sol.t) # number of discretization points in time
+sol = solve(ode_prob, Tsit5())
+sol_x = sol[x]
+nₓ = length(sol_x) # number of discretization points in x
+nₜ = length(sol[t]) # number of discretization points in time
 nothing # hide
 ```
 
@@ -102,8 +99,8 @@ and the nonlinear snapshots ``f(v)``.
 
 ```@example deim_FitzHugh_Nagumo
 using LinearAlgebra
-snapshot_v = reduce(hcat, sol[grid_v])
-snapshot_w = reduce(hcat, sol[grid_w])
+snapshot_v = sol[v(x, t)]
+snapshot_w = sol[w(x, t)]
 snapshot_fv = f.(snapshot_v)
 svdval_v = svdvals(snapshot_v)
 svdval_w = svdvals(snapshot_w)
@@ -120,27 +117,12 @@ The following figure shows the phase-space diagram of ``v`` and ``w`` at differe
 points ``x`` from the full-order system.
 
 ```@example deim_FitzHugh_Nagumo
-using CatViews # avoid copying and conveniently store unconnected data for plotting
-split_vec_sizes = collect(isodd(i) ? (n_t,) : (1,) for i in 1:(2n_x))
-vec_x, sol_x = splitview(split_vec_sizes...)
-vec_v, sol_v = splitview(split_vec_sizes...)
-vec_w, sol_w = splitview(split_vec_sizes...)
-for (i, (xᵢ, vᵢ, wᵢ)) in enumerate(zip(grid_x, grid_v, grid_w))
-    iₓ₂ = 2i
-    iₓ₂₋₁ = iₓ₂ - 1
-    sol_x[iₓ₂₋₁] .= xᵢ
-    sol_x[iₓ₂] .= NaN # NaN is a path separator for plotting unconnected data
-    sol_v[iₓ₂₋₁] .= sol[vᵢ]
-    sol_v[iₓ₂] .= NaN
-    sol_w[iₓ₂₋₁] .= sol[wᵢ]
-    sol_w[iₓ₂] .= NaN
-end
 full_plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-           ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
-           camera = (50, 30), titlefont = 10,
-           title = "Phase−Space diagram of full $(nameof(pde_sys)) system")
-for i in 1:2:(2n_x)
-    plot!(full_plt, sol_v[i], sol_x[i], sol_w[i])
+                ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+                camera = (50, 30), titlefont = 10,
+                title = "Phase−Space diagram of full $(nameof(pde_sys)) system")
+@views for i in 1:nₓ
+    plot!(full_plt, snapshot_v[i, :], _ -> sol_x[i], snapshot_w[i, :])
 end
 plot!(full_plt)
 ```
@@ -151,49 +133,56 @@ terms. This can be done by simply calling [`deim`](@ref).
 
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction
-snapshot_simpsys = Array(sol)
+snapshot_simpsys = Array(sol.original_sol)
 pod_dim = deim_dim = 5
 deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
-deim_sol = solve(deim_prob)
-n_t_deim = length(deim_sol.t)
+deim_sol = solve(deim_prob, Tsit5())
+nₜ_deim = length(deim_sol[t])
+sol_deim_x = deim_sol[x]
+sol_deim_v = deim_sol[v(x, t)]
+sol_deim_w = deim_sol[w(x, t)]
 nothing # hide
 ```
 
 And plot the result from the POD-DEIM reduced system.
 
 ```@example deim_FitzHugh_Nagumo
-split_vec_sizes_deim = collect(isodd(i) ? (n_t_deim,) : (1,) for i in 1:(2n_x))
-vec_deim_x, sol_deim_x = splitview(split_vec_sizes_deim...)
-vec_deim_v, sol_deim_v = splitview(split_vec_sizes_deim...)
-vec_deim_w, sol_deim_w = splitview(split_vec_sizes_deim...)
-for (i, (xᵢ, vᵢ, wᵢ)) in enumerate(zip(grid_x, grid_v, grid_w))
-    iₓ₂ = 2i
-    iₓ₂₋₁ = iₓ₂ - 1
-    sol_deim_x[iₓ₂₋₁] .= xᵢ
-    sol_deim_x[iₓ₂] .= NaN
-    sol_deim_v[iₓ₂₋₁] .= deim_sol[vᵢ]
-    sol_deim_v[iₓ₂] .= NaN
-    sol_deim_w[iₓ₂₋₁] .= deim_sol[wᵢ]
-    sol_deim_w[iₓ₂] .= NaN
-end
 deim_plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
                 ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
                 camera = (50, 30), titlefont = 10,
                 title = "Phase−Space diagram of reduced $(nameof(pde_sys)) system")
-for i in 1:2:(2n_x)
-    plot!(deim_plt, sol_deim_v[i], sol_deim_x[i], sol_deim_w[i])
+@views for i in 1:nₓ
+    plot!(deim_plt, sol_deim_v[i, :], _ -> sol_deim_x[i], sol_deim_w[i, :])
 end
 plot!(deim_plt)
 ```
 
 Finally, we put the two solutions in one figure.
 ```@example deim_FitzHugh_Nagumo
+# create data for plotting unconnected lines
+function unconnected(m::AbstractMatrix)
+    row, col = size(m)
+    data = similar(m, row, col + 1)
+    data[:, begin:(end - 1)] .= m
+    data[:, end] .= NaN # path separator
+    vec(data')
+end
+function unconnected(v::AbstractVector, nₜ::Integer)
+    data = similar(v, nₜ + 1, length(v))
+    for (i, vᵢ) in enumerate(v)
+        data[begin:(end - 1), i] .= vᵢ
+    end
+    data[end, :] .= NaN
+    vec(data)
+end
 plt_2 = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-             ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30), 
+             ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
              titlefont = 10, title = "Comparison of full and reduced systems")
-plot!(plt_2, vec_v, vec_x, vec_w, label = "Full$(length(ode_sys.eqs))")
-plot!(plt_2, vec_deim_v, vec_deim_x, vec_deim_w, label = "POD$(pod_dim)/DEIM$(deim_dim)")
+plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
+      label = "Full$(length(ode_sys.eqs))")
+plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
+      unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
 ```
 
 As we can see, the reduced-order system captures the limit cycle of the original full-order 

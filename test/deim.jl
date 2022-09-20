@@ -33,9 +33,9 @@ discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = structural_simplify(ode_sys) # field substitutions is non-empty
 ode_prob = ODEProblem(simp_sys, nothing, tspan)
-sol = solve(ode_prob)
+sol = solve(ode_prob, Tsit5(), saveat = 1.0)
 
-snapshot_simpsys = Array(sol)
+snapshot_simpsys = Array(sol.original_sol)
 pod_dim = 3
 deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
@@ -44,12 +44,11 @@ deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
 
-deim_sol = solve(deim_prob)
+deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 
-grid = get_discrete(pde_sys, discretization)
-grid_v = grid[v(x, t)]
-grid_w = grid[w(x, t)]
+nₓ = length(sol[x])
+nₜ = length(sol[t])
 
-# expect no exception when retrieving eliminated variables
-@test_nowarn deim_sol[grid_v]
-@test_nowarn deim_sol[grid_w]
+# test solution retrival
+@test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
+@test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
