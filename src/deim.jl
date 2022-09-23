@@ -27,6 +27,73 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
 end
 
 """
+$(SIGNATURES)
+
+Compute the reduced model by applying the Discrete Empirical Interpolation Method (DEIM).
+
+This method allows users to input the projection matrices of their own choices.
+
+Given the projection matrix ``V\\in\\mathbb R^{n\\times k}`` for the dependent variables
+``\\mathbf y\\in\\mathbb R^n`` and the projection matrix
+``U\\in\\mathbb R^{n\\times m}`` for the nonlinear function ``\\mathbf F\\in\\mathbb R^n``,
+the full-order model (FOM)
+```math
+\\frac{d}{dt}\\mathbf y(t)=A\\mathbf y(t)+\\mathbf g(t)+\\mathbf F(\\mathbf y(t))
+```
+is transformed to the reduced-order model (ROM)
+```math
+\\frac{d}{dt}\\hat{\\mathbf y}(t)=\\underbrace{V^TAV}_{k\\times k}\\hat{\\mathbf y}(t)+V^T
+\\mathbf g(t)+\\underbrace{V^TU(P^TU)^{-1}}_{k\\times m}\\underbrace{P^T\\mathbf F(V
+\\hat{\\mathbf y}(t))}_{m\\times1}
+```
+where ``P=[\\mathbf e_{\\rho_1},\\dots,\\mathbf e_{\\rho_m}]\\in\\mathbb R^{n\\times m}``,
+``\\rho_1,\\dots,\\rho_m`` are interpolation indices from the DEIM point selection
+algorithm, and ``\\mathbf e_{\\rho_i}=[0,\\ldots,0,1,0,\\ldots,0]^T\\in\\mathbb R^n`` is
+the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n}``.
+
+# Arguments
+- `full_vars::AbstractVector`: the dependent variables ``\\underset{n\\times 1}{\\mathbf y}`` in FOM.
+- `linear_coeffs::AbstractMatrix`: the coefficient matrix ``\\underset{n\\times n}A`` of linear terms in FOM.
+- `constant_part::AbstractVector`: the constant terms ``\\underset{n\\times 1}{\\mathbf g}`` in FOM.
+- `nonlinear_part::AbstractVector`: the nonlinear functions ``\\underset{n\\times 1}{\\mathbf F}`` in FOM.
+- `reduced_vars::AbstractVector`: the dependent variables ``\\underset{k\\times 1}{\\hat{\\mathbf y}}`` in the reduced-order model.
+- `linear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times k}V`` for the dependent variables ``\\mathbf y``.
+- `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
+
+# Return
+- `reduced_rhss`: the right hand side of ROM.
+- `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
+"""
+function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
+              constant_part::AbstractVector, nonlinear_part::AbstractVector,
+              reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
+              nonlinear_projection_matrix::AbstractMatrix)
+    # rename variables for convenience
+    y = full_vars
+    A = linear_coeffs
+    g = constant_part
+    F = nonlinear_part
+    ŷ = reduced_vars
+    V = linear_projection_matrix
+    U = nonlinear_projection_matrix
+
+    # original vars to reduced vars
+    linear_projection_eqs = Symbolics.scalarize(y .~ V * ŷ)
+    linear_projection_dict = Dict(eq.lhs => eq.rhs for eq in linear_projection_eqs)
+
+    indices = deim_interpolation_indices(U) # DEIM interpolation indices
+    # the DEIM projector (not DEIM basis) satisfies
+    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
+    projector = ((@view U[indices, :])' \ (U' * V))'
+    temp = substitute.(F[indices], (linear_projection_dict,))
+    F̂ = projector * temp # DEIM approximation for nonlinear func F
+
+    Â = V' * A * V
+    ĝ = V' * g
+    reduced_rhss = Â * ŷ + ĝ + F̂
+    reduced_rhss, linear_projection_eqs
+end
+"""
 $(TYPEDSIGNATURES)
 
 Reduce a `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
@@ -44,7 +111,8 @@ The POD basis used for DEIM interpolation is obtained from the snapshot matrix o
 nonlinear terms, which is computed by executing the runtime-generated function for
 nonlinear expressions.
 """
-function deim(sys::ODESystem, snapshot, pod_dim::Integer; deim_dim::Integer = pod_dim,
+function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
+              deim_dim::Integer = pod_dim,
               name::Symbol = Symbol(nameof(sys), :_deim))::ODESystem
     @set! sys.name = name
 
@@ -71,18 +139,6 @@ function deim(sys::ODESystem, snapshot, pod_dim::Integer; deim_dim::Integer = po
     # a vector of constant terms and a vector of nonlinear terms about dvs
     A, g, F = linear_terms(rhs, dvs)
 
-    pod_eqs = Symbolics.scalarize(dvs .~ V * ŷ)
-    old_observed = ModelingToolkit.get_observed(sys)
-    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
-    new_observed = [old_observed; pod_eqs]
-    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates)
-    @set! sys.observed = new_sorted_observed
-
-    inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
-    @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
-
-    pod_dict = Dict(eq.lhs => eq.rhs for eq in pod_eqs) # original vars to reduced vars
-
     # generate an in-place function from the symbolic expression of the nonlinear functions
     F_expr = build_function(F, dvs; expression = Val{false})[2]
     F_func! = eval(F_expr)
@@ -95,16 +151,17 @@ function deim(sys::ODESystem, snapshot, pod_dim::Integer; deim_dim::Integer = po
     reduce!(deim_reducer, TSVD())
     U = deim_reducer.rbasis # DEIM projection basis
 
-    indices = deim_interpolation_indices(U) # DEIM interpolation indices
-    # the DEIM projector (not DEIM basis) satisfies
-    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
-    projector = ((@view U[indices, :])' \ (U' * V))'
-    temp = substitute.(F[indices], (pod_dict,))
-    F̂ = projector * temp # DEIM approximation for nonlinear func F
+    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U)
 
-    Â = V' * A * V
-    ĝ = V' * g
-    deqs = D.(ŷ) ~ Â * ŷ + ĝ + F̂
+    reduced_deqs = D.(ŷ) ~ reduced_rhss
+    @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
 
-    @set! sys.eqs = [Symbolics.scalarize(deqs); eqs]
+    old_observed = ModelingToolkit.get_observed(sys)
+    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
+    new_observed = [old_observed; linear_projection_eqs]
+    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates)
+    @set! sys.observed = new_sorted_observed
+
+    inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
+    @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
 end
