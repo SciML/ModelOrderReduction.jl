@@ -20,14 +20,29 @@ D = Differential(t)
 test_equation = [D(x) ~ a*x]
 
 # test PCE generation
-bases = [a => GaussOrthoPoly(4)]
+n = 5
+bases = [a => GaussOrthoPoly(n)]
 pce = PCE([x], bases)
-@test length(pce.moments[1]) == 5
-@test length(pce.sym_basis) == 5
+@test length(pce.moments[1]) == n + 1
+@test length(pce.sym_basis) == n + 1
 @test isequal(pce.parameters, [a])
 
 # test PCE ansatz application
 eq = [eq.rhs for eq in test_equation]
 pce_eq = MO.apply_ansatz(eq, pce)[1]
-true_eq = pce.sym_basis[2]*dot(pce.moments[1],pce.sym_basis)
-@test isequal(pce_eq, expand(true_eq))
+true_eq = expand(pce.sym_basis[2]*dot(pce.moments[1],pce.sym_basis))
+@test isequal(pce_eq, true_eq)
+
+# test extraction of monomial coefficients
+coeffs = Dict(pce.sym_basis[i]*pce.sym_basis[2] => pce.moments[1][i] for i in 2:n+1)
+extracted_coeffs = MO.extract_coeffs(pce_eq, pce.sym_basis)
+@test all(isequal(coeffs[mono],extracted_coeffs[mono]) for mono in keys(coeffs))
+
+basis_indices = Dict([pce.sym_basis[i]*pce.sym_basis[2] => ([i-1, 1], [1,i-1]) for i in 2:n+1])
+extracted_coeffs, extracted_basis_indices = MO.extract_basismonomial_coeffs([pce_eq], pce)
+extracted_basis_indices = Dict(extracted_basis_indices)
+test1 = [isequal(basis_indices[mono][1], extracted_basis_indices[mono]) for mono in keys(basis_indices)]
+test2 = [isequal(basis_indices[mono][2], extracted_basis_indices[mono]) for mono in keys(basis_indices)]
+@test all(test1 + test2 .>= 1)
+
+
