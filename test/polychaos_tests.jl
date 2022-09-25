@@ -1,5 +1,5 @@
 using Test
-using ModelOrderReduction, Symbolics, PolyChaos
+using ModelOrderReduction, Symbolics, PolyChaos, LinearAlgebra
 MO = ModelOrderReduction
 
 # testing extraction of independent variables 
@@ -25,3 +25,9 @@ pce = PCE([x], bases)
 @test length(pce.moments[1]) == 5
 @test length(pce.sym_basis) == 5
 @test isequal(pce.parameters, [a])
+
+# test PCE ansatz application
+eq = [eq.rhs for eq in test_equation]
+pce_eq = MO.apply_ansatz(eq, pce)[1]
+true_eq = pce.sym_basis[2]*dot(pce.moments[1],pce.sym_basis)
+@test isequal(pce_eq, expand(true_eq))
