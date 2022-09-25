@@ -13,8 +13,15 @@ MO = ModelOrderReduction
 @test isequal(MO.get_independent_vars(collect(v)), [[t] for i in 1:length(v)])
 @test isequal(MO.get_independent_vars(collect(x)), [[t,z] for i in 1:length(v)])
 
-# testing PCE expansion generation
+# test equation for throughout:
 @parameters a
 @variables t, x(t)
 D = Differential(t)
 test_equation = [D(x) ~ a*x]
+
+# test PCE generation
+bases = [a => GaussOrthoPoly(4)]
+pce = PCE([x], bases)
+@test length(pce.moments[1]) == 5
+@test length(pce.sym_basis) == 5
+@test isequal(pce.parameters, [a])

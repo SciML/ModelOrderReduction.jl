@@ -1,5 +1,7 @@
 using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
+export PCE 
+
 include("PCE_utils.jl")
 # for now only consider tensor grid bases
 # with degree equal across all bases
