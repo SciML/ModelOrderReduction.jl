@@ -93,6 +93,14 @@ function apply_ansatz(eqs::AbstractVector, pce::PCE)
 end
 
 # 2. extract PCE expansion coeffs 
+function extract_basismonomial_coeffs(eqs::AbstractVector, pce::PCE)
+    basismonomial_coeffs = [extract_coeffs(eq, pce.sym_basis) for eq in eqs]
+    basismonomial_indices = []
+    for coeffs in basismonomial_coeffs
+        union!(basismonomial_indices, [mono => get_basis_indices(mono) for mono in keys(coeffs)])
+    end
+    return basismonomial_coeffs, basismonomial_indices
+end
 
 # 3. compute inner products
 
