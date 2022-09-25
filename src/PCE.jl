@@ -67,3 +67,33 @@ function (pce::PCE)(moment_vals, parameter_vals::Number)
     return pce(moment_vals, reshape([parameter_vals],1,1))
 end
 
+# 1. apply PCE ansatz
+function generate_parameter_pce(pce::PCE)
+    par_dim = length(pce.parameters)
+    par_pce = Vector{Pair{eltype(pce.parameters), eltype(pce.sym_basis)}}(undef, par_dim)
+    for (i, bases) in enumerate(pce.bases)
+        p, op = bases
+        par_pce[i] = p => pce.sym_basis[i+1] + op.α[1]
+    end
+    return par_pce
+end
+function substitute_parameters(eqs::AbstractVector, pce::PCE)
+    par_pce = generate_parameter_pce(pce)
+    subs_eqs = [substitute(eq, par_pce) for eq in eqs]
+    return subs_eqs
+end
+function substitute_pce_ansatz(eqs::AbstractVector, pce::PCE)
+    subs_eqs = [expand(expand(substitute(eq, pce.ansatz))) for eq in eqs]
+    return subs_eqs
+end
+function apply_ansatz(eqs::AbstractVector, pce::PCE)
+    return substitute_pce_ansatz(substitute_parameters(eqs, pce), pce)
+end
+
+# 2. extract PCE expansion coeffs 
+
+# 3. compute inner products
+
+# 4. Galerkin projection
+
+# 5. combine everything to high-level interface
