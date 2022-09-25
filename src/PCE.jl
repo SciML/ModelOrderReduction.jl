@@ -135,4 +135,13 @@ function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
     return projected_eqs
 end
 
-# 5. combine everything to high-level interface
+# 5. combine everything
+function pce_galerkin(eqs::AbstractVector, pce::PCE)
+    expanded_eqs = apply_ansatz(eqs, pce)
+    basismonomial_coeffs, basismonomial_indices = extract_basismonomial_coeffs(expanded_eqs, pce)
+    scalar_products = eval_scalar_products(basismonomial_indices, pce)
+    projected_eqs = galerkin_projection(basismonomial_coeffs, scalar_products, pce)
+    return projected_eqs
+end
+
+# 6. high-level interface
