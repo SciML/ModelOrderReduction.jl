@@ -1,6 +1,6 @@
 using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
-export PCE 
+export PCE, moment_equations
 
 include("PCE_utils.jl")
 # for now only consider tensor grid bases
