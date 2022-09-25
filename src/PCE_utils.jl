@@ -89,6 +89,9 @@ function get_basis_indices(mono::Num)
 end
 
 # bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
+# PR to PolyChaos -> remove unnecessarily restrictive constructors and allow construction from measures
+#                 -> also expose number of points used for quadrature generation for general orthogonal polys
+#
 measure_parameters(m::AbstractMeasure) = []
 measure_parameters(m::Measure) = m.pars
 measure_parameters(m::JacobiMeasure) = [m.ashapeParameter, m.bshapeParameter]
