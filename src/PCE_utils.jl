@@ -69,3 +69,20 @@ extract_coeffs(expr::Num, vars::Set) = extract_coeffs(Symbolics.unwrap.(expr), v
 extract_coeffs(expr::Num, vars::AbstractArray) = extract_coeffs(Symbolics.unwrap.(expr), vars)
 extract_coeffs(expr, vars::AbstractArray{<:Num}) = extract_coeffs(expr, Symbolics.unwrap.(vars))
 extract_coeffs(expr, vars::AbstractArray) = extract_coeffs(expr, Set(vars))
+
+function get_basis_indices(mono::Symbolics.Mul)
+    basis_indices = Int[]
+    for (term, pow) in mono.dict
+        append!(basis_indices, (arguments(term)[end] - 1)*ones(Int, pow))
+    end
+    return basis_indices
+end
+function get_basis_indices(mono::Symbolics.Term)
+    return [arguments(mono)[end] - 1]
+end
+function get_basis_indices(mono::Symbolics.Pow)
+    return (arguments(mono.base)[end] - 1)*ones(Int, mono.exp)
+end
+function get_basis_indices(mono::Num)
+    return get_basis_indices(Symbolics.unwrap(mono))
+end
