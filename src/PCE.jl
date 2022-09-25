@@ -167,8 +167,10 @@ function moment_equations(sys::ODESystem, pce::PCE)
     return pce_system, pce_eval
 end
 
-# 6b. apply pce to algebraic equations
+# 6b. apply pce to implicit & mass-matrix ODE/DAEs
 
-# 6c. apply pce to control problems
+# 6c. apply pce to algebraic equations
 
-# 6d. ? 
+# 6d. apply pce to control problems
+
+# 6e. ? 
