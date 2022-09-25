@@ -123,5 +123,16 @@ function eval_scalar_products(mono_indices, pce::PCE)
 end
 
 # 4. Galerkin projection
+function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
+    projected_eqs = []
+    for i in eachindex(bm_coeffs)
+        eqs = []
+        for k in 1:dim(pce.pc_basis)
+            push!(eqs, sum(bm_coeffs[i][mono]*scalar_products[k][mono] for mono in keys(bm_coeffs[i])))
+        end
+        push!(projected_eqs, eqs)
+    end
+    return projected_eqs
+end
 
 # 5. combine everything to high-level interface
