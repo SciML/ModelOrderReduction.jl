@@ -1,5 +1,6 @@
 using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
+include("PCE_utils.jl")
 # for now only consider tensor grid bases
 # with degree equal across all bases
 # need to adjust in PolyChaos
@@ -65,5 +66,4 @@ end
 function (pce::PCE)(moment_vals, parameter_vals::Number)
     return pce(moment_vals, reshape([parameter_vals],1,1))
 end
-
 
