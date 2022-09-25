@@ -70,6 +70,7 @@ extract_coeffs(expr::Num, vars::AbstractArray) = extract_coeffs(Symbolics.unwrap
 extract_coeffs(expr, vars::AbstractArray{<:Num}) = extract_coeffs(expr, Symbolics.unwrap.(vars))
 extract_coeffs(expr, vars::AbstractArray) = extract_coeffs(expr, Set(vars))
 
+# extracting the indices of the factors of as basismonomial
 function get_basis_indices(mono::Symbolics.Mul)
     basis_indices = Int[]
     for (term, pow) in mono.dict
@@ -85,4 +86,148 @@ function get_basis_indices(mono::Symbolics.Pow)
 end
 function get_basis_indices(mono::Num)
     return get_basis_indices(Symbolics.unwrap(mono))
+end
+
+# bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
+measure_parameters(m::AbstractMeasure) = []
+measure_parameters(m::Measure) = m.pars
+measure_parameters(m::JacobiMeasure) = [m.ashapeParameter, m.bshapeParameter]
+measure_parameters(m::genLaguerreMeasure) = [m.shapeParameter]
+measure_parameters(m::genHermiteMeasure) = [m.muParameter]
+measure_parameters(m::MeixnerPollaczekMeasure) = [m.λParameter, m.ϕParameter]
+measure_parameters(m::Beta01Measure) = [m.ashapeParameter, m.bshapeParameter]
+measure_parameters(m::GammaMeasure) = [m.shapeParameter, m.rateParameter]
+
+recursion_coeffs(m::JacobiMeasure, deg::Int) = rm_jacobi(deg+1, m.ashapeParameter, m.bshapeParameter)
+function OrthoPoly(m::JacobiMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return JacobiOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::JacobiOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return JacobiOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::genLaguerreMeasure, deg::Int) = rm_laguerre(deg+1, m.shapeParameter)
+function OrthoPoly(m::genLaguerreMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return genLaguerreOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::genLaguerreOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return genLaguerreorthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::MeixnerPollaczekMeasure, deg::Int) = rm_meixner_pollaczek(deg+1, m.λParameter, m.ϕParameter)
+function OrthoPoly(m::MeixnerPollaczekMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return MeixnerPollaczekOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::MeixnerPollaczekOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return MeixnerPollaczekOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::Beta01Measure, deg::Int) = r_scale(1 / beta(m.ashapeParameter, m.bshapeParameter), rm_jacobi01(deg + 1, m.bshapeParameter - 1.0, m.ashapeParameter - 1.0)...)
+function OrthoPoly(m::Beta01Measure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return Beta01OrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::Beta01OrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return Beta01OrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::GammaMeasure, deg::Int) = r_scale((m.rateParameter^m.shapeParameter) / gamma(m.shapeParameter), rm_laguerre(deg+1, m.shapeParameter - 1.0)...)
+function OrthoPoly(m::GammaMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return GammaOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::GammaOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return GammaOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::genHermiteMeasure, deg::Int) = rm_hermite(deg+1, m.muParameter)
+function OrthoPoly(m::genHermiteMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return genHermiteOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::genHermiteOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return genHermiteOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::HermiteMeasure, deg::Int) = rm_hermite(deg+1)
+function OrthoPoly(m::HermiteMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return HermiteOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::HermiteOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return HermiteOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::LaguerreMeasure, deg::Int) = rm_laguerre(deg+1)
+function OrthoPoly(m::LaguerreMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return LaguerreOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::LaguerreOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return LaguerreOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::Uniform01Measure, deg::Int) = r_scale(1.0, rm_legendre01(deg+1)...)
+function OrthoPoly(m::Uniform01Measure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return Uniform01OrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::Uniform01OrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return Uniform01OrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::Uniform_11Measure, deg::Int) = r_scale(0.5, rm_legendre(deg+1)...)
+function OrthoPoly(m::Uniform_11Measure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return Uniform_11OrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::Uniform_11OrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return Uniform_11OrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::GaussMeasure, deg::Int) = r_scale(1/sqrt(2π), rm_hermite_prob(deg+1)...)
+function OrthoPoly(m::GaussMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return GaussOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::GaussOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return GaussOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::LegendreMeasure, deg::Int) = rm_legendre(deg+1)
+function OrthoPoly(m::LegendreMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return LegendreOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::LegendreOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return LegendreOrthoPoly(deg, ps...)
+end
+
+recursion_coeffs(m::LogisticMeasure, deg::Int) = r_scale(1.0, rm_logistic(deg+1)...)
+function OrthoPoly(m::LogisticMeasure, deg::Int)
+    α, β = recursion_coeffs(m, deg)
+    return LogisticOrthoPoly(deg, α, β, m)
+end
+function bump_degree(op::LogisticOrthoPoly, deg::Int)
+    ps = measure_parameters(op.measure)
+    return LogisticOrthoPoly(deg, ps...)
+end
+
+function bump_degree(op::MultiOrthoPoly, deg::Int)
+    return MultiOrthoPoly(bump_degree.(op.uni, deg), deg)
 end

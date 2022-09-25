@@ -103,6 +103,24 @@ function extract_basismonomial_coeffs(eqs::AbstractVector, pce::PCE)
 end
 
 # 3. compute inner products
+function maximum_degree(mono_indices::AbstractVector, pce::PCE)
+    max_degree = 0
+    for (mono, ind) in mono_indices
+        max_degree = max(max_degree, maximum(sum(ind[i]*pce.pc_basis.ind[i+1] for i in eachindex(ind))))
+    end
+    return max_degree
+end
+function eval_scalar_products(mono_indices, pce::PCE)
+    max_degree = maximum_degree(mono_indices, pce)
+    degree_quadrature = ceil(Int, 0.5 * (max_degree + deg(pce.pc_basis) + 1))
+    integrator_pce = bump_degree(pce.pc_basis, degree_quadrature)
+
+    scalar_products = Dict()
+    for k in 1:dim(pce.pc_basis)
+        scalar_products[k] = Dict([mono => computeSP([ind..., k-1], integrator_pce) for (mono, ind) in mono_indices])
+    end
+    return scalar_products
+end
 
 # 4. Galerkin projection
 
