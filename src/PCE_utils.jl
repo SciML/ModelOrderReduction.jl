@@ -1,3 +1,5 @@
+import PolyChaos.computeSP2
+
 # getting independent variables
 function get_independent_vars(var)
     return []
@@ -185,4 +187,13 @@ end
 
 function bump_degree(op::MultiOrthoPoly, deg::Int)
     return MultiOrthoPoly(bump_degree.(op.uni, deg), deg)
+end
+
+# extending computeSP2 for multivariate orthogonal polys
+function computeSP2(pc::MultiOrthoPoly)
+    n = length(pc.uni)
+    m = dim(pc)
+    uni_SP2 = [computeSP2(op) for op in pc.uni]
+    multi_SP2 = [prod(uni_SP2[j][pc.ind[i,j]+1] for j in 1:n) for i in 1:m]
+    return multi_SP2
 end

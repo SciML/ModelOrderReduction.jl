@@ -145,3 +145,30 @@ function pce_galerkin(eqs::AbstractVector, pce::PCE)
 end
 
 # 6. high-level interface
+# 6a. apply pce to explicit ODE
+function moment_equations(sys::ODESystem, pce::PCE)
+    eqs = [eq.rhs for eq in equations(sys)]
+    scaling_factors = computeSP2(pce.pc_basis)
+    moment_eqs = reduce(vcat, [eq ./ scaling_factors for eq in pce_galerkin(eqs, pce)])
+    iv = independent_variable(sys)
+    params = setdiff(parameters(sys), pce.parameters)
+    D = Differential(iv)
+    moments = reduce(vcat, pce.moments)
+    name = Symbol(String(nameof(sys))*"_pce")
+    pce_system = ODESystem([D(moments[i]) ~ moment_eqs[i] for i in eachindex(moments)], 
+                            iv, moments, params, name = name)
+    
+    n_moments = dim(pce.pc_basis)
+    n_states = length(states(sys))
+    pce_eval = function (moment_vals, parameter_values) 
+                    shape_state = [moment_vals[i*n_moments+1:(i+1)*n_moments] for i in 0:n_states-1]
+                    return pce(shape_state, parameter_values)
+               end
+    return pce_system, pce_eval
+end
+
+# 6b. apply pce to algebraic equations
+
+# 6c. apply pce to control problems
+
+# 6d. ? 
