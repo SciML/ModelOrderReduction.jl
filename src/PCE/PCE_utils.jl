@@ -50,6 +50,9 @@ end
 
 function extract_coeffs(expr::Symbolics.Add, vars::Set)
     coeffs = Dict()
+    if !iszero(expr.coeff)
+        coeffs[Val(1)] = expr.coeff
+    end
     for term in keys(expr.dict)
         num_coeff = expr.dict[term]
         var_coeff, mono = split_term(term, vars)
@@ -88,6 +91,9 @@ function get_basis_indices(mono::Symbolics.Pow)
 end
 function get_basis_indices(mono::Num)
     return get_basis_indices(Symbolics.unwrap(mono))
+end
+function get_basis_indices(::Val{1})
+    return [0]
 end
 
 # bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
