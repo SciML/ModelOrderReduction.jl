@@ -1,6 +1,6 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu"]
+authors = ["Bowen S. Zhu", "Rahul Manavalan"]
 version = "0.1.0"
 
 [deps]
@@ -12,8 +12,12 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+RandomizedLinAlg = "0448d7d9-159c-5637-8537-fd72090fea46"
+TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
+TSVD = "0.4"
+RandomizedLinAlg = "0.1"
 julia = "1.6"
 
 [extras]
