@@ -1,5 +1,4 @@
-using Test
-using ModelOrderReduction, Symbolics, PolyChaos, ModelingToolkit, LinearAlgebra
+using Symbolics, PolyChaos, ModelingToolkit, LinearAlgebra
 MO = ModelOrderReduction
 
 include("PCETestUtils.jl")
