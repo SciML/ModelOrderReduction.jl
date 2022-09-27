@@ -1,5 +1,4 @@
 using Symbolics, PolyChaos, ModelingToolkit, LinearAlgebra
-MO = ModelOrderReduction
 
 include("PCETestUtils.jl")
 
@@ -7,13 +6,13 @@ include("PCETestUtils.jl")
 @variables t, z, u(t), v(t)[1:4], w(t, z), x(t, z)[1:4]
 
 @testset "PCE: get_independent_vars test" begin
-    @test isequal(MO.get_independent_vars(u), [t])
-    @test isequal(MO.get_independent_vars(v[1]), [t])
-    @test isequal(MO.get_independent_vars(v[2]), [t])
-    @test isequal(MO.get_independent_vars(w), [t, z])
-    @test isequal(MO.get_independent_vars(x[2]), [t, z])
-    @test isequal(MO.get_independent_vars(collect(v)), [[t] for i in 1:length(v)])
-    @test isequal(MO.get_independent_vars(collect(x)), [[t, z] for i in 1:length(v)])
+    @test isequal(MOR.get_independent_vars(u), [t])
+    @test isequal(MOR.get_independent_vars(v[1]), [t])
+    @test isequal(MOR.get_independent_vars(v[2]), [t])
+    @test isequal(MOR.get_independent_vars(w), [t, z])
+    @test isequal(MOR.get_independent_vars(x[2]), [t, z])
+    @test isequal(MOR.get_independent_vars(collect(v)), [[t] for i in 1:length(v)])
+    @test isequal(MOR.get_independent_vars(collect(x)), [[t, z] for i in 1:length(v)])
 end
 
 # test equation for throughout:
@@ -34,7 +33,7 @@ end
 
 # test PCE ansatz application
 eq = [eq.rhs for eq in test_equation]
-pce_eq = MO.apply_ansatz(eq, pce)[1]
+pce_eq = MOR.apply_ansatz(eq, pce)[1]
 @testset "PCE: apply_ansatz test" begin
     true_eq = expand(pce.sym_basis[2] * dot(pce.moments[1], pce.sym_basis) + 4)
     @test isequal(pce_eq, true_eq)
@@ -50,10 +49,10 @@ basis_indices = Dict{Any, Any}(pce.sym_basis[i] * pce.sym_basis[2] => ([i - 1, 1
 basis_indices[Val(1)] = [[0], [0]]
 
 @testset "PCE: basismonomial extraction test" begin
-    extracted_coeffs = MO.extract_coeffs(pce_eq, pce.sym_basis)
+    extracted_coeffs = MOR.extract_coeffs(pce_eq, pce.sym_basis)
     @test all(isequal(coeffs[mono], extracted_coeffs[mono]) for mono in keys(coeffs))
 
-    extracted_coeffs, extracted_basis_indices = MO.extract_basismonomial_coeffs([pce_eq],
+    extracted_coeffs, extracted_basis_indices = MOR.extract_basismonomial_coeffs([pce_eq],
                                                                                 pce)
     extracted_basis_indices = Dict(extracted_basis_indices)
     test1 = [isequal(basis_indices[mono][1], extracted_basis_indices[mono])
@@ -65,8 +64,8 @@ end
 
 # test Galerkin projection
 @testset "PCE: galerkin projection test" begin
-    moment_eqs = MO.pce_galerkin(eq, pce)
-    integrator = MO.bump_degree(pce.pc_basis, n + 1)
+    moment_eqs = MOR.pce_galerkin(eq, pce)
+    integrator = MOR.bump_degree(pce.pc_basis, n + 1)
 
     true_moment_eqs = Num[]
     for j in 0:n
@@ -84,4 +83,37 @@ end
     @test integrator.measure.measures[1] isa typeof(pce.pc_basis.measure.measures[1])
     @test all([isapprox_sym(moment_eqs[1][i], true_moment_eqs[i])
                for i in eachindex(true_moment_eqs)])
+end
+
+# test bump_degree
+@testset "PCE: bump_degree test" begin
+    n = 5
+    n_bumped = 10
+    shape_a = 0.1
+    shape_b = 0.2
+    shape = 0.3
+    mu = 0.4
+    λ = 0.5
+    ϕ = 0.6
+    rate = 1.0
+    orthogonal_polynomials = [GaussOrthoPoly(n) => [],
+                              Uniform01OrthoPoly(n) => [],
+                              Uniform_11OrthoPoly(n) => [],
+                              GammaOrthoPoly(n,shape,rate) => [shape, rate],
+                              HermiteOrthoPoly(n) => [],
+                              JacobiOrthoPoly(n, shape_a, shape_b) => [shape_a, shape_b],
+                              LaguerreOrthoPoly(n) => [],
+                              LogisticOrthoPoly(n) => [],
+                              MeixnerPollaczekOrthoPoly(n,λ,ϕ) => [λ,ϕ],
+                              genHermiteOrthoPoly(n,mu) => [mu],
+                              genLaguerreOrthoPoly(n,shape) => [shape],
+                              LegendreOrthoPoly(n) => [],
+                              Beta01OrthoPoly(n,shape_a,shape_b) => [shape_a, shape_b]]
+    
+
+    for (op, params) in orthogonal_polynomials
+        bumped_op = MOR.bump_degree(op, n_bumped)
+        @test deg(bumped_op) == n_bumped
+        @test MOR.measure_parameters(bumped_op.measure) == params
+    end
 end

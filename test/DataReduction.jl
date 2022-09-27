@@ -1,6 +1,5 @@
 #--------- Data Reduction -----------------#
 using OrdinaryDiffEq
-const MOR = ModelOrderReduction
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
