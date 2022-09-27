@@ -119,7 +119,7 @@ function recursion_coeffs(m::JacobiMeasure, deg::Int)
 end
 function OrthoPoly(m::JacobiMeasure, deg::Int)
     α, β = recursion_coeffs(m, deg)
-    return JacobiOrthoPoly(deg, α, β, m)
+    return JacobiOrthoPoly(deg, α, β)
 end
 function bump_degree(op::JacobiOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
@@ -129,7 +129,7 @@ end
 recursion_coeffs(m::genLaguerreMeasure, deg::Int) = rm_laguerre(deg + 1, m.shapeParameter)
 function bump_degree(op::genLaguerreOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
-    return genLaguerreorthoPoly(deg, ps...)
+    return genLaguerreOrthoPoly(deg, ps...)
 end
 
 function recursion_coeffs(m::MeixnerPollaczekMeasure, deg::Int)
