@@ -43,10 +43,11 @@ and since $\left\langle \zeta_i, \zeta_j\right\rangle = \delta_{ij}$ it follows 
 \end{aligned}
 ```
 with initial condition
+```math
 \begin{aligned}
     z_i(0) = \left\langle x_0, \zeta_i \right\rangle. 
 \end{aligned}
-
+```
 These equations are referred to as the moment equations and can in principle be solved with any suitable IVP solution technique. 
 
 ## Example
