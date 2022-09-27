@@ -74,6 +74,7 @@ extract_coeffs(expr::Num, vars::Set) = extract_coeffs(Symbolics.unwrap.(expr), v
 extract_coeffs(expr::Num, vars::AbstractArray) = extract_coeffs(Symbolics.unwrap.(expr), vars)
 extract_coeffs(expr, vars::AbstractArray{<:Num}) = extract_coeffs(expr, Symbolics.unwrap.(vars))
 extract_coeffs(expr, vars::AbstractArray) = extract_coeffs(expr, Set(vars))
+extract_coeffs(expr::Number, vars::Set) = Dict(Val(1) => expr)
 
 # extracting the indices of the factors of as basismonomial
 function get_basis_indices(mono::Symbolics.Mul)

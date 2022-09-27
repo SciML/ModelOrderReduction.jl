@@ -1,6 +1,6 @@
 using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
-export PCE, moment_equations
+export PCE, moment_equations, pce_galerkin, mean, var
 
 include("PCE_utils.jl")
 # for now only consider tensor grid bases
@@ -112,12 +112,12 @@ function maximum_degree(mono_indices::AbstractVector, pce::PCE)
 end
 function eval_scalar_products(mono_indices, pce::PCE)
     max_degree = maximum_degree(mono_indices, pce)
-    degree_quadrature = ceil(Int, 0.5 * (max_degree + deg(pce.pc_basis) + 1))
+    degree_quadrature = max(ceil(Int, 0.5 * (max_degree + deg(pce.pc_basis) + 1)), deg(pce.pc_basis))
     integrator_pce = bump_degree(pce.pc_basis, degree_quadrature)
 
     scalar_products = Dict()
     for k in 1:dim(pce.pc_basis)
-        scalar_products[k] = Dict([mono => computeSP([ind..., k-1], integrator_pce) for (mono, ind) in mono_indices])
+        scalar_products[k] = Dict(mono => computeSP(vcat(ind,k-1), integrator_pce) for (mono, ind) in mono_indices)
     end
     return scalar_products
 end
@@ -174,3 +174,9 @@ end
 # 6d. apply pce to control problems
 
 # 6e. ? 
+
+
+# ToDo:
+# better support to evaluate the PCE
+# in particular => make evaluation of means, variances, etc evaluable from the object itself upon specification of the moment values
+# hinderance -> how do you provide the moments in a convenient format?
