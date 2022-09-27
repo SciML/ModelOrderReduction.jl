@@ -53,7 +53,7 @@ basis_indices[Val(1)] = [[0], [0]]
     @test all(isequal(coeffs[mono], extracted_coeffs[mono]) for mono in keys(coeffs))
 
     extracted_coeffs, extracted_basis_indices = MOR.extract_basismonomial_coeffs([pce_eq],
-                                                                                pce)
+                                                                                 pce)
     extracted_basis_indices = Dict(extracted_basis_indices)
     test1 = [isequal(basis_indices[mono][1], extracted_basis_indices[mono])
              for mono in keys(basis_indices)]
@@ -96,20 +96,21 @@ end
     λ = 0.5
     ϕ = 0.6
     rate = 1.0
-    orthogonal_polynomials = [GaussOrthoPoly(n) => [],
-                              Uniform01OrthoPoly(n) => [],
-                              Uniform_11OrthoPoly(n) => [],
-                              GammaOrthoPoly(n,shape,rate) => [shape, rate],
-                              HermiteOrthoPoly(n) => [],
-                              JacobiOrthoPoly(n, shape_a, shape_b) => [shape_a, shape_b],
-                              LaguerreOrthoPoly(n) => [],
-                              LogisticOrthoPoly(n) => [],
-                              MeixnerPollaczekOrthoPoly(n,λ,ϕ) => [λ,ϕ],
-                              genHermiteOrthoPoly(n,mu) => [mu],
-                              genLaguerreOrthoPoly(n,shape) => [shape],
-                              LegendreOrthoPoly(n) => [],
-                              Beta01OrthoPoly(n,shape_a,shape_b) => [shape_a, shape_b]]
-    
+    orthogonal_polynomials = [
+        GaussOrthoPoly(n) => [],
+        Uniform01OrthoPoly(n) => [],
+        Uniform_11OrthoPoly(n) => [],
+        GammaOrthoPoly(n, shape, rate) => [shape, rate],
+        HermiteOrthoPoly(n) => [],
+        JacobiOrthoPoly(n, shape_a, shape_b) => [shape_a, shape_b],
+        LaguerreOrthoPoly(n) => [],
+        LogisticOrthoPoly(n) => [],
+        MeixnerPollaczekOrthoPoly(n, λ, ϕ) => [λ, ϕ],
+        genHermiteOrthoPoly(n, mu) => [mu],
+        genLaguerreOrthoPoly(n, shape) => [shape],
+        LegendreOrthoPoly(n) => [],
+        Beta01OrthoPoly(n, shape_a, shape_b) => [shape_a, shape_b],
+    ]
 
     for (op, params) in orthogonal_polynomials
         bumped_op = MOR.bump_degree(op, n_bumped)
