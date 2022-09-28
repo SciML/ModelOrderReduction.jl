@@ -124,77 +124,56 @@ function bump_degree(op::genLaguerreOrthoPoly, deg::Int)
     return genLaguerreOrthoPoly(deg, ps...)
 end
 
-function recursion_coeffs(m::MeixnerPollaczekMeasure, deg::Int)
-    rm_meixner_pollaczek(deg + 1, m.λParameter, m.ϕParameter)
-end
 function bump_degree(op::MeixnerPollaczekOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return MeixnerPollaczekOrthoPoly(deg, ps...)
 end
 
-function recursion_coeffs(m::Beta01Measure, deg::Int)
-    r_scale(1 / beta(m.ashapeParameter, m.bshapeParameter),
-            rm_jacobi01(deg + 1, m.bshapeParameter - 1.0, m.ashapeParameter - 1.0)...)
-end
 function bump_degree(op::Beta01OrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return Beta01OrthoPoly(deg, ps...)
 end
 
-function recursion_coeffs(m::GammaMeasure, deg::Int)
-    r_scale((m.rateParameter^m.shapeParameter) / gamma(m.shapeParameter),
-            rm_laguerre(deg + 1, m.shapeParameter - 1.0)...)
-end
 function bump_degree(op::GammaOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return GammaOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::genHermiteMeasure, deg::Int) = rm_hermite(deg + 1, m.muParameter)
 function bump_degree(op::genHermiteOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return genHermiteOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::HermiteMeasure, deg::Int) = rm_hermite(deg + 1)
 function bump_degree(op::HermiteOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return HermiteOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::LaguerreMeasure, deg::Int) = rm_laguerre(deg + 1)
 function bump_degree(op::LaguerreOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return LaguerreOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::Uniform01Measure, deg::Int) = r_scale(1.0, rm_legendre01(deg + 1)...)
 function bump_degree(op::Uniform01OrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return Uniform01OrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::Uniform_11Measure, deg::Int) = r_scale(0.5, rm_legendre(deg + 1)...)
 function bump_degree(op::Uniform_11OrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return Uniform_11OrthoPoly(deg, ps...)
 end
 
-function recursion_coeffs(m::GaussMeasure, deg::Int)
-    r_scale(1 / sqrt(2π), rm_hermite_prob(deg + 1)...)
-end
 function bump_degree(op::GaussOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return GaussOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::LegendreMeasure, deg::Int) = rm_legendre(deg + 1)
 function bump_degree(op::LegendreOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return LegendreOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::LogisticMeasure, deg::Int) = r_scale(1.0, rm_logistic(deg + 1)...)
 function bump_degree(op::LogisticOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return LogisticOrthoPoly(deg, ps...)
