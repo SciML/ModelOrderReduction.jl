@@ -65,7 +65,7 @@ function extract_coeffs(expr::Symbolics.Add, vars::Set)
     return coeffs
 end
 
-function extract_coeffs(expr::T, vars::Set) where T <: Union{Symbolics.Sym, Symbolics.Mul}
+function extract_coeffs(expr::T, vars::Set) where {T <: Union{Symbolics.Sym, Symbolics.Mul}}
     coeff, mono = split_term(expr, vars)
     return Dict(mono => coeff)
 end

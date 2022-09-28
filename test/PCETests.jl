@@ -18,23 +18,23 @@ end
 @testset "PCE: constructor test" begin
     @variables y
     n = 5
-    test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n+1)]
-    warn_message = "Currently only bases with identical degrees are supported."*
+    test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n + 1)]
+    warn_message = "Currently only bases with identical degrees are supported." *
                    "\nProceed with minimum common degree = $n"
     @test_logs (:warn, warn_message) PCE([y], test_basis)
 
     test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n)]
     pce = PCE([y], test_basis)
-    @test length(pce.moments[1]) == binomial(n+2,2)
-    @test length(pce.sym_basis) == binomial(n+2,2)
-    @test isequal(pce.parameters, [a,b])
+    @test length(pce.moments[1]) == binomial(n + 2, 2)
+    @test length(pce.sym_basis) == binomial(n + 2, 2)
+    @test isequal(pce.parameters, [a, b])
 end
 
 # test equation for throughout:
 @parameters a, b
 @variables t, y(t)
 D = Differential(t)
-test_equation = [D(y) ~ a * y + 4*b]
+test_equation = [D(y) ~ a * y + 4 * b]
 
 # set up pce
 bases = [a => GaussOrthoPoly(n)]
@@ -43,14 +43,14 @@ eq = [eq.rhs for eq in test_equation]
 pce_eq = MOR.apply_ansatz(eq, pce)[1]
 
 @testset "PCE: apply_ansatz test" begin
-    true_eq = expand(pce.sym_basis[2] * dot(pce.moments[1], pce.sym_basis) + 4*b)
+    true_eq = expand(pce.sym_basis[2] * dot(pce.moments[1], pce.sym_basis) + 4 * b)
     @test isequal(pce_eq, true_eq)
 end
 
 # test extraction of monomial coefficients
 coeffs = Dict{Any, Any}(pce.sym_basis[i] * pce.sym_basis[2] => pce.moments[1][i]
                         for i in 1:(n + 1))
-coeffs[Val(1)] = 4.0*b
+coeffs[Val(1)] = 4.0 * b
 basis_indices = Dict{Any, Any}(pce.sym_basis[i] * pce.sym_basis[2] => ([i - 1, 1],
                                                                        [1, i - 1])
                                for i in 1:(n + 1))
@@ -81,7 +81,7 @@ end
     λ = 0.5
     ϕ = 0.6
     rate = 1.0
-    my_measure = Measure("my_measure", t -> 1+t, (-1,1), false, Dict())
+    my_measure = Measure("my_measure", t -> 1 + t, (-1, 1), false, Dict())
     my_poly = OrthoPoly("my_poly", n, my_measure)
     orthogonal_polynomials = [
         my_poly => Dict(),
@@ -130,10 +130,11 @@ end
                for i in eachindex(true_moment_eqs)])
 
     # check generation of moment equations
-    @named test_system = ODESystem(test_equation, t, [y], [a,b])
+    @named test_system = ODESystem(test_equation, t, [y], [a, b])
     moment_system, pce_eval = moment_equations(test_system, pce)
     moment_eqs = equations(moment_system)
-    moment_eqs = [moment_eqs[i].rhs * computeSP([i-1,i-1], integrator) for i in eachindex(moment_eqs)]
+    moment_eqs = [moment_eqs[i].rhs * computeSP([i - 1, i - 1], integrator)
+                  for i in eachindex(moment_eqs)]
     @test isequal(parameters(moment_system), [b])
     @test nameof(moment_system) == :test_system_pce
     @test isequal(states(moment_system), reduce(vcat, pce.moments))
