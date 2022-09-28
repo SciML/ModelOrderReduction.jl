@@ -38,6 +38,7 @@ D = Differential(t)
 test_equation = [D(y) ~ a * y + 4 * b]
 
 # set up pce
+n = 5
 bases = [a => GaussOrthoPoly(n)]
 pce = PCE([y], bases)
 eq = [eq.rhs for eq in test_equation]
