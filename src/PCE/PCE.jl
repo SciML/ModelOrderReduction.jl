@@ -28,7 +28,8 @@ function PCE(states, bases::AbstractVector{<:Pair})
     degs = [deg(op) for op in ops]
     min_deg = minimum(degs)
     if !(all(isequal(first(degs)), degs)) # allequal
-        @warn "Currently only bases with identical degrees are supported. Proceed with minimum common degree = $min_deg"
+        @warn "Currently only bases with identical degrees are supported."*
+              "\nProceed with minimum common degree = $min_deg"
     end
     pc_basis = MultiOrthoPoly(ops, min_deg)
     n_basis = size(pc_basis.ind, 1)

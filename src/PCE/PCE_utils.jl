@@ -36,7 +36,7 @@ function split_term(term::Symbolics.Pow, vars)
     if term.base in vars
         return 1.0, term
     else
-        return term, 1.0
+        return term, Val(1)
     end
 end
 
@@ -44,7 +44,7 @@ function split_term(term::T, vars) where {T <: Union{Symbolics.Term, Symbolics.S
     if term in vars
         return 1.0, term
     else
-        return term, 1.0
+        return term, Val(1)
     end
 end
 
@@ -65,7 +65,7 @@ function extract_coeffs(expr::Symbolics.Add, vars::Set)
     return coeffs
 end
 
-function extract_coeffs(expr::Symbolics.Mul, vars::Set)
+function extract_coeffs(expr::T, vars::Set) where T <: Union{Symbolics.Sym, Symbolics.Mul}
     coeff, mono = split_term(expr, vars)
     return Dict(mono => coeff)
 end
