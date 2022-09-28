@@ -16,6 +16,7 @@ end
 
 # test PCE generation
 @testset "PCE: constructor test" begin
+    @parameters a, b
     @variables y
     n = 5
     test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n + 1)]
