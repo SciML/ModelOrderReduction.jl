@@ -96,7 +96,10 @@ end
     λ = 0.5
     ϕ = 0.6
     rate = 1.0
+    my_measure = Measure("my_measure", t -> 1+t, (-1,1), false, Dict())
+    my_poly = OrthoPoly("my_poly", n, my_measure)
     orthogonal_polynomials = [
+        my_poly => Dict(),
         GaussOrthoPoly(n) => [],
         Uniform01OrthoPoly(n) => [],
         Uniform_11OrthoPoly(n) => [],

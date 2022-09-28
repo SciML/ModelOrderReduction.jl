@@ -105,6 +105,7 @@ end
 # PR to PolyChaos -> remove unnecessarily restrictive constructors and allow construction from measures
 #                 -> also expose number of points used for quadrature generation for general orthogonal polys
 #
+
 measure_parameters(m::AbstractMeasure) = []
 measure_parameters(m::Measure) = m.pars
 measure_parameters(m::JacobiMeasure) = [m.ashapeParameter, m.bshapeParameter]
@@ -113,6 +114,10 @@ measure_parameters(m::genHermiteMeasure) = [m.muParameter]
 measure_parameters(m::MeixnerPollaczekMeasure) = [m.λParameter, m.ϕParameter]
 measure_parameters(m::Beta01Measure) = [m.ashapeParameter, m.bshapeParameter]
 measure_parameters(m::GammaMeasure) = [m.shapeParameter, m.rateParameter]
+
+function bump_degree(op::OrthoPoly, deg::Int)
+    return OrthoPoly(op.name, deg, op.measure)
+end
 
 function bump_degree(op::JacobiOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
