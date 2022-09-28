@@ -114,19 +114,11 @@ measure_parameters(m::MeixnerPollaczekMeasure) = [m.λParameter, m.ϕParameter]
 measure_parameters(m::Beta01Measure) = [m.ashapeParameter, m.bshapeParameter]
 measure_parameters(m::GammaMeasure) = [m.shapeParameter, m.rateParameter]
 
-function recursion_coeffs(m::JacobiMeasure, deg::Int)
-    rm_jacobi(deg + 1, m.ashapeParameter, m.bshapeParameter)
-end
-function OrthoPoly(m::JacobiMeasure, deg::Int)
-    α, β = recursion_coeffs(m, deg)
-    return JacobiOrthoPoly(deg, α, β)
-end
 function bump_degree(op::JacobiOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return JacobiOrthoPoly(deg, ps...)
 end
 
-recursion_coeffs(m::genLaguerreMeasure, deg::Int) = rm_laguerre(deg + 1, m.shapeParameter)
 function bump_degree(op::genLaguerreOrthoPoly, deg::Int)
     ps = measure_parameters(op.measure)
     return genLaguerreOrthoPoly(deg, ps...)
