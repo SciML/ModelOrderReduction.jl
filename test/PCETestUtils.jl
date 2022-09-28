@@ -1,15 +1,11 @@
 function isapprox_sym(exprA, exprB, atol = 1e-6)
     exprA = Symbolics.unwrap(exprA)
     exprB = Symbolics.unwrap(exprB)
-    approx_equal = false
-    if typeof(exprA) == typeof(exprB)
-        approx_equal = isapprox_sym(exprA, exprB, atol)
-    end
-    return approx_equal
+    return isapprox_sym(exprA, exprB)
 end
 
-function isapprox_sym(exprA::T, exprB::T,
-                      atol = 1e-6) where {T <: Union{Symbolics.Mul, Symbolics.Add}}
+function isapprox_sym(exprA::TA, exprB::TB,
+                      atol = 1e-6) where {TA, TB <: Union{Symbolics.Mul, Symbolics.Add}}
     approx_equal = true
     approx_equal = isapprox(exprA.coeff, exprB.coeff, atol = atol)
     approx_equal = keys(exprA.dict) == keys(exprB.dict)
