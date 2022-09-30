@@ -140,8 +140,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     A, g, F = linear_terms(rhs, dvs)
 
     # generate an in-place function from the symbolic expression of the nonlinear functions
-    F_expr = build_function(F, dvs; expression = Val{false})[2]
-    F_func! = eval(F_expr)
+    F_func! = build_function(F, dvs; expression = Val{false})[2]
     nonlinear_snapshot = similar(snapshot) # snapshot matrix of nonlinear terms
     for i in 1:size(snapshot, 2) # iterate through time instances
         F_func!(view(nonlinear_snapshot, :, i), view(snapshot, :, i))
