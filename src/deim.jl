@@ -67,7 +67,7 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
               constant_part::AbstractVector, nonlinear_part::AbstractVector,
               reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
-              nonlinear_projection_matrix::AbstractMatrix)
+              nonlinear_projection_matrix::AbstractMatrix; kwargs...)
     # rename variables for convenience
     y = full_vars
     A = linear_coeffs
@@ -85,7 +85,7 @@ function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
     # the DEIM projector (not DEIM basis) satisfies
     # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
     projector = ((@view U[indices, :])' \ (U' * V))'
-    temp = substitute.(F[indices], (linear_projection_dict,))
+    temp = substitute.(F[indices], (linear_projection_dict,); kwargs...)
     F̂ = projector * temp # DEIM approximation for nonlinear func F
 
     Â = V' * A * V
@@ -112,13 +112,13 @@ nonlinear terms, which is computed by executing the runtime-generated function f
 nonlinear expressions.
 """
 function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
-              deim_dim::Integer = pod_dim,
-              name::Symbol = Symbol(nameof(sys), :_deim))::ODESystem
+              deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
+              kwargs...)::ODESystem
     @set! sys.name = name
 
     # handle ODESystem.substitutions
     # https://github.com/SciML/ModelingToolkit.jl/issues/1754
-    sys = tearing_substitution(sys)
+    sys = tearing_substitution(sys; kwargs...)
 
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
@@ -140,7 +140,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     A, g, F = linear_terms(rhs, dvs)
 
     # generate an in-place function from the symbolic expression of the nonlinear functions
-    F_func! = build_function(F, dvs; expression = Val{false})[2]
+    F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
     nonlinear_snapshot = similar(snapshot) # snapshot matrix of nonlinear terms
     for i in 1:size(snapshot, 2) # iterate through time instances
         F_func!(view(nonlinear_snapshot, :, i), view(snapshot, :, i))
@@ -150,7 +150,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     reduce!(deim_reducer, TSVD())
     U = deim_reducer.rbasis # DEIM projection basis
 
-    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U)
+    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U; kwargs...)
 
     reduced_deqs = D.(ŷ) ~ reduced_rhss
     @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
@@ -158,7 +158,8 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     old_observed = ModelingToolkit.get_observed(sys)
     fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
     new_observed = [old_observed; linear_projection_eqs]
-    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates)
+    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates;
+                                                            kwargs...)
     @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
