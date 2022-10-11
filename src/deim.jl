@@ -114,6 +114,7 @@ nonlinear expressions.
 function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
               deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
               kwargs...)::ODESystem
+    sys = deepcopy(sys)
     @set! sys.name = name
 
     # handle ODESystem.substitutions
