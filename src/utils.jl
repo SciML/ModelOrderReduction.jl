@@ -76,11 +76,11 @@ function linear_terms(exprs::AbstractVector, vars)
         if expr isa Number # just a number, e.g. Int, Float64
             const_terms[i] = expr
         elseif expr in vars # expr is a variables in vars
-            push_sparse_coeff(i, term, 1)
+            push_sparse_coeff(i, expr, 1)
         elseif SymbolicUtils.ismul(expr) && length(expr.dict) == 1
             base, exp = first(expr.dict)
             if base in vars && exp == 1 # a var with a coeff
-                push_sparse_coeff(i, term, expr.coeff)
+                push_sparse_coeff(i, base, expr.coeff)
             else
                 const_nonlinear(i, expr)
             end
