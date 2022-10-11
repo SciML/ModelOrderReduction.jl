@@ -1,4 +1,4 @@
-using OrderedCollections, SparseArrays
+using SparseArrays
 
 """
 $(TYPEDSIGNATURES)
@@ -35,12 +35,16 @@ where the constant terms do not contain any variables in `vars`.
 Variables in `vars` must be unique.
 """
 function linear_terms(exprs::AbstractVector, vars)
-    vars = OrderedSet(Symbolics.unwrap.(vars))
+    vars = Symbolics.unwrap.(vars)
     exprs = Symbolics.unwrap.(exprs)
     linear_I = Int[] # row idx for sparse matrix
     linear_J = Int[] # col idx for sparse matrix
     linear_V = Float64[] # values
     idxmap = Dict(v => i for (i, v) in enumerate(vars))
+    if length(idxmap) < length(vars)
+        throw(ArgumentError("vars: $vars are not unique"))
+    end
+    vars = keys(idxmap)
 
     # (a function used to avoid code duplication)
     # when a linear term is identified, add the indices and value to the sparse matrix
