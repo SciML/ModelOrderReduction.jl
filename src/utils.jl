@@ -15,7 +15,7 @@ function get_deqs(sys::ODESystem)::Tuple{Vector{Equation}, Vector{Equation}}
     deqs = Equation[]
     others = Equation[]
     for eq in eqs
-        if eq.lhs isa Term && operation(eq.lhs) isa Differential
+        if istree(eq.lhs) && operation(eq.lhs) isa Differential
             push!(deqs, eq)
         else
             push!(others, eq)
