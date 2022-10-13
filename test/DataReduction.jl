@@ -1,4 +1,5 @@
-#--------- Data Reduction -----------------#
+using Test, ModelOrderReduction
+using DifferentialEquations
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
@@ -18,7 +19,7 @@ end
 @testset "POD-Utils" begin
     solution = lorenz_prob()
     VoV = solution.u
-    M = matricize(VoV)
+    M = ModelOrderReduction.matricize(VoV)
     @test size(M, 1) == length(VoV[1]) # Parameters
     @test size(M, 2) == length(VoV) # Time
 end
