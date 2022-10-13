@@ -1,4 +1,6 @@
+using Test, ModelOrderReduction
 using Symbolics, PolyChaos, ModelingToolkit, LinearAlgebra
+const MOR = ModelOrderReduction
 
 include("PCETestUtils.jl")
 

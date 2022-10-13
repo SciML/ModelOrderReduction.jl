@@ -1,3 +1,6 @@
+using TSVD: tsvd
+using RandomizedLinAlg: rsvd
+
 function matricize(VoV::Vector{Vector{T}}) where {T}
     reduce(hcat, VoV)
 end
@@ -24,7 +27,7 @@ end
 _rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
 
 mutable struct POD <: AbstractDRProblem
-    # specified 
+    # specified
     snapshots::Any
     min_renergy::Any
     min_nmodes::Int
