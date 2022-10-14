@@ -2,10 +2,30 @@ using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
 export PCE, moment_equations, pce_galerkin, mean, var
 
-include("PCE_utils.jl")
-# for now only consider tensor grid bases
-# with degree equal across all bases
-# need to adjust in PolyChaos
+"""
+$(SIGNATURES)
+
+`PCE` object for symbolic representation of a dense multivariate polynomial chaos expansion
+of a given set of states ``x`` in terms of a given set of uncertain parameters ``p``:
+```math
+    x = ∑ᵢ zᵢ ζᵢ(p). 
+```
+Here ``x`` denotes the states of the PCE, ``p`` the parameters, ``zᵢ`` refers to the ``i``th moments and ``ζᵢ`` to the
+``i``th basis function. 
+
+# Fields
+- `states`: Vector of states (symbolic variables) representing the state of the PCE.
+- `parameters`: `Vector` of parameters (symbolic variables) being expanded.
+- `bases`: `Vector` of `Pair`s mapping parameters to a `PolyChaos.AbstractOrthoPoly` representing 
+           the basis in which the parametric dependence is expanded.
+- `bases_dict`: `Dict` generated from bases.
+- `sym_basis`: `Vector` of symbolic variables representing the basis functions: ``[ζ₁, …, ζₘ]``.
+- `pc_basis`: `PolyChaos.MultiOrthoPoly` representing the tensorproduct-based multi-variate basis underpinning the PCE
+- `sym_to_pc`: `Dict` mapping symbolic basis variable to PolyChaos.MultiOrthoPoly index (multi-index)
+- `pc_to_sym`: `Dict` mapping PolyChaos.MultiOrthoPoly index (multi-index) to symbolic basis variable
+- `ansatz`: `Vector` of `Pair`s mapping state to corresponding PCE ansatz
+- `moments`: `Vector` of `Vector`s carrying the moments for each state.
+"""
 struct PCE
     states::Any # states
     parameters::Any # vector of parameters being expanded
@@ -15,9 +35,16 @@ struct PCE
     pc_basis::Any # polychaos basis object 
     sym_to_pc::Any # dictionary mapping symbolic to pc basis 
     pc_to_sym::Any # dictionary mapping pc to symbolic basis 
-    ansatz::Any # vector of pairs: x(t,p) => ∑ᵢ cᵢ(t)ξᵢ(p)
-    moments::Any # matrix (?) of symbolic variables: cᵢ(t)
+    ansatz::Any # vector of pairs: x(t,p) => ∑ᵢ zᵢ(t)ζᵢ(p)
+    moments::Any # symbolic variables: zᵢ(t)
 end
+
+"""
+$(SIGNATURES)
+    
+Create `PCE` object from a `Vector` of states (symbolic variables) and a `Vector` of `Pair`s mapping
+the parameters to the corresponding `PolyChaos.AbstractOrthoPoly` basis used for expansion.
+"""
 function PCE(states, bases::AbstractVector{<:Pair})
     # to deal with symbolic arrays
     states = collect(states)
@@ -72,7 +99,14 @@ function (pce::PCE)(moment_vals, parameter_vals::Number)
     return pce(moment_vals, reshape([parameter_vals], 1, 1))
 end
 
+include("PCE_utils.jl")
+
 # 1. apply PCE ansatz
+"""
+$(TYPEDSIGNATURES)
+
+Generate linear PCEs for the uncertain parameters.
+"""
 function generate_parameter_pce(pce::PCE)
     par_dim = length(pce.parameters)
     par_pce = Vector{Pair{eltype(pce.parameters), eltype(pce.sym_basis)}}(undef, par_dim)
@@ -82,20 +116,47 @@ function generate_parameter_pce(pce::PCE)
     end
     return par_pce
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+Substitute parameters shared between a set of symbolic `eqs` and the PCE `pce` for the corresponding linear PCEs.  
+"""
 function substitute_parameters(eqs::AbstractVector, pce::PCE)
     par_pce = generate_parameter_pce(pce)
     subs_eqs = [substitute(eq, par_pce) for eq in eqs]
     return subs_eqs
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+Substitute PCE Ansatz defined in `pce` into a set of symbolic equations `eqs`.
+"""
 function substitute_pce_ansatz(eqs::AbstractVector, pce::PCE)
     subs_eqs = [expand(expand(substitute(eq, pce.ansatz))) for eq in eqs]
     return subs_eqs
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+Apply PCE ansatz defined in `pce` to a given set of symbolic equations `eqs`.
+"""
 function apply_ansatz(eqs::AbstractVector, pce::PCE)
     return substitute_pce_ansatz(substitute_parameters(eqs, pce), pce)
 end
 
-# 2. extract PCE expansion coeffs 
+# 2. extract PCE expansion coeffs
+"""
+$(TYPEDSIGNATURES)
+
+Given a set of symbolic equations `eqs` involving the basis functions of `pce`, 
+extract monomials of the basis functions and the corresponding coeffiecients.
+
+# Returns
+`Vector` of `Dict`s mapping monomial of basis functions to its coefficient in the individual equations.
+"""
 function extract_basismonomial_coeffs(eqs::AbstractVector, pce::PCE)
     basismonomial_coeffs = [extract_coeffs(eq, pce.sym_basis) for eq in eqs]
     basismonomial_indices = []
@@ -107,15 +168,12 @@ function extract_basismonomial_coeffs(eqs::AbstractVector, pce::PCE)
 end
 
 # 3. compute inner products
-function maximum_degree(mono_indices::AbstractVector, pce::PCE)
-    max_degree = 0
-    for (mono, ind) in mono_indices
-        max_degree = max(max_degree,
-                         maximum(sum(ind[i] * pce.pc_basis.ind[i + 1]
-                                     for i in eachindex(ind))))
-    end
-    return max_degree
-end
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate scalar products between all basis functions in `pce` and 
+basis monomials as characterized by `mono_indices`.
+"""
 function eval_scalar_products(mono_indices, pce::PCE)
     max_degree = maximum_degree(mono_indices, pce)
     degree_quadrature = max(ceil(Int, 0.5 * (max_degree + deg(pce.pc_basis) + 1)),
@@ -131,7 +189,14 @@ function eval_scalar_products(mono_indices, pce::PCE)
 end
 
 # 4. Galerkin projection
-function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
+"""
+$(TYPEDSIGNATURES)
+
+perform Galerkin projection of polynomial expressions characterized by `Dict`s mapping
+basis monomials to coefficients. 
+"""
+function galerkin_projection(bm_coeffs::Vector{<:Dict}, scalar_products::Vector{<:Dict},
+                             pce::PCE)
     projected_eqs = []
     scaling_factors = computeSP2(pce.pc_basis)
     for i in eachindex(bm_coeffs)
@@ -147,6 +212,11 @@ function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
 end
 
 # 5. combine everything
+"""
+$(TYPEDSIGNATURES)
+
+perform Galerkin projection onto the `pce`.
+"""
 function pce_galerkin(eqs::AbstractVector, pce::PCE)
     expanded_eqs = apply_ansatz(eqs, pce)
     basismono_coeffs, basismono_idcs = extract_basismonomial_coeffs(expanded_eqs, pce)
@@ -157,6 +227,11 @@ end
 
 # 6. high-level interface
 # 6a. apply pce to explicit ODE
+"""
+$(TYPEDSIGNATURES)
+
+Generate moment equations of an `ODESystem` from a given `PCE`-Ansatz via Galerkin projection.
+"""
 function moment_equations(sys::ODESystem, pce::PCE)
     eqs = [eq.rhs for eq in equations(sys)]
     projected_eqs = pce_galerkin(eqs, pce)

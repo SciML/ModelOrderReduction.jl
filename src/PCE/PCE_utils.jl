@@ -196,3 +196,14 @@ function computeSP2(pc::MultiOrthoPoly)
     multi_SP2 = [prod(uni_SP2[j][pc.ind[i, j] + 1] for j in 1:n) for i in 1:m]
     return multi_SP2
 end
+
+# computing maximum degree
+function maximum_degree(mono_indices::AbstractVector, pce::PCE)
+    max_degree = 0
+    for (mono, ind) in mono_indices
+        max_degree = max(max_degree,
+                         maximum(sum(pce.pc_basis.ind[ind[i] + 1, :]
+                                     for i in eachindex(ind))))
+    end
+    return max_degree
+end
