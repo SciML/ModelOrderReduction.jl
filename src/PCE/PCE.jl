@@ -195,7 +195,7 @@ $(TYPEDSIGNATURES)
 perform Galerkin projection of polynomial expressions characterized by `Dict`s mapping
 basis monomials to coefficients. 
 """
-function galerkin_projection(bm_coeffs::Vector{<:Dict}, scalar_products::Vector{<:Dict},
+function galerkin_projection(bm_coeffs::Vector{<:Dict}, scalar_products::Dict,
                              pce::PCE)
     projected_eqs = []
     scaling_factors = computeSP2(pce.pc_basis)
