@@ -117,6 +117,7 @@ end
     integrator = MOR.bump_degree(pce.pc_basis, n + 1)
 
     true_moment_eqs = Num[]
+    scaling_factor = computeSP2(pce.pc_basis)
     for j in 0:n
         mom_eq = 0.0
         for mono in keys(basis_indices)
@@ -124,7 +125,7 @@ end
             c = computeSP(vcat(ind, j), integrator)
             mom_eq += c * coeffs[mono]
         end
-        push!(true_moment_eqs, mom_eq)
+        push!(true_moment_eqs, 1 / scaling_factor[j + 1] * mom_eq)
     end
 
     @test integrator.deg == n + 1
@@ -137,8 +138,7 @@ end
     @named test_system = ODESystem(test_equation, t, [y], [a, b])
     moment_system, pce_eval = moment_equations(test_system, pce)
     moment_eqs = equations(moment_system)
-    moment_eqs = [moment_eqs[i].rhs * computeSP([i - 1, i - 1], integrator)
-                  for i in eachindex(moment_eqs)]
+    moment_eqs = [moment_eqs[i].rhs for i in eachindex(moment_eqs)]
     @test isequal(parameters(moment_system), [b])
     @test nameof(moment_system) == :test_system_pce
     @test isequal(states(moment_system), reduce(vcat, pce.moments))

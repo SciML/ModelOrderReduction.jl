@@ -133,6 +133,7 @@ end
 # 4. Galerkin projection
 function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
     projected_eqs = []
+    scaling_factors = computeSP2(pce.pc_basis)
     for i in eachindex(bm_coeffs)
         eqs = []
         for k in 1:dim(pce.pc_basis)
@@ -140,7 +141,7 @@ function galerkin_projection(bm_coeffs, scalar_products, pce::PCE)
                   sum(bm_coeffs[i][mono] * scalar_products[k][mono]
                       for mono in keys(bm_coeffs[i])))
         end
-        push!(projected_eqs, eqs)
+        push!(projected_eqs, eqs ./ scaling_factors)
     end
     return projected_eqs
 end
@@ -148,10 +149,9 @@ end
 # 5. combine everything
 function pce_galerkin(eqs::AbstractVector, pce::PCE)
     expanded_eqs = apply_ansatz(eqs, pce)
-    basismonomial_coeffs, basismonomial_indices = extract_basismonomial_coeffs(expanded_eqs,
-                                                                               pce)
-    scalar_products = eval_scalar_products(basismonomial_indices, pce)
-    projected_eqs = galerkin_projection(basismonomial_coeffs, scalar_products, pce)
+    basismono_coeffs, basismono_idcs = extract_basismonomial_coeffs(expanded_eqs, pce)
+    scalar_products = eval_scalar_products(basismono_idcs, pce)
+    projected_eqs = galerkin_projection(basismono_coeffs, scalar_products, pce)
     return projected_eqs
 end
 
@@ -159,8 +159,8 @@ end
 # 6a. apply pce to explicit ODE
 function moment_equations(sys::ODESystem, pce::PCE)
     eqs = [eq.rhs for eq in equations(sys)]
-    scaling_factors = computeSP2(pce.pc_basis)
-    moment_eqs = reduce(vcat, [eq ./ scaling_factors for eq in pce_galerkin(eqs, pce)])
+    projected_eqs = pce_galerkin(eqs, pce)
+    moment_eqs = reduce(vcat, projected_eqs)
     iv = independent_variable(sys)
     params = setdiff(parameters(sys), pce.parameters)
     D = Differential(iv)
