@@ -2,7 +2,7 @@ using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
 export PCE, moment_equations, pce_galerkin, mean, var
 
-include("PCE_utils.jl") 
+include("PCE_utils.jl")
 
 """
 $(SIGNATURES)
@@ -70,9 +70,9 @@ function PCE(states, bases::AbstractVector{<:Pair})
     moments = Vector{Num}[]
     for (i, state) in enumerate(collect(states))
         ind_vars = get_independent_vars(state)
-        create_var = isempty(ind_vars) ? name -> (@variables $(name))[1] : 
-                                         name -> (@variables $(name)(ind_vars...))[1]
-        push!(moments, [create_var(moment_name(i,j)) for j in 1:n_basis])
+        create_var = isempty(ind_vars) ? name -> (@variables $(name))[1] :
+                     name -> (@variables $(name)(ind_vars...))[1]
+        push!(moments, [create_var(moment_name(i, j)) for j in 1:n_basis])
     end
     ansatz = [states[i] => sum(moments[i][j] * sym_basis[j] for j in 1:n_basis)
               for i in 1:n_states]
@@ -161,7 +161,7 @@ function eval_scalar_products(mono_indices, pce::PCE)
     uni_degs = [deg(op) for op in pce.pc_basis.uni]
     max_degs = uni_degs
     for (mono, id) in mono_indices
-        max_degs = max.(max_degs, vec(sum(pce.pc_basis.ind[id .+ 1, :], dims=1)))
+        max_degs = max.(max_degs, vec(sum(pce.pc_basis.ind[id .+ 1, :], dims = 1)))
     end
     println(max_degs)
     println(typeof(max_degs))
@@ -170,7 +170,8 @@ function eval_scalar_products(mono_indices, pce::PCE)
     integrators = map((uni, deg) -> bump_degree(uni, deg), pce.pc_basis.uni, quad_deg)
     scalar_products = Dict()
     for k in 1:dim(pce.pc_basis)
-        scalar_products[k] = Dict(mono => computeSP(vcat(id, k - 1), pce.pc_basis, integrators) 
+        scalar_products[k] = Dict(mono => computeSP(vcat(id, k - 1), pce.pc_basis,
+                                                    integrators)
                                   for (mono, id) in mono_indices)
     end
     return scalar_products

@@ -110,8 +110,9 @@ end
 # test Galerkin projection
 @testset "PCE: galerkin projection test" begin
     moment_eqs = MOR.pce_galerkin(eq, pce)
-    
-    integrator = map((uni, deg) -> MOR.bump_degree(uni,deg), pce.pc_basis.uni, [n + 1, n+1])
+
+    integrator = map((uni, deg) -> MOR.bump_degree(uni, deg), pce.pc_basis.uni,
+                     [n + 1, n + 1])
 
     true_moment_eqs = Num[]
     scaling_factor = computeSP2(pce.pc_basis)
