@@ -1,4 +1,10 @@
-import PolyChaos.computeSP2
+import PolyChaos.computeSP2, PolyChaos.computeSP, PolyChaos.dim
+
+# moment names
+function moment_name(i,j) 
+    return Symbol("z" * Symbolics.map_subscripts(i) * 
+                  "₋" * Symbolics.map_subscripts(j))
+end
 
 # getting independent variables
 function get_independent_vars(var)
@@ -101,6 +107,141 @@ function get_basis_indices(::Val{1})
     return [0]
 end
 
+"""
+`TensorProductOrthoPoly` objects represent bases formed as the tensor product of univariate `PolyChaos.AbstractOrthoPoly` bases.
+By default the basis elements of the tensor product are restricted to polynomials with total degree up to the maximum degree among the 
+univariate bases. This maximum degree can be manually specified, however.
+"""
+struct TensorProductOrthoPoly{M,U}
+    ind::Matrix
+    measure::M
+    deg::Vector{Int}
+    uni::U
+end
+function TensorProductOrthoPoly(ops::AbstractVector{T}) where T <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}
+    n = length(ops)
+    degrees = [deg(op) for op in ops]
+    ind = grevlex(n, 0:maximum(degrees), degrees)
+    measures = [op.measure for op in ops]
+    prod_measure = ProductMeasure(t -> prod(measure.w for measure in measures), 
+                                  measures) 
+    
+    return TensorProductOrthoPoly(ind, prod_measure, degrees, ops)
+end
+function TensorProductOrthoPoly(ops::AbstractVector{T}, max_deg::Int) where T <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}
+    n = length(ops)
+    degrees = [deg(op) for op in ops]
+    ind = grevlex(n, 0:max_deg, degrees)
+    measures = [op.measure for op in ops]
+    prod_measure = ProductMeasure(t -> prod(measure.w for measure in measures), 
+                                  measures) 
+    
+    return TensorProductOrthoPoly(ind, prod_measure, degrees, ops)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+computes inner product between basis functions of a `TensorProductOrthoPoly` via 
+`PolyChaos`'s infrastructure (exploiting the tensor product form). 
+"""
+function computeSP(basis_fxns, tpop::TensorProductOrthoPoly, 
+                    integrators = tpop.uni)
+    multi_indices = tpop.ind[basis_fxns .+ 1, :]
+    # columns of multi_indices refer to inner products to be computed
+    sp = 1.0
+    for k in axes(multi_indices, 2)
+        sp *= computeSP(multi_indices[:,k], integrators[k])
+    end
+    return round(sp, digits = 12)
+end
+
+function computeSP2(tpop::TensorProductOrthoPoly)
+    sp2 = [computeSP2(op) for op in tpop.uni]
+    return [prod(sp2[i][j+1] for (i,j) in enumerate(tpop.ind[k,:])) 
+                           for k in axes(tpop.ind, 1)]
+end
+
+function evaluate(x, tpop::TensorProductOrthoPoly)
+    uni_vals = [_evaluate_uni_op(x[i], tpop.uni[i]) for i in eachindex(x)]
+    tensor_vals = zeros(size(tpop.ind,1))
+    for idx in axes(tpop.ind,1)
+        tensor_vals[idx] = prod(uni_vals[i][j+1] for (i,j) in enumerate(tpop.ind[idx,:]))
+    end
+    return tensor_vals
+end
+
+function _evaluate_uni_op(x, op::T) where T <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}
+    vals = zeros(deg(op)+2)
+    vals[1], vals[2] = 0.0, 1.0
+    for k in 2:deg(op)+1
+        vals[k+1] = (x-op.α[k-1])*vals[k] - vals[k-1]*op.β[k-1]
+    end
+    popfirst!(vals)
+    return vals
+end
+"""
+$(TYPEDSIGNATURES)
+
+Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries) 
+in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated. 
+"""
+function grevlex(n::Int, grade::Int)
+    if n == 1
+        return reshape([grade], 1, 1)
+    end
+    
+    if grade == 0
+        return zeros(Int, 1, n)
+    end
+
+    sub_ind = grevlex(n-1,grade)
+    ind = hcat(sub_ind, zeros(Int,size(sub_ind,1)))
+    for k in 1:grade
+        sub_ind = grevlex(n-1,grade-k)
+        ind = vcat(ind, hcat(sub_ind, k*ones(Int,size(sub_ind,1))))
+    end
+    return ind
+end
+
+function grevlex(n::Int, grades::AbstractVector)
+    return reduce(vcat, [grevlex(n, grade) for grade in grades])
+end
+
+function grevlex(n::Int, grade::Int, max_degrees::Vector{Int})
+    return grevlex(n, grade, [0:d for d in max_degrees])
+end
+
+function grevlex(n::Int, grades::AbstractVector, max_degrees::Vector{Int})
+    return reduce(vcat, [grevlex(n, grade, max_degrees) for grade in grades])
+end
+
+function grevlex(n::Int, grade::Int, constrained_degrees::Vector{<:AbstractVector})
+    if n == 1
+        return grade in constrained_degrees[1] ? reshape([grade], 1, 1) : zeros(Int,0,1)
+    end
+    
+    if grade == 0
+        return zeros(Int, 1, n)
+    end
+
+    filtered_grades = filter(x -> x <= grade, constrained_degrees[end])
+    sub_ind = grevlex(n-1, grade - filtered_grades[1], constrained_degrees[1:end-1])
+    ind = hcat(sub_ind, filtered_grades[1]*ones(Int,size(sub_ind,1)))
+    for k in filtered_grades[2:end]
+        sub_ind = grevlex(n-1, grade-k, constrained_degrees[1:end-1])
+        ind = vcat(ind, hcat(sub_ind, k*ones(Int,size(sub_ind,1))))
+    end
+    return ind
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+returns dimension of `TensorProductOrthoPoly` object, i.e., the number of basis functions encoded.
+"""
+dim(tpop::TensorProductOrthoPoly) = size(tpop.ind,1)
+
 # bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
 # PR to PolyChaos -> remove unnecessarily restrictive constructors and allow construction from measures
 #                 -> also expose number of points used for quadrature generation for general orthogonal polys
@@ -188,6 +329,10 @@ function bump_degree(op::MultiOrthoPoly, deg::Int)
     return MultiOrthoPoly(bump_degree.(op.uni, deg), deg)
 end
 
+function bump_degree(op::TensorProductOrthoPoly, deg::Vector{Int})
+    return TensorProductOrthoPoly(bump_degree.(op.uni, deg))
+end
+
 # extending computeSP2 for multivariate orthogonal polys
 function computeSP2(pc::MultiOrthoPoly)
     n = length(pc.uni)
@@ -197,116 +342,3 @@ function computeSP2(pc::MultiOrthoPoly)
     return multi_SP2
 end
 
-# computing maximum degree
-function maximum_degree(mono_indices::AbstractVector, pce::PCE)
-    max_degree = 0
-    for (mono, ind) in mono_indices
-        max_degree = max(max_degree,
-                         maximum(sum(pce.pc_basis.ind[ind[i] + 1, :]
-                                     for i in eachindex(ind))))
-    end
-    return max_degree
-end
-
-"""
-`TensorProductOrthoPoly` objects represent bases formed as the tensor product of univariate `PolyChaos.AbstractOrthoPoly` bases.
-By default the basis elements of the tensor product are restricted to polynomials with total degree up to the maximum degree among the 
-univariate bases. This maximum degree can be manually specified, however.
-"""
-struct TensorProductOrthoPoly{M,U}
-    ind::Matrix
-    measure::M
-    deg::Vector{Int}
-    uni::U
-end
-function TensorProductOrthoPoly(ops::AbstractVector{T}) where T <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}
-    n = length(ops)
-    degrees = [deg(op) for op in ops]
-    ind = grevlex(n, 0:maximum(degrees), degrees)
-    measures = [op.measure for op in ops]
-    prod_measure = ProductMeasure(t -> prod(measure.w for measure in measures), 
-                                  measures) 
-    
-    return TensorProductOrthoPoly(ind, prod_measure, degrees, ops)
-end
-function TensorProductOrthoPoly(ops::AbstractVector{T}, max_deg::Int) where T <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}
-    n = length(ops)
-    degrees = [deg(op) for op in ops]
-    ind = grevlex(n, 0:max_deg, degrees)
-    measures = [op.measure for op in ops]
-    prod_measure = ProductMeasure(t -> prod(measure.w for measure in measures), 
-                                  measures) 
-    
-    return TensorProductOrthoPoly(ind, prod_measure, degrees, ops)
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-computes inner product between basis functions of a `TensorProductOrthoPoly` via 
-`PolyChaos`'s infrastructure (exploiting the tensor product form). 
-"""
-function computeSP(basis_fxns, tpop::TensorProductOrthoPoly)
-    multi_indices = tpop.ind[basis_fxns, :]
-    # columns of multi_indices refer to inner products to be computed
-    sp = 1.0
-    for k in axes(multi_indices, 2)
-        sp *= computeSP(multi_indices[:,k], tpop.uni[k])
-    end
-    return round(sp, digits = 12)
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries) 
-in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated. 
-"""
-function grevlex(n::Int, grade::Int)
-    if n == 1
-        return reshape([grade], 1, 1)
-    end
-    
-    if grade == 0
-        return zeros(Int, 1, n)
-    end
-
-    sub_ind = grevlex(n-1,grade)
-    ind = hcat(sub_ind, zeros(Int,size(sub_ind,1)))
-    for k in 1:grade
-        sub_ind = grevlex(n-1,grade-k)
-        ind = vcat(ind, hcat(sub_ind, k*ones(Int,size(sub_ind,1))))
-    end
-    return ind
-end
-
-function grevlex(n::Int, grades::AbstractVector)
-    return reduce(vcat, [grevlex(n, grade) for grade in grades])
-end
-
-function grevlex(n::Int, grade::Int, max_degrees::Vector{Int})
-    return grevlex(n, grade, [0:d for d in max_degrees])
-end
-
-function grevlex(n::Int, grades::AbstractVector, max_degrees::Vector{Int})
-    return reduce(vcat, [grevlex(n, grade, max_degrees) for grade in grades])
-end
-
-function grevlex(n::Int, grade::Int, constrained_degrees::Vector{<:AbstractVector})
-    if n == 1
-        return grade in constrained_degrees[1] ? reshape([grade], 1, 1) : zeros(Int,0,1)
-    end
-    
-    if grade == 0
-        return zeros(Int, 1, n)
-    end
-
-    filtered_grades = filter(x -> x <= grade, constrained_degrees[end])
-    sub_ind = grevlex(n-1, grade - filtered_grades[1], constrained_degrees[1:end-1])
-    ind = hcat(sub_ind, filtered_grades[1]*ones(Int,size(sub_ind,1)))
-    for k in filtered_grades[2:end]
-        sub_ind = grevlex(n-1, grade-k, constrained_degrees[1:end-1])
-        ind = vcat(ind, hcat(sub_ind, k*ones(Int,size(sub_ind,1))))
-    end
-    return ind
-end

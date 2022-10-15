@@ -21,10 +21,6 @@ end
     @parameters a, b
     @variables y
     n = 5
-    test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n + 1)]
-    warn_message = "Currently only bases with identical degrees are supported." *
-                   "\nProceed with minimum common degree = $n"
-    @test_logs (:warn, warn_message) PCE([y], test_basis)
 
     test_basis = [a => GaussOrthoPoly(n), b => Uniform01OrthoPoly(n)]
     pce = PCE([y], test_basis)
@@ -114,7 +110,8 @@ end
 # test Galerkin projection
 @testset "PCE: galerkin projection test" begin
     moment_eqs = MOR.pce_galerkin(eq, pce)
-    integrator = MOR.bump_degree(pce.pc_basis, n + 1)
+    
+    integrator = map((uni, deg) -> MOR.bump_degree(uni,deg), pce.pc_basis.uni, [n + 1, n+1])
 
     true_moment_eqs = Num[]
     scaling_factor = computeSP2(pce.pc_basis)
@@ -122,15 +119,12 @@ end
         mom_eq = 0.0
         for mono in keys(basis_indices)
             ind = basis_indices[mono][2]
-            c = computeSP(vcat(ind, j), integrator)
+            c = computeSP(vcat(ind, j), pce.pc_basis, integrator)
             mom_eq += c * coeffs[mono]
         end
         push!(true_moment_eqs, 1 / scaling_factor[j + 1] * mom_eq)
     end
 
-    @test integrator.deg == n + 1
-    @test integrator.measure isa typeof(pce.pc_basis.measure)
-    @test integrator.measure.measures[1] isa typeof(pce.pc_basis.measure.measures[1])
     @test all([isapprox_sym(moment_eqs[1][i], true_moment_eqs[i])
                for i in eachindex(true_moment_eqs)])
 

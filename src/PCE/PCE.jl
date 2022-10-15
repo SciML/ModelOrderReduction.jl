@@ -2,6 +2,8 @@ using PolyChaos, Symbolics, ModelingToolkit, LinearAlgebra
 
 export PCE, moment_equations, pce_galerkin, mean, var
 
+include("PCE_utils.jl") 
+
 """
 $(SIGNATURES)
 
@@ -52,13 +54,10 @@ function PCE(states, bases::AbstractVector{<:Pair})
     bases_dict = Dict(bases)
     parameters = [p for (p, op) in bases]
     ops = [op for (p, op) in bases]
-    degs = [deg(op) for op in ops]
-    min_deg = minimum(degs)
-    if !(all(isequal(first(degs)), degs)) # allequal
-        @warn "Currently only bases with identical degrees are supported." *
-              "\nProceed with minimum common degree = $min_deg"
-    end
-    pc_basis = MultiOrthoPoly(ops, min_deg)
+
+    @assert all(deg(op) > 0 for op in ops) "Every basis considered must at least include the linear function"
+
+    pc_basis = TensorProductOrthoPoly(ops)
     n_basis = size(pc_basis.ind, 1)
     n_states = length(states)
 
@@ -68,38 +67,22 @@ function PCE(states, bases::AbstractVector{<:Pair})
     sym_to_pc = Dict(ζ[i] => pc_basis.ind[i, :] for i in eachindex(ζ))
     pc_to_sym = Dict(val => key for (val, key) in sym_to_pc)
 
-    moments = []
+    moments = Vector{Num}[]
     for (i, state) in enumerate(collect(states))
-        moment_name = Symbol("z" * Symbolics.map_subscripts(i))
         ind_vars = get_independent_vars(state)
-        if isempty(ind_vars)
-            pce_coeffs = @variables $(moment_name)[1:n_basis]
-        else
-            pce_coeffs = @variables $(moment_name)(ind_vars...)[1:n_basis]
-        end
-        push!(moments, collect(pce_coeffs[1]))
+        create_var = isempty(ind_vars) ? name -> (@variables $(name))[1] : 
+                                         name -> (@variables $(name)(ind_vars...))[1]
+        push!(moments, [create_var(moment_name(i,j)) for j in 1:n_basis])
     end
     ansatz = [states[i] => sum(moments[i][j] * sym_basis[j] for j in 1:n_basis)
               for i in 1:n_states]
     return PCE(states, parameters, bases, bases_dict, sym_basis, pc_basis, sym_to_pc,
                pc_to_sym, ansatz, moments)
 end
-function (pce::PCE)(moment_vals, parameter_vals::AbstractMatrix)
-    # wasteful => should implement my own version of this
-    # this evaluates each polynomial via recurrence relation from scratch
-    # can reuse many results. 
-    # fine for now. 
+function (pce::PCE)(moment_vals, parameter_vals::AbstractVector)
     basis = evaluate(parameter_vals, pce.pc_basis)
     return [dot(moments, basis) for moments in moment_vals]
 end
-function (pce::PCE)(moment_vals, parameter_vals::AbstractVector)
-    return pce(moment_vals, reshape(parameter_vals, 1, length(parameter_vals)))
-end
-function (pce::PCE)(moment_vals, parameter_vals::Number)
-    return pce(moment_vals, reshape([parameter_vals], 1, 1))
-end
-
-include("PCE_utils.jl")
 
 # 1. apply PCE ansatz
 """
@@ -175,15 +158,20 @@ Evaluate scalar products between all basis functions in `pce` and
 basis monomials as characterized by `mono_indices`.
 """
 function eval_scalar_products(mono_indices, pce::PCE)
-    max_degree = maximum_degree(mono_indices, pce)
-    degree_quadrature = max(ceil(Int, 0.5 * (max_degree + deg(pce.pc_basis) + 1)),
-                            deg(pce.pc_basis))
-    integrator_pce = bump_degree(pce.pc_basis, degree_quadrature)
+    uni_degs = [deg(op) for op in pce.pc_basis.uni]
+    max_degs = uni_degs
+    for (mono, id) in mono_indices
+        max_degs = max.(max_degs, vec(sum(pce.pc_basis.ind[id .+ 1, :], dims=1)))
+    end
+    println(max_degs)
+    println(typeof(max_degs))
+    quad_deg = max.(ceil.(Int, 0.5 * (max_degs + uni_degs .+ 1)))
 
+    integrators = map((uni, deg) -> bump_degree(uni, deg), pce.pc_basis.uni, quad_deg)
     scalar_products = Dict()
     for k in 1:dim(pce.pc_basis)
-        scalar_products[k] = Dict(mono => computeSP(vcat(ind, k - 1), integrator_pce)
-                                  for (mono, ind) in mono_indices)
+        scalar_products[k] = Dict(mono => computeSP(vcat(id, k - 1), pce.pc_basis, integrators) 
+                                  for (mono, id) in mono_indices)
     end
     return scalar_products
 end
