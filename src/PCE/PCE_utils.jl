@@ -234,7 +234,8 @@ function grevlex(n::Int, grade::Int, degree_constraints::Vector{<:AbstractVector
     end
 
     if grade == 0
-        return all(0 in degs for degs in degree_constraints) ? zeros(Int, 1, n) : zeros(Int, 0, n) 
+        return all(0 in degs for degs in degree_constraints) ? zeros(Int, 1, n) :
+               zeros(Int, 0, n)
     end
 
     filtered_grades = filter(x -> x <= grade, degree_constraints[end])
@@ -247,7 +248,8 @@ function grevlex(n::Int, grade::Int, degree_constraints::Vector{<:AbstractVector
     return ind
 end
 
-function grevlex(n::Int, grades::AbstractVector{Int}, degree_constraints::Vector{<:AbstractVector})
+function grevlex(n::Int, grades::AbstractVector{Int},
+                 degree_constraints::Vector{<:AbstractVector})
     return reduce(vcat, [grevlex(n, grade, degree_constraints) for grade in grades])
 end
 
@@ -270,7 +272,7 @@ $(TYPEDSIGNATURES)
 
 returns maximum degree featured in a `TensorProductOrthoPoly` object.
 """
-max_degree(tpop::TensorProductOrthoPoly) = sum(tpop.ind[end,:])
+max_degree(tpop::TensorProductOrthoPoly) = sum(tpop.ind[end, :])
 
 # bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
 # PR to PolyChaos -> remove unnecessarily restrictive constructors and allow construction from measures
