@@ -1,4 +1,4 @@
-import PolyChaos.computeSP2, PolyChaos.computeSP, PolyChaos.dim
+import PolyChaos: computeSP2, computeSP, dim, deg
 
 # moment names
 function moment_name(i, j)
@@ -216,7 +216,7 @@ function grevlex(n::Int, grade::Int)
     return ind
 end
 
-function grevlex(n::Int, grades::AbstractVector)
+function grevlex(n::Int, grades::AbstractVector{Int})
     return reduce(vcat, [grevlex(n, grade) for grade in grades])
 end
 
@@ -224,27 +224,31 @@ function grevlex(n::Int, grade::Int, max_degrees::Vector{Int})
     return grevlex(n, grade, [0:d for d in max_degrees])
 end
 
-function grevlex(n::Int, grades::AbstractVector, max_degrees::Vector{Int})
+function grevlex(n::Int, grades::AbstractVector{Int}, max_degrees::Vector{Int})
     return reduce(vcat, [grevlex(n, grade, max_degrees) for grade in grades])
 end
 
-function grevlex(n::Int, grade::Int, constrained_degrees::Vector{<:AbstractVector})
+function grevlex(n::Int, grade::Int, degree_constraints::Vector{<:AbstractVector})
     if n == 1
-        return grade in constrained_degrees[1] ? reshape([grade], 1, 1) : zeros(Int, 0, 1)
+        return grade in degree_constraints[1] ? reshape([grade], 1, 1) : zeros(Int, 0, 1)
     end
 
     if grade == 0
-        return zeros(Int, 1, n)
+        return all(0 in degs for degs in degree_constraints) ? zeros(Int, 1, n) : zeros(Int, 0, n) 
     end
 
-    filtered_grades = filter(x -> x <= grade, constrained_degrees[end])
-    sub_ind = grevlex(n - 1, grade - filtered_grades[1], constrained_degrees[1:(end - 1)])
+    filtered_grades = filter(x -> x <= grade, degree_constraints[end])
+    sub_ind = grevlex(n - 1, grade - filtered_grades[1], degree_constraints[1:(end - 1)])
     ind = hcat(sub_ind, filtered_grades[1] * ones(Int, size(sub_ind, 1)))
     for k in filtered_grades[2:end]
-        sub_ind = grevlex(n - 1, grade - k, constrained_degrees[1:(end - 1)])
+        sub_ind = grevlex(n - 1, grade - k, degree_constraints[1:(end - 1)])
         ind = vcat(ind, hcat(sub_ind, k * ones(Int, size(sub_ind, 1))))
     end
     return ind
+end
+
+function grevlex(n::Int, grades::AbstractVector{Int}, degree_constraints::Vector{<:AbstractVector})
+    return reduce(vcat, [grevlex(n, grade, degree_constraints) for grade in grades])
 end
 
 """
@@ -253,6 +257,20 @@ $(TYPEDSIGNATURES)
 returns dimension of `TensorProductOrthoPoly` object, i.e., the number of basis functions encoded.
 """
 dim(tpop::TensorProductOrthoPoly) = size(tpop.ind, 1)
+
+"""
+$(TYPEDSIGNATURES)
+
+returns degrees of the bases forming a `TensorProductOrthoPoly` object.
+"""
+deg(tpop::TensorProductOrthoPoly) = tpop.deg
+
+"""
+$(TYPEDSIGNATURES)
+
+returns maximum degree featured in a `TensorProductOrthoPoly` object.
+"""
+max_degree(tpop::TensorProductOrthoPoly) = sum(tpop.ind[end,:])
 
 # bumping the degree of a PolyChaos OrthoPoly object up to ensure exact integration
 # PR to PolyChaos -> remove unnecessarily restrictive constructors and allow construction from measures
@@ -343,6 +361,10 @@ end
 
 function bump_degree(op::TensorProductOrthoPoly, deg::Vector{Int})
     return TensorProductOrthoPoly(bump_degree.(op.uni, deg))
+end
+
+function bump_degree(op::TensorProductOrthoPoly, deg::Vector{Int}, max_deg::Int)
+    return TensorProductOrthoPoly(bump_degree.(op.uni, deg), max_deg)
 end
 
 # extending computeSP2 for multivariate orthogonal polys

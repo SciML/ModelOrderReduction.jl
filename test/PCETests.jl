@@ -4,6 +4,101 @@ const MOR = ModelOrderReduction
 
 include("PCETestUtils.jl")
 
+# testing GRevLex capabilities
+@testset "PCE: GRevLeX ordering" begin
+    @test MOR.grevlex(1,5) == reshape([5],1,1)
+
+    ind = [2 0 0;
+           1 1 0;
+           0 2 0;
+           1 0 1;
+           0 1 1;
+           0 0 2]
+    @test ind == MOR.grevlex(3, 2)
+    
+    ind = [1 1 0;
+           1 0 1;
+           0 1 1;
+           0 0 2]
+    @test ind == MOR.grevlex(3, 2, [1,1,2])
+
+    ind = [1 1 0;
+           0 1 1]
+    @test ind == MOR.grevlex(3, 2, [0:1,[1],0:2])
+
+    @test zeros(Int,0,3) == MOR.grevlex(3, 0, [0:1,[1],0:2])
+
+
+    ind0 = [0 0 0]
+    ind1 = [1 0 0;
+            0 1 0;
+            0 0 1]
+    ind2 = [2 0 0;
+            1 1 0;
+            0 2 0;
+            1 0 1;
+            0 1 1;
+            0 0 2]
+    @test vcat(ind0, ind1, ind2) == MOR.grevlex(3, 0:2)
+    @test vcat(ind1, ind2) == MOR.grevlex(3, 1:2)
+    @test vcat(ind0, ind2) == MOR.grevlex(3, [0,2])
+    @test vcat(ind2, ind0) == MOR.grevlex(3, [2,0])
+    
+    degree_constraints = [0:1, [1], 1:2]
+    ind0 = zeros(Int,0,3)
+    ind1 = zeros(Int,0,3)
+    ind2 = [0 1 1]
+    @test vcat(ind0, ind1, ind2) == MOR.grevlex(3, 0:2, degree_constraints)
+    @test vcat(ind1, ind2) == MOR.grevlex(3, 1:2, degree_constraints)
+    @test vcat(ind0, ind2) == MOR.grevlex(3, [0,2], degree_constraints)
+    @test vcat(ind2, ind0) == MOR.grevlex(3, [2,0], degree_constraints)
+end
+
+# testing TensorProductOrthoPoly
+@testset "PCE: TensorProductOrthoPoly test" begin
+    ops = [GaussOrthoPoly(4), Uniform01OrthoPoly(2), LaguerreOrthoPoly(3)]
+    tpop = MOR.TensorProductOrthoPoly(ops)
+    @test tpop.uni == ops
+    @test MOR.max_degree(tpop) == 4
+    @test MOR.deg(tpop) == [4, 2, 3]
+
+    tpop = MOR.TensorProductOrthoPoly(ops, 3)
+    @test MOR.max_degree(tpop) == 3
+
+    ops = [GaussOrthoPoly(4), Uniform01OrthoPoly(2)]
+    tpop = MOR.TensorProductOrthoPoly(ops)
+    ind = [0 0;
+           1 0;
+           0 1;
+           2 0;
+           1 1;
+           0 2;
+           3 0;
+           2 1;
+           1 2;
+           4 0;
+           3 1;
+           2 2] # GRevLex-ordered multi-indices
+    @test tpop.ind == ind
+
+    ops = [GaussOrthoPoly(3), Uniform01OrthoPoly(3), LaguerreOrthoPoly(3)]
+    mop = MultiOrthoPoly(ops,3)
+    tpop = MOR.TensorProductOrthoPoly(ops)
+    sp2_mop = computeSP2(mop)
+    sp2_tpop = computeSP2(tpop)
+    mop_multi_indices = [mop.ind[i,:] for i in axes(mop.ind,1)]
+    tpop_multi_indices = [tpop.ind[i,:] for i in axes(mop.ind,1)]
+    idx_map = [findfirst(x -> x == mult_index, mop_multi_indices) for mult_index in tpop_multi_indices]
+    @test sp2_mop[idx_map] == sp2_tpop
+    @test isapprox(computeSP(idx_map[[5,5,2,2]],mop), computeSP([5,5,2,2],tpop))
+
+    tpop = MOR.bump_degree(tpop, [2,4,1])
+    @test deg(tpop) == [2,4,1]
+
+    tpop = MOR.bump_degree(tpop, [2,4,1], 5)
+    @test tpop.ind[end,:] == [0,4,1]
+end
+
 # testing extraction of independent variables 
 @testset "PCE: get_independent_vars test" begin
     @variables t, z, u(t), v(t)[1:4], w(t, z), x(t, z)[1:4]
