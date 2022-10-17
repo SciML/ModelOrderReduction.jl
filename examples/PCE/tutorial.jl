@@ -1,4 +1,4 @@
-using ModelOrderReduction, ModelingToolkit, DifferentialEquations, 
+using ModelOrderReduction, ModelingToolkit, DifferentialEquations,
       PolyChaos, Plots, LinearAlgebra
 
 # Reaction system
