@@ -206,16 +206,16 @@ end
 @testset "PCE: galerkin projection test" begin
     moment_eqs = MOR.pce_galerkin(eq, pce)
 
-    integrator = map((uni, deg) -> MOR.bump_degree(uni, deg), pce.pc_basis.uni,
+    integrator = map((uni, deg) -> MOR.bump_degree(uni, deg), pce.tensor_basis.uni,
                      [n + 1, n + 1])
 
     true_moment_eqs = Num[]
-    scaling_factor = computeSP2(pce.pc_basis)
+    scaling_factor = computeSP2(pce.tensor_basis)
     for j in 0:n
         mom_eq = 0.0
         for mono in keys(basis_indices)
             ind = basis_indices[mono][2]
-            c = computeSP(vcat(ind, j), pce.pc_basis, integrator)
+            c = computeSP(vcat(ind, j), pce.tensor_basis, integrator)
             mom_eq += c * coeffs[mono]
         end
         push!(true_moment_eqs, 1 / scaling_factor[j + 1] * mom_eq)
