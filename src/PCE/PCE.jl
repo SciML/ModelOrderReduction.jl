@@ -26,13 +26,13 @@ Here ``x`` denotes the states of the PCE, ``p`` the parameters, ``zᵢ`` refers 
 - `moments`: `Vector` of `Vector`s carrying the moments for each state.
 """
 struct PCE
-    states::Vector{<:Num} 
-    parameters::Vector{<:Num} 
+    states::Vector{<:Num}
+    parameters::Vector{<:Num}
     uni_basis::Vector{Pair{<:Num, <:Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}}}
-    tensor_basis::TensorProductOrthoPoly 
-    sym_basis::Vector{<:Num} 
+    tensor_basis::TensorProductOrthoPoly
+    sym_basis::Vector{<:Num}
     ansatz::Vector{Pair{<:Num, <:Num}}
-    moments::Vector{Vector{<:Num}}  
+    moments::Vector{Vector{<:Num}}
 end
 
 """
