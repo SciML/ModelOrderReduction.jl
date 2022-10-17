@@ -1,4 +1,5 @@
-using ModelOrderReduction, Plots, ModelingToolkit, DifferentialEquations, PolyChaos
+using ModelOrderReduction, ModelingToolkit, DifferentialEquations, 
+      PolyChaos, Plots, LinearAlgebra
 
 # Reaction system
 # k[1](1+θ[1]/2)/k[2]: A + B ⇌ C 
@@ -94,7 +95,7 @@ var_solution = mean([sol .^ 2 for sol in sols]) - mean_solution .^ 2
 
 L = length(pce.sym_basis)
 mean_PCE = [[moment_sol(t)[((i - 1) * L + 1):(i * L)][1] for i in 1:4] for t in t_range]
-var_weightings = computeSP2(pce.pc_basis)
+var_weightings = computeSP2(pce.tensor_basis)
 var_PCE = [[dot(moment_sol(t)[((i - 1) * L + 1):(i * L)] .^ 2, var_weightings) for i in 1:4]
            for t in t_range] .- [m .^ 2 for m in mean_PCE]
 
