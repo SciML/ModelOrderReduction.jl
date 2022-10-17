@@ -94,7 +94,14 @@ function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
     reduced_rhss, linear_projection_eqs
 end
 """
-$(TYPEDSIGNATURES)
+    $(FUNCTIONNAME)(
+        sys::ModelingToolkit.ODESystem,
+        snapshot::AbstractMatrix,
+        pod_dim::Integer;
+        deim_dim::Integer = pod_dim,
+        name::Symbol = Symbol(nameof(sys), :_deim),
+        kwargs...
+    ) -> ModelingToolkit.ODESystem
 
 Reduce a `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
 the Discrete Empirical Interpolation Method (DEIM).
