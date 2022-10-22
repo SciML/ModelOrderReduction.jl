@@ -68,7 +68,7 @@ nothing # hide
 ```
 
 Next, we apply finite difference discretization using 
-[MethodOfLines.jl](https://github.com/SciML/MethodOfLines.jl).
+[MethodOfLines.jl](https://docs.sciml.ai/MethodOfLines/stable/).
 
 ```@example deim_FitzHugh_Nagumo
 using MethodOfLines

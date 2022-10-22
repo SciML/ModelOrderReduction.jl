@@ -1,17 +1,29 @@
 # ModelOrderReduction.jl
 
-[![Github Action CI](https://github.com/SciML/ModelOrderReduction.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/SciML/ModelOrderReduction.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/SciML/ModelOrderReduction.jl/branch/main/graph/badge.svg)](https://app.codecov.io/gh/SciML/ModelOrderReduction.jl/tree/main)
+[![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/ModelOrderReduction/stable/)
+
+[![codecov](https://codecov.io/gh/SciML/ModelOrderReduction.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/ModelOrderReduction.jl)
+[![Build Status](https://github.com/SciML/ModelOrderReduction.jl/workflows/CI/badge.svg)](https://github.com/SciML/ModelOrderReduction.jl/actions?query=workflow%3ACI)
+
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 ModelOrderReduction.jl is a package for automatically reducing the computational complexity
 of mathematical models, while keeping expected fidelity within a controlled error bound. 
 These methods function a submodel with a projection
 where solving the smaller model gives approximation information about the full model. 
-MOR.jl uses [ModelingToolkit.jl](https://github.com/SciML/ModelingToolkit.jl)
+MOR.jl uses [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/)
 as a system description and automatically transforms equations
 to the subform, defining the observables to automatically lazily reconstruct the full
 model on-demand in a fast and stable form.
+
+## Tutorials and Documentation
+
+For information on using the package,
+[see the stable documentation](https://docs.sciml.ai/ModelOrderReduction/stable/). Use the
+[in-development documentation](https://docs.sciml.ai/ModelOrderReduction/dev/) for the version of
+the documentation, which contains the unreleased features.
 
 ## Example
 #### Proper Orthogonal Decomposition and Discrete Empirical Interpolation Method (POD-DEIM) on the FitzHugh-Nagumo system
