@@ -80,7 +80,7 @@ d_pce = 3
 pce = PCE(c, [θ[i] => Uniform_11OrthoPoly(d_pce) for i in eachindex(θ)])
 ```
 
-Next, we are constructing the corresponding moment equations via a simple function call of `moment_equations`. This function returns an `MTK.ODESystem` describing the deterministic evolution equation of the PCE moments and a function that maps the state of this model via the PCE Ansatz back to the original model state (in this example, the concentration of the different species).
+Next, we are constructing the corresponding moment equations via a simple function call of `moment_equations`. This function returns an `ModelingToolkit.ODESystem` describing the deterministic evolution equation of the PCE moments and a function that maps the state of this model via the PCE Ansatz back to the original model state (in this example, the concentration of the different species).
 ```
 moment_eqs, pce_eval = moment_equations(reactor_model, pce)
 ```
