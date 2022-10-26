@@ -60,9 +60,13 @@ function PCE(states, uni_basis::AbstractVector{<:Pair})
     moments = Vector{Num}[]
     for (i, state) in enumerate(collect(states))
         ind_vars = get_independent_vars(state)
-        create_var = isempty(ind_vars) ? name -> (@variables $(name))[1] :
-                     name -> (@variables $(name)(ind_vars...))[1]
-        push!(moments, [create_var(moment_name(i, j)) for j in 1:n_basis])
+        new_vars = if isempty(ind_vars)
+            Symbolics.variables(:z, i:i, 1:n_basis)
+        else
+            map(z -> z(ind_vars...),
+                Symbolics.variables(:z, i:i, 1:n_basis; T = Symbolics.FnType))
+        end
+        push!(moments, vec(new_vars))
     end
     ansatz = [states[i] => sum(moments[i][j] * sym_basis[j] for j in 1:n_basis)
               for i in 1:n_states]

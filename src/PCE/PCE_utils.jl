@@ -1,11 +1,5 @@
 import PolyChaos: computeSP2, computeSP, dim, deg
 
-# moment names
-function moment_name(i, j)
-    return Symbol("z" * Symbolics.map_subscripts(i) *
-                  "₋" * Symbolics.map_subscripts(j))
-end
-
 # getting independent variables
 function get_independent_vars(var)
     return []
@@ -109,7 +103,7 @@ end
 
 """
 `TensorProductOrthoPoly` objects represent bases formed as the tensor product of univariate `PolyChaos.AbstractOrthoPoly` bases.
-By default the basis elements of the tensor product are restricted to polynomials with total degree up to the maximum degree among the 
+By default the basis elements of the tensor product are restricted to polynomials with total degree up to the maximum degree among the
 univariate bases. This maximum degree can be manually specified, however.
 """
 struct TensorProductOrthoPoly{M, U}
@@ -149,8 +143,8 @@ end
 """
 $(TYPEDSIGNATURES)
 
-computes inner product between basis functions of a `TensorProductOrthoPoly` via 
-`PolyChaos`'s infrastructure (exploiting the tensor product form). 
+computes inner product between basis functions of a `TensorProductOrthoPoly` via
+`PolyChaos`'s infrastructure (exploiting the tensor product form).
 """
 function computeSP(basis_fxns, tpop::TensorProductOrthoPoly,
                    integrators = tpop.uni)
@@ -195,8 +189,8 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries) 
-in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated. 
+Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries)
+in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated.
 """
 function grevlex(n::Int, grade::Int)
     if n == 1
