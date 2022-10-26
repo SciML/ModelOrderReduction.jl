@@ -292,69 +292,14 @@ function bump_degree(op::OrthoPoly, deg::Int)
     return OrthoPoly(op.name, deg, op.measure)
 end
 
-function bump_degree(op::JacobiOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return JacobiOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::genLaguerreOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return genLaguerreOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::MeixnerPollaczekOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return MeixnerPollaczekOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::Beta01OrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return Beta01OrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::GammaOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return GammaOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::genHermiteOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return genHermiteOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::HermiteOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return HermiteOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::LaguerreOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return LaguerreOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::Uniform01OrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return Uniform01OrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::Uniform_11OrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return Uniform_11OrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::GaussOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return GaussOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::LegendreOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return LegendreOrthoPoly(deg, ps...)
-end
-
-function bump_degree(op::LogisticOrthoPoly, deg::Int)
-    ps = measure_parameters(op.measure)
-    return LogisticOrthoPoly(deg, ps...)
+for OrthoPolyT in (JacobiOrthoPoly, genLaguerreOrthoPoly, MeixnerPollaczekOrthoPoly,
+                   Beta01OrthoPoly, GammaOrthoPoly, genHermiteOrthoPoly, HermiteOrthoPoly,
+                   LaguerreOrthoPoly, Uniform01OrthoPoly, Uniform_11OrthoPoly,
+                   GaussOrthoPoly, LegendreOrthoPoly, LogisticOrthoPoly)
+    @eval begin function bump_degree(op::$OrthoPolyT, deg::Integer)
+        ps = measure_parameters(op.measure)
+        return $OrthoPolyT(deg, ps...)
+    end end
 end
 
 function bump_degree(op::MultiOrthoPoly, deg::Int)
