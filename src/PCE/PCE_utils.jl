@@ -10,7 +10,7 @@ end
 function get_independent_vars(var)
     return []
 end
-function get_independent_vars(var::Symbolics.Term) where {T}
+function get_independent_vars(var::Symbolics.Term)
     if operation(var) isa Symbolics.Sym
         return arguments(var)
     else
