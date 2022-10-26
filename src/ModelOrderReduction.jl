@@ -21,5 +21,6 @@ export deim
 
 # Polynomial Chaos Expansion
 include("PCE/PCE.jl")
+include("PCE/pseudo_spectral.jl")
 
 end
