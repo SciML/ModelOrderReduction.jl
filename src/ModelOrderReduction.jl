@@ -20,4 +20,9 @@ export POD, reduce!
 include("deim.jl")
 export deim
 
+using PolyChaos
+include("pce/pce.jl")
+include("pce/pce_metadata.jl")
+export PCE
+
 end
