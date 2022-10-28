@@ -212,7 +212,7 @@ function moment_equations(sys::ODESystem, pce::PCE)
     eqs = [eq.rhs for eq in equations(sys)]
     projected_eqs = pce_galerkin(eqs, pce)
     moment_eqs = reduce(vcat, projected_eqs)
-    iv = independent_variable(sys)
+    iv = ModelingToolkit.get_iv(sys)
     params = setdiff(parameters(sys), pce.parameters)
     D = Differential(iv)
     moments = reduce(vcat, pce.moments)
