@@ -24,5 +24,7 @@ using PolyChaos
 include("pce/pce.jl")
 include("pce/pce_metadata.jl")
 export PCE
+include("pce/stochastic_galerkin.jl")
+export stochastic_galerkin
 
 end
