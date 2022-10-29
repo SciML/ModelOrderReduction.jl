@@ -7,12 +7,13 @@ jobs:
     strategy:
       matrix:
         group:
-          - Core
+          - DEIM
+          - PCE
         version:
           - "1"
           - "1.6"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
@@ -28,6 +29,8 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+        env:
+          GROUP: ${{ matrix.group }}
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v2
         with:
