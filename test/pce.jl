@@ -1,6 +1,6 @@
 using Test, ModelOrderReduction
 using Symbolics, PolyChaos
-import ModelOrderReduction as MOR
+import ModelOrderReduction: TensorProductOrthoPoly, multi_indices_size
 
 supp = (-1, 1)
 w(t) = 1 + t
@@ -17,5 +17,14 @@ end
 
 @testset "TensorProductOrthoPoly" begin
     ops = [GaussOrthoPoly(4), Uniform01OrthoPoly(2), LaguerreOrthoPoly(3), my_op]
-    @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    @test_nowarn TensorProductOrthoPoly(ops)
+end
+
+@testset "multi_indices_size" begin
+    @test multi_indices_size([0]) == 1
+    @test multi_indices_size([1]) == 2
+    @test multi_indices_size([5]) == 6
+    @test multi_indices_size([2, 2]) == 6
+    @test multi_indices_size([4, 2]) == 12
+    @test multi_indices_size([2, 2, 2]) == 10
 end

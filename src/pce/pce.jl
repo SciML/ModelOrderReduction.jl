@@ -1,3 +1,62 @@
+"""
+$(TYPEDSIGNATURES)
+Returns the number of monomials in the multinomial expansion
+``(x_1 + x_2 + \\dotsb + x_m)^n``.
+"""
+multi_indices_size(m::Integer, n::Integer)::Int = binomial(m + n - 1, n)
+"""
+$(TYPEDSIGNATURES)
+Compute the count of solutions ``(a_1, a_2, \\dotsc, a_m)`` with non-negative integers
+``a_i`` such that
+```math
+\\begin{gather*}
+\\operatorname{mn} \\leq a_1 + a_2 + \\dotsb + a_m \\leq \\operatorname{mx} \\\\
+0 \\leq a_i \\leq r_i \\quad \\forall i
+\\end{gather*}
+```
+The count for equality
+```math
+a_1 + a_2 + \\dotsb + a_m = n
+```
+by using the inclusion–exclusion principle is
+```math
+\\sum_{S\\subseteq\\{1,2,\\dotsc,m\\}}(-1)^{|S|}\\binom{n+m-1-\\sum_{i\\in S}(r_i+1)}{m-1}
+```
+where ``\\binom{p}{q}=0`` when ``p < 0``.
+
+The final result is the sum of this formula with ``n`` ranging from `mn` to `mx`.
+"""
+function multi_indices_size(r::AbstractVector{<:Integer}, mn::Integer, mx::Integer)::Int
+    m = length(r)
+    m₁ = m - 1
+    sum(powerset(1:m); init = 0) do S
+        l = length(S)
+        temp = m₁ - l - sum(@view r[S]; init = 0)
+        res = sum(binomial(a, m₁) for a in (mx + temp):-1:max(1, mn + temp); init = 0)
+        iseven(l) ? res : -res
+    end
+end
+"""
+$(TYPEDSIGNATURES)
+Compute the count of solutions ``(a_1, a_2, \\dotsc, a_m)`` with non-negative integers
+``a_i`` such that
+```math
+\\begin{gather*}
+a_1 + a_2 + \\dotsb + a_m \\leq \\max_i a_i \\\\
+0 \\leq a_i \\leq r_i \\quad \\forall i
+\\end{gather*}
+```
+"""
+function multi_indices_size(r::AbstractVector{<:Integer})::Int
+    m = length(r)
+    mn, mx = extrema(r)
+    res = sum(multi_indices_size(m, n) for n in 0:mn)
+    if mn == mx
+        return res
+    end
+    res + multi_indices_size(r, mn + 1, mx)
+end
+
 function grevlex(n::Int, grade::Int)
     if n == 1
         return reshape([grade], 1, 1)

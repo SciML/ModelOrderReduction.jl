@@ -21,6 +21,7 @@ include("deim.jl")
 export deim
 
 using PolyChaos
+using Combinatorics: powerset
 include("pce/pce.jl")
 include("pce/pce_metadata.jl")
 export PCE
