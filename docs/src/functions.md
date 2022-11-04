@@ -1,6 +1,3 @@
-```@index
-```
-
 ```@docs
 deim
 ```
