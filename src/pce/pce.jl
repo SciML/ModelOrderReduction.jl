@@ -102,12 +102,18 @@ function grlex(r::AbstractVector{<:Integer})::Matrix{Int}
     res
 end
 
+"""
+$(TYPEDEF)
+"""
 struct TensorProductOrthoPoly <: AbstractOrthoPoly{ProductMeasure, EmptyQuad{Float64}}
     deg::Vector{Int}
     ind::Matrix{Int}
     measure::ProductMeasure
     uni::Vector
 end
+"""
+$(TYPEDSIGNATURES)
+"""
 function TensorProductOrthoPoly(ops::AbstractVector{T}) where {T <: AbstractOrthoPoly}
     degrees = deg.(ops)
     ind = grlex(degrees)
@@ -119,7 +125,6 @@ end
 
 """
 $(TYPEDEF)
-
 # Fields
 $(TYPEDFIELDS)
 """

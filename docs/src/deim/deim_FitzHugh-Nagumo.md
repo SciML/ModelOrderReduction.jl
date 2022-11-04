@@ -1,4 +1,4 @@
-# Discrete Empirical Interpolation Method (DEIM)
+# Example: FitzHugh-Nagumo System
 
 This section illustrates how ModelOrderReduction.jl can be used to build a reduced order 
 model via Petrov-Galerkin projection using the Proper Orthogonal Decomposition (POD) and 
