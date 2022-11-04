@@ -57,52 +57,49 @@ function multi_indices_size(r::AbstractVector{<:Integer})::Int
     res + multi_indices_size(r, mn + 1, mx)
 end
 
-function grevlex(n::Int, grade::Int)
-    if n == 1
-        return reshape([grade], 1, 1)
+"""
+$(TYPEDSIGNATURES)
+Return a matrix where the columns are the degrees ``(d_1, d_2, \\dotsc, d_m)`` of monomials
+``x_1^{d_1}x_2^{d_2}\\dotsm x_m^{d_m}`` in the graded lexicographic order such that
+```math
+\\begin{gather*}
+d_1 + d_2 + \\dotsb + d_m \\leq \\max_i r_i \\\\
+0 \\leq d_i \\leq r_i \\quad \\forall i
+\\end{gather*}
+```
+"""
+function grlex(r::AbstractVector{<:Integer})::Matrix{Int}
+    mn, mx = extrema(r)
+    indices_size = multi_indices_size(r)
+    n_term = length(r)
+    res = zeros(Int, n_term, indices_size)
+    indices_i = 2
+    @inbounds for total_degree in 1:mn
+        for stars in combinations(1:(n_term + total_degree - 1), total_degree)
+            degree = @view res[:, indices_i]
+            for (i, s) in enumerate(stars)
+                degree[s - i + 1] += 1
+            end
+            indices_i += 1
+        end
     end
-
-    if grade == 0
-        return zeros(Int, 1, n)
+    @inbounds for total_degree in (mn + 1):mx
+        for stars in combinations(1:(n_term + total_degree - 1), total_degree)
+            degree = @view res[:, indices_i]
+            for (i, s) in enumerate(stars)
+                degree[s - i + 1] += 1
+            end
+            if any(degree .> r)
+                degree .= 0
+                continue
+            end
+            indices_i += 1
+            if indices_i > indices_size
+                return res
+            end
+        end
     end
-
-    sub_ind = grevlex(n - 1, grade)
-    ind = hcat(sub_ind, zeros(Int, size(sub_ind, 1)))
-    for k in 1:grade
-        sub_ind = grevlex(n - 1, grade - k)
-        ind = vcat(ind, hcat(sub_ind, k * ones(Int, size(sub_ind, 1))))
-    end
-    return ind
-end
-function grevlex(n::Int, grades::AbstractVector{Int})
-    return reduce(vcat, [grevlex(n, grade) for grade in grades])
-end
-function grevlex(n::Int, grade::Int, max_degrees::Vector{Int})
-    return grevlex(n, grade, [0:d for d in max_degrees])
-end
-function grevlex(n::Int, grades::AbstractVector{Int}, max_degrees::Vector{Int})
-    return reduce(vcat, [grevlex(n, grade, max_degrees) for grade in grades])
-end
-function grevlex(n::Int, grade::Int, degree_constraints::Vector{<:AbstractVector})
-    if n == 1
-        return grade in degree_constraints[1] ? reshape([grade], 1, 1) : zeros(Int, 0, 1)
-    end
-    if grade == 0
-        return all(0 in degs for degs in degree_constraints) ? zeros(Int, 1, n) :
-               zeros(Int, 0, n)
-    end
-    filtered_grades = filter(x -> x <= grade, degree_constraints[end])
-    sub_ind = grevlex(n - 1, grade - filtered_grades[1], degree_constraints[1:(end - 1)])
-    ind = hcat(sub_ind, filtered_grades[1] * ones(Int, size(sub_ind, 1)))
-    for k in filtered_grades[2:end]
-        sub_ind = grevlex(n - 1, grade - k, degree_constraints[1:(end - 1)])
-        ind = vcat(ind, hcat(sub_ind, k * ones(Int, size(sub_ind, 1))))
-    end
-    return ind
-end
-function grevlex(n::Int, grades::AbstractVector{Int},
-                 degree_constraints::Vector{<:AbstractVector})
-    return reduce(vcat, [grevlex(n, grade, degree_constraints) for grade in grades])
+    res
 end
 
 struct TensorProductOrthoPoly <: AbstractOrthoPoly{ProductMeasure, EmptyQuad{Float64}}
@@ -112,9 +109,8 @@ struct TensorProductOrthoPoly <: AbstractOrthoPoly{ProductMeasure, EmptyQuad{Flo
     uni::Vector
 end
 function TensorProductOrthoPoly(ops::AbstractVector{T}) where {T <: AbstractOrthoPoly}
-    n = length(ops)
     degrees = deg.(ops)
-    ind = grevlex(n, 0:maximum(degrees), degrees)
+    ind = grlex(degrees)
     measures = [op.measure for op in ops]
     w(t) = prod(m.w(t) for m in measures)
     measure = ProductMeasure(w, measures)
