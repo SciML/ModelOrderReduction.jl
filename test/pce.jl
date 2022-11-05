@@ -1,5 +1,6 @@
 using Test, ModelOrderReduction
 using Symbolics, PolyChaos
+using SpecialFunctions: beta
 import ModelOrderReduction as MOR
 
 supp = (-1, 1)
@@ -61,4 +62,28 @@ end
     check_grlex([3, 2, 2])
     check_grlex([3, 2, 1, 2])
     check_grlex([2, 5, 3, 4, 2])
+end
+
+@testset "Tensor" begin
+    deg, n = 4, 20
+    s_α, s_β = 2.1, 3.2
+    beta_op = Beta01OrthoPoly(deg, s_α, s_β; Nrec = n, addQuadrature = true)
+    supp = (0, 1)
+    w(t) = (t^(s_α - 1) * (1 - t)^(s_β - 1) / beta(s_α, s_β))
+    my_meas = Measure("my_meas", w, supp, false)
+    my_opq = OrthoPoly("my_op", deg, my_meas; Nrec = n, addQuadrature = true)
+
+    ops = [beta_op, my_opq]
+    tpop = MOR.TensorProductOrthoPoly(ops)
+    mop = MultiOrthoPoly(ops, deg)
+
+    for t in (2, 3)
+        tt = MOR.Tensor2(t, tpop)
+        mt = Tensor(t, mop)
+        index = Vector{Int}(undef, t)
+        for i in 0:(dim(mop) - 1)
+            fill!(index, i)
+            @test tt.get(index) == mt.get(index)
+        end
+    end
 end
