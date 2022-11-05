@@ -1,26 +1,26 @@
 """
 $(TYPEDSIGNATURES)
 Returns the number of monomials in the multinomial expansion
-``(x_1 + x_2 + \\dotsb + x_m)^n``.
+``(x_1 + x_2 + ⋯ + x_m)^n``.
 """
 multi_indices_size(m::Integer, n::Integer)::Int = binomial(m + n - 1, n)
 """
 $(TYPEDSIGNATURES)
-Compute the count of solutions ``(a_1, a_2, \\dotsc, a_m)`` with non-negative integers
+Compute the count of solutions ``(a_1, a_2, …, a_m)`` with non-negative integers
 ``a_i`` such that
 ```math
 \\begin{gather*}
-\\operatorname{mn} \\leq a_1 + a_2 + \\dotsb + a_m \\leq \\operatorname{mx} \\\\
-0 \\leq a_i \\leq r_i \\quad \\forall i
+\\operatorname{mn} ≤ a_1 + a_2 + ⋯ + a_m ≤ \\operatorname{mx} \\\\
+0 ≤ a_i ≤ r_i \\quad ∀ i
 \\end{gather*}
 ```
 The count for equality
 ```math
-a_1 + a_2 + \\dotsb + a_m = n
+a_1 + a_2 + ⋯ + a_m = n
 ```
 by using the inclusion–exclusion principle is
 ```math
-\\sum_{S\\subseteq\\{1,2,\\dotsc,m\\}}(-1)^{|S|}\\binom{n+m-1-\\sum_{i\\in S}(r_i+1)}{m-1}
+∑_{S⊆\\{1,2,…,m\\}}(-1)^{|S|}\\binom{n+m-1-∑_{i∈S}(r_i+1)}{m-1}
 ```
 where ``\\binom{p}{q}=0`` when ``p < 0``.
 
@@ -38,12 +38,12 @@ function multi_indices_size(r::AbstractVector{<:Integer}, mn::Integer, mx::Integ
 end
 """
 $(TYPEDSIGNATURES)
-Compute the count of solutions ``(a_1, a_2, \\dotsc, a_m)`` with non-negative integers
+Compute the count of solutions ``(a_1, a_2, …, a_m)`` with non-negative integers
 ``a_i`` such that
 ```math
 \\begin{gather*}
-a_1 + a_2 + \\dotsb + a_m \\leq \\max_i a_i \\\\
-0 \\leq a_i \\leq r_i \\quad \\forall i
+a_1 + a_2 + ⋯ + a_m ≤ \\max_i a_i \\\\
+0 ≤ a_i ≤ r_i \\quad ∀ i
 \\end{gather*}
 ```
 """
@@ -59,14 +59,17 @@ end
 
 """
 $(TYPEDSIGNATURES)
-Return a matrix where the columns are the degrees ``(d_1, d_2, \\dotsc, d_m)`` of monomials
-``x_1^{d_1}x_2^{d_2}\\dotsm x_m^{d_m}`` in the graded lexicographic order such that
+Return a matrix where the columns are the degrees ``(d_1, d_2, …, d_m)`` of monomials
+``x_1^{d_1}x_2^{d_2}⋯x_m^{d_m}`` in the graded lexicographic order such that
 ```math
 \\begin{gather*}
-d_1 + d_2 + \\dotsb + d_m \\leq \\max_i r_i \\\\
-0 \\leq d_i \\leq r_i \\quad \\forall i
+d_1 + d_2 + ⋯ + d_m ≤ \\max_i r_i \\\\
+0 ≤ d_i ≤ r_i \\quad ∀ i
 \\end{gather*}
 ```
+
+As `$(FUNCTIONNAME)` has exponential space complexity, [`multi_indices_size`](@ref) is used
+to compute the matrix size in order to reduce the number of allocations.
 """
 function grlex(r::AbstractVector{<:Integer})::Matrix{Int}
     mn, mx = extrema(r)
@@ -107,8 +110,10 @@ $(TYPEDEF)
 `$(FUNCTIONNAME)` represents multivariate orthogonal polynomial bases formed as the tensor
 product of univariate `PolyChaos.AbstractOrthoPoly`s.
 
-This is similar to `PolyChaos.MultiOrthoPoly`, but allows different degree truncation for
-univariate bases.
+`$(FUNCTIONNAME)` is similar to `PolyChaos.MultiOrthoPoly`, but allows different degree
+truncation for univariate bases. Multi-indices of `$(FUNCTIONNAME)` are stored in the
+columns as Julia is column-major, while multi-indices are rows in the index matrix of
+`PolyChaos.MultiOrthoPoly`.
 
 By default, the sum of multi-indices are restricted to the maximum degree among the
 univariate bases.
@@ -118,7 +123,7 @@ $(TYPEDFIELDS)
 """
 struct TensorProductOrthoPoly{V <: AbstractVector{<:AbstractOrthoPoly}} <:
        AbstractOrthoPoly{ProductMeasure, AbstractQuad{Float64}}
-    "The degree of each univariate orthogonal polynomials."
+    "The degree truncation of each univariate orthogonal polynomials."
     deg::Vector{Int}
     "Multi-indices in the columns."
     ind::Matrix{Int}
@@ -193,9 +198,19 @@ function PolyChaos.computeTensorizedSP(dim::Int, tpop::TensorProductOrthoPoly)
     computeTensorizedSP(dim, tpop.uni, transpose(tpop.ind))
 end
 
+"""
+$(TYPEDEF)
+`$(FUNCTIONNAME)` is used to store the results of scalar products.
+
+# Fields
+$(TYPEDFIELDS)
+"""
 struct Tensor2 <: AbstractTensor{TensorProductOrthoPoly}
+    "Dimension ``m`` of tensor ``⟨ϕ_{i_1}ϕ_{i_2}⋯ϕ_{i_{m-1}},ϕ_{i_m}⟩``."
     dim::Int
+    "Entries of tensor."
     T::SparseVector{Float64, Int}
+    "Function to get entries from `T`."
     get::Function
     function Tensor2(dim::Int, tpop::TensorProductOrthoPoly)
         tensor_entries = computeTensorizedSP(dim, tpop)
