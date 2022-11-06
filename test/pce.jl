@@ -10,10 +10,19 @@ deg = 4
 my_op = OrthoPoly("my_op", deg, my_meas; Nquad = 200)
 
 @testset "PCE constructor" begin
-    x = @variables a b c d
-    basis = [HermiteOrthoPoly(3), Uniform01OrthoPoly(4), Uniform_11OrthoPoly(5), my_op]
-    ind = rand(Int, 5, 4)
-    @test_nowarn PCE(x, basis, ind)
+    @variables t x[1:4] y(t)[1:2]
+    degrees = [3, 4, 5, 4]
+    uni_basis = [
+        HermiteOrthoPoly(degrees[1]),
+        Uniform01OrthoPoly(degrees[2]),
+        Uniform_11OrthoPoly(degrees[3]),
+        my_op,
+    ]
+    pce = @test_nowarn PCE(y, x, uni_basis)
+    @test isequal(pce.states, Symbolics.scalarize(y))
+    @test isequal(pce.parameters, Symbolics.scalarize(x))
+    multi_indices_dim = MOR.multi_indices_size(degrees)
+    @test size(pce.moments) == (multi_indices_dim, length(y))
 end
 
 @testset "TensorProductOrthoPoly" begin
@@ -49,10 +58,9 @@ end
 
     function check_grlex(r::AbstractVector{<:Integer})
         res = MOR.grlex(r)
-        col = size(res, 2)
         mx = maximum(r)
-        @test allunique(view(res, :, i) for i in 1:col)
-        for i in 1:col
+        @test allunique(view(res, :, i) for i in axes(res, 2))
+        for i in axes(res, 2)
             degree = @view res[:, i]
             @test sum(degree) ≤ mx
             @test all(degree .≤ r)

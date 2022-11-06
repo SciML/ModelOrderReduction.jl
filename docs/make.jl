@@ -1,4 +1,4 @@
-using Documenter, ModelOrderReduction
+using Documenter, ModelOrderReduction, Symbolics, PolyChaos
 
 include("pages.jl")
 

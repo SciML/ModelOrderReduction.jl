@@ -121,7 +121,7 @@ univariate bases.
 # Fields
 $(TYPEDFIELDS)
 """
-struct TensorProductOrthoPoly{V <: AbstractVector{<:AbstractOrthoPoly}} <:
+struct TensorProductOrthoPoly{OP <: AbstractOrthoPoly} <:
        AbstractOrthoPoly{ProductMeasure, AbstractQuad{Float64}}
     "The degree truncation of each univariate orthogonal polynomials."
     deg::Vector{Int}
@@ -130,7 +130,7 @@ struct TensorProductOrthoPoly{V <: AbstractVector{<:AbstractOrthoPoly}} <:
     "Product measure."
     measure::ProductMeasure
     "Univariate orthogonal polynomials."
-    uni::V
+    uni::Vector{OP}
 end
 """
 $(TYPEDSIGNATURES)
@@ -141,7 +141,7 @@ function TensorProductOrthoPoly(ops::AbstractVector{<:AbstractOrthoPoly})
     measures = [op.measure for op in ops]
     w(t) = prod(m.w(t) for m in measures)
     measure = ProductMeasure(w, measures)
-    TensorProductOrthoPoly(degrees, ind, measure, ops)
+    TensorProductOrthoPoly(degrees, ind, measure, Vector(ops))
 end
 
 PolyChaos.dim(tpop::TensorProductOrthoPoly) = size(tpop.ind, 2)
@@ -221,14 +221,67 @@ end
 
 """
 $(TYPEDEF)
+Suppose a variable ``Y`` with finite variance is a function of ``n`` independent but not
+identically distributed random variables ``X_1, …, X_n`` with joint density
+``p(x_1, …, x_n) = p_1(x_1) p_2(x_2) ⋯ p_n(x_n)``. Then the Polynomial Chaos Expansion
+(PCE) for ``Y = Y(X_i), X_i ∼ π_{x_i}, i = 1, …, n``, takes the form
+```math
+y(x_1, …, x_n) = ∑_{α_1=0}^∞ ∑_{α_2=0}^∞ ⋯ ∑_{α_n=0}^∞
+C_{(α_1, α_2, …, α_n)} Ψ_{(α_1, α_2, …, α_n)}(x_1, …, x_n)
+```
+Here the summation runs across all possible combinations of the multi-index
+``α⃗ = (α_1, …, α_n)``.
+
+The set of multivariate orthogonal polynomials is defined as
+```math
+Ψ_{α⃗}(x_1, …, x_n) = ∏_{i=1}^n ψ_{α_i}^{(i)}(x_i)
+```
+where ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^∞`` is the family of univariate orthogonal
+polynomials with respect to ``p_i``.
+
 # Fields
 $(TYPEDFIELDS)
 """
-struct PCE{P <: AbstractOrthoPoly}
-    "Independent symbolic random variables ``X``."
-    x::Vector{Num}
-    "Univariate orthogonal polynomial basis for each ``X_i``."
-    basis::Vector{P}
-    "The array of multi-indices which could be a sparse grid."
-    ind::Matrix{Int}
+struct PCE{OP <: AbstractOrthoPoly}
+    "The random variables ``\\mathbf Y`` that are represented by other random variables."
+    states::Vector{Num}
+    "The independent random variables ``\\mathbf X``."
+    parameters::Vector{Num}
+    """The univariate orthogonal polynomial basis
+    ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``."""
+    uni_basis::Vector{OP}
+    "The tensor-product-based multivariate basis underpinning the PCE."
+    tensor_basis::TensorProductOrthoPoly
+    "The coefficients ``C_{(α_1, α_2, …, α_n)}`` for each ``Y_i`` in the columns."
+    moments::Matrix
+end
+"""
+$(TYPEDSIGNATURES)
+Construct a `$(FUNCTIONNAME)` object.
+
+In practice, the infinite series of multi-indices must be truncated. By default, besides
+the upper bound for the degree of each univariate orthogonal polynomial, the total degree
+is restricted to the maximum degree among the univariate bases. That is
+```math
+\\begin{gather*}
+α_1 + α_2 + ⋯ α_n ≤ \\max_i r_i \\\\
+0 ≤ α_i ≤ r_i \\quad ∀ i
+\\end{gather*}
+```
+where ``r_i`` is the degree upper bound for the univariate basis corresponding to ``X_i``.
+
+# Arguments
+- `states`: Random vairables ``\\mathbf Y`` that are represented by other random variables."
+- `parameters`: Independent random variables ``\\mathbf X``."
+- `uni_basis`: Univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``."
+"""
+function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
+             uni_basis::AbstractVector{<:AbstractOrthoPoly})
+    states = Symbolics.scalarize(states)
+    parameters = Symbolics.scalarize(parameters)
+    tensor_basis = TensorProductOrthoPoly(uni_basis)
+    moments = [Symbolics.variable(Symbol(:C, i), view(tensor_basis.ind, :, j)...;
+                                  T = Symbolics.FnType)
+               for j in axes(tensor_basis.ind, 2), i in eachindex(states)]
+    PCE(states, parameters, uni_basis, tensor_basis, moments)
 end

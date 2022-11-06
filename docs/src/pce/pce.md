@@ -2,4 +2,5 @@
 
 ```@docs
 PCE
+PCE(::AbstractVector{Num}, ::AbstractVector{Num}, ::AbstractVector{<:AbstractOrthoPoly})
 ```
