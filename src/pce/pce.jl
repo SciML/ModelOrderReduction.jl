@@ -242,15 +242,16 @@ polynomials with respect to ``p_i``.
 # Fields
 $(TYPEDFIELDS)
 """
-struct PCE{OP <: AbstractOrthoPoly}
+struct PCE
     "The random variables ``\\mathbf Y`` that are represented by other random variables."
     states::Vector{Num}
     "The independent random variables ``\\mathbf X``."
     parameters::Vector{Num}
-    """The univariate orthogonal polynomial basis
-    ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``."""
-    uni_basis::Vector{OP}
-    "The tensor-product-based multivariate basis underpinning the PCE."
+    """
+    The tensor-product-based multivariate basis underpinning the PCE, which stores the
+    univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for
+    each ``X_i`` and multi-indices ``α⃗``.
+    """
     tensor_basis::TensorProductOrthoPoly
     "The coefficients ``C_{(α_1, α_2, …, α_n)}`` for each ``Y_i`` in the columns."
     moments::Matrix
@@ -283,5 +284,5 @@ function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
     moments = [Symbolics.variable(Symbol(:C, i), view(tensor_basis.ind, :, j)...;
                                   T = Symbolics.FnType)
                for j in axes(tensor_basis.ind, 2), i in eachindex(states)]
-    PCE(states, parameters, uni_basis, tensor_basis, moments)
+    PCE(states, parameters, tensor_basis, moments)
 end
