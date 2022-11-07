@@ -146,52 +146,7 @@ end
 
 PolyChaos.dim(tpop::TensorProductOrthoPoly) = size(tpop.ind, 2)
 
-function PolyChaos.computeSP(a_::AbstractVector{<:Integer},
-                             α::AbstractVector{<:AbstractVector{<:Real}},
-                             β::AbstractVector{<:AbstractVector{<:Real}},
-                             nodes::AbstractVector{<:AbstractVector{<:Real}},
-                             weights::AbstractVector{<:AbstractVector{<:Real}},
-                             ind::AbstractMatrix{<:Integer};
-                             issymmetric::BitArray = falses(length(α)),
-                             zerotol::Float64 = 1e-10)
-    mn, mx = extrema(a_)
-    if mn < 0
-        throw(DomainError(minimum(a_), "no negative degrees allowed"))
-    end
-    l, p = size(ind) # p-variate basis
-    p == 1 && computeSP(a_, α[1], β[1], nodes[1], weights[1]; issymmetric = issymmetric[1])
-    l -= 1
-    if mx > l
-        throw(DomainError(mx,
-                          "not enough elements in multi-index (requested: $mx, max: $l)"))
-    end
-    if !(length(α) == length(β) == length(nodes) == length(weights) ==
-         length(issymmetric) == p)
-        msg = "inconsistent number of recurrence coefficients and/or nodes/weights"
-        throw(InconsistencyError(msg))
-    end
-    a = filter(!iszero, a_)
-    if length(a) == 0
-        return prod(β[i][1] for i in 1:p)
-    elseif length(a) == 1
-        return 0.0
-    else
-        inds_uni = multi2uni(a, ind)
-        val = 1.0
-        @inbounds for i in 1:p
-            v = computeSP(inds_uni[i, :], α[i], β[i], nodes[i], weights[i];
-                          issymmetric = issymmetric[i])
-            if isapprox(v, 0, atol = zerotol)
-                return 0.0
-            else
-                val *= v
-            end
-        end
-    end
-    return val
-end
-
-function PolyChaos.computeTensorizedSP(dim::Int, tpop::TensorProductOrthoPoly)
+function PolyChaos.computeTensorizedSP(dim::Integer, tpop::TensorProductOrthoPoly)
     if any(op.quad isa EmptyQuad for op in tpop.uni)
         throw(InconsistencyError("at least one quadrature rule missing"))
     end
