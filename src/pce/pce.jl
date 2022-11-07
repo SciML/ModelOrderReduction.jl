@@ -121,7 +121,7 @@ univariate bases.
 # Fields
 $(TYPEDFIELDS)
 """
-struct TensorProductOrthoPoly{OP <: AbstractOrthoPoly} <:
+struct TensorProductOrthoPoly{OP <: Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly}} <:
        AbstractOrthoPoly{ProductMeasure, AbstractQuad{Float64}}
     "The degree truncation of each univariate orthogonal polynomials."
     deg::Vector{Int}
@@ -135,7 +135,9 @@ end
 """
 $(TYPEDSIGNATURES)
 """
-function TensorProductOrthoPoly(ops::AbstractVector{<:AbstractOrthoPoly})
+function TensorProductOrthoPoly(ops::AbstractVector{
+                                                    <:Union{AbstractOrthoPoly,
+                                                            AbstractCanonicalOrthoPoly}})
     degrees = deg.(ops)
     ind = grlex(degrees)
     measures = [op.measure for op in ops]

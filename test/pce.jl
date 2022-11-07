@@ -26,8 +26,20 @@ my_op = OrthoPoly("my_op", deg, my_meas; Nquad = 200)
 end
 
 @testset "TensorProductOrthoPoly" begin
-    ops = [GaussOrthoPoly(4), Uniform01OrthoPoly(2), LaguerreOrthoPoly(3), my_op]
+    ops = [GaussOrthoPoly(1)]
     @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    ops = [GaussOrthoPoly(4), GaussOrthoPoly(3)]
+    @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    ops = [my_op]
+    @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    ops = [my_op, my_op]
+    @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    ops = [GaussOrthoPoly(4), Uniform01OrthoPoly(2), LaguerreOrthoPoly(3), my_op]
+    tpop = @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    @test dim(tpop) == MOR.multi_indices_size([4, 2, 3, 4])
+    ops = [GaussOrthoPoly(4; addQuadrature = false), Uniform01OrthoPoly(2)]
+    tpop = @test_nowarn MOR.TensorProductOrthoPoly(ops)
+    @test_throws InconsistencyError computeTensorizedSP(3, tpop)
 end
 
 @testset "multi_indices_size" begin
