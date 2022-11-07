@@ -221,9 +221,9 @@ is restricted to the maximum degree among the univariate bases. That is
 where ``r_i`` is the degree upper bound for the univariate basis corresponding to ``X_i``.
 
 # Arguments
-- `states`: Random vairables ``\\mathbf Y`` that are represented by other random variables."
-- `parameters`: Independent random variables ``\\mathbf X``."
-- `uni_basis`: Univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``."
+- `states`: Random vairables ``\\mathbf Y`` that are represented by other random variables.
+- `parameters`: Independent random variables ``\\mathbf X``.
+- `uni_basis`: Univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``.
 """
 function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
              uni_basis::AbstractVector{<:AbstractOrthoPoly})
