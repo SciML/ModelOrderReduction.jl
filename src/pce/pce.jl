@@ -234,8 +234,10 @@ function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
     states = Symbolics.scalarize(states)
     parameters = Symbolics.scalarize(parameters)
     tensor_basis = TensorProductOrthoPoly(uni_basis)
-    moments = [Symbolics.variable(Symbol(:C, i), view(tensor_basis.ind, :, j)...;
-                                  T = Symbolics.FnType)
-               for j in axes(tensor_basis.ind, 2), i in eachindex(states)]
+    moments = [(name = Symbol(:C, Symbolics.tosymbol(s),
+                              join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)),
+                                   "ˏ"));
+                first(@variables $name(..) [description = j]))
+               for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
     PCE(states, parameters, tensor_basis, moments)
 end
