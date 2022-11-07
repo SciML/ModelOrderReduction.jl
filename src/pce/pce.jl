@@ -138,6 +138,9 @@ $(TYPEDSIGNATURES)
 function TensorProductOrthoPoly(ops::AbstractVector{
                                                     <:Union{AbstractOrthoPoly,
                                                             AbstractCanonicalOrthoPoly}})
+    if any(op.quad isa EmptyQuad for op in ops)
+        throw(InconsistencyError("at least one quadrature rule missing"))
+    end
     degrees = deg.(ops)
     ind = grlex(degrees)
     measures = [op.measure for op in ops]
@@ -149,9 +152,6 @@ end
 PolyChaos.dim(tpop::TensorProductOrthoPoly) = size(tpop.ind, 2)
 
 function PolyChaos.computeTensorizedSP(dim::Integer, tpop::TensorProductOrthoPoly)
-    if any(op.quad isa EmptyQuad for op in tpop.uni)
-        throw(InconsistencyError("at least one quadrature rule missing"))
-    end
     computeTensorizedSP(dim, tpop.uni, transpose(tpop.ind))
 end
 

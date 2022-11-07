@@ -38,8 +38,7 @@ end
     tpop = @test_nowarn MOR.TensorProductOrthoPoly(ops)
     @test dim(tpop) == MOR.multi_indices_size([4, 2, 3, 4])
     ops = [GaussOrthoPoly(4; addQuadrature = false), Uniform01OrthoPoly(2)]
-    tpop = @test_nowarn MOR.TensorProductOrthoPoly(ops)
-    @test_throws InconsistencyError computeTensorizedSP(3, tpop)
+    @test_throws InconsistencyError MOR.TensorProductOrthoPoly(ops)
 end
 
 @testset "multi_indices_size" begin
