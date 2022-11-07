@@ -23,6 +23,16 @@ my_op = OrthoPoly("my_op", deg, my_meas; Nquad = 200)
     @test isequal(pce.parameters, Symbolics.scalarize(x))
     multi_indices_dim = MOR.multi_indices_size(degrees)
     @test size(pce.moments) == (multi_indices_dim, length(y))
+    uni_basis = [
+        HermiteOrthoPoly(degrees[1]),
+        Uniform01OrthoPoly(degrees[2]),
+        Uniform_11OrthoPoly(degrees[3]),
+    ]
+    @test_nowarn PCE(y, x[1:3], uni_basis)
+    uni_basis = [HermiteOrthoPoly(degrees[1]), HermiteOrthoPoly(degrees[2])]
+    @test_nowarn PCE(y, x[1:2], uni_basis)
+    uni_basis = [my_op, my_op]
+    @test_nowarn PCE(y, x[1:2], uni_basis)
 end
 
 @testset "TensorProductOrthoPoly" begin
