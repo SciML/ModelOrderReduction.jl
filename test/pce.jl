@@ -86,7 +86,7 @@ end
     mop = MultiOrthoPoly(ops, deg)
 
     for t in (2, 3)
-        tt = MOR.Tensor2(t, tpop)
+        tt = Tensor(t, tpop)
         mt = Tensor(t, mop)
         index = Vector{Int}(undef, t)
         for i in 0:(dim(mop) - 1)

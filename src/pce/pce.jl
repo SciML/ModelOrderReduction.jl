@@ -154,24 +154,18 @@ function PolyChaos.computeTensorizedSP(dim::Integer, tpop::TensorProductOrthoPol
 end
 
 """
-$(TYPEDEF)
-`$(FUNCTIONNAME)` is used to store the results of scalar products.
-
-# Fields
-$(TYPEDFIELDS)
+$(TYPEDSIGNATURES)
+Construct a `$(FUNCTIONNAME)` which is used to compute and store the results of inner
+products
+```math
+⟨ϕ_{i_1}ϕ_{i_2}⋯ϕ_{i_{m-1}},ϕ_{i_m}⟩
+```
+where ``m`` is input argument `dim`.
 """
-struct Tensor2 <: AbstractTensor{TensorProductOrthoPoly}
-    "Dimension ``m`` of tensor ``⟨ϕ_{i_1}ϕ_{i_2}⋯ϕ_{i_{m-1}},ϕ_{i_m}⟩``."
-    dim::Int
-    "Entries of tensor."
-    T::SparseVector{Float64, Int}
-    "Function to get entries from `T`."
-    get::Function
-    function Tensor2(dim::Int, tpop::TensorProductOrthoPoly)
-        tensor_entries = computeTensorizedSP(dim, tpop)
-        getfun(ind) = getentry(ind, tensor_entries, transpose(tpop.ind), dim)
-        new(dim, tensor_entries, getfun)
-    end
+function PolyChaos.Tensor(dim::Int, tpop::TensorProductOrthoPoly)
+    tensor_entries = computeTensorizedSP(dim, tpop)
+    getfun(ind) = getentry(ind, tensor_entries, transpose(tpop.ind), dim)
+    Tensor(dim, tensor_entries, getfun, tpop)
 end
 
 """
