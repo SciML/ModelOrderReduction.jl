@@ -60,15 +60,3 @@ import ModelOrderReduction as MOR
         @test_throws ArgumentError ModelOrderReduction.linear_terms(exprs, vars)
     end
 end
-
-# testing extraction of independent variables
-@testset "PCE: get_independent_vars test" begin
-    @variables t, z, u(t), v(t)[1:4], w(t, z), x(t, z)[1:4]
-    @test isequal(MOR.get_independent_vars(u), [t])
-    @test isequal(MOR.get_independent_vars(v[1]), [t])
-    @test isequal(MOR.get_independent_vars(v[2]), [t])
-    @test isequal(MOR.get_independent_vars(w), [t, z])
-    @test isequal(MOR.get_independent_vars(x[2]), [t, z])
-    @test isequal(MOR.get_independent_vars(collect(v)), [[t] for i in 1:length(v)])
-    @test isequal(MOR.get_independent_vars(collect(x)), [[t, z] for i in 1:length(v)])
-end
