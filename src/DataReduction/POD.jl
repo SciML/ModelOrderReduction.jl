@@ -1,6 +1,3 @@
-using TSVD: tsvd
-using RandomizedLinAlg: rsvd
-
 function matricize(VoV::Vector{Vector{T}}) where {T}
     reduce(hcat, VoV)
 end

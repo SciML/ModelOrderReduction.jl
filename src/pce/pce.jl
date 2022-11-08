@@ -241,3 +241,229 @@ function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
                for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
     PCE(states, parameters, tensor_basis, moments)
 end
+
+# extracting the indices of the factors of as basismonomial
+function get_basis_indices(mono::Symbolics.Mul)
+    basis_indices = Int[]
+    for (term, pow) in mono.dict
+        append!(basis_indices, (arguments(term)[end] - 1) * ones(Int, pow))
+    end
+    return basis_indices
+end
+function get_basis_indices(mono::Symbolics.Term)
+    return [arguments(mono)[end] - 1]
+end
+function get_basis_indices(mono::Symbolics.Pow)
+    return (arguments(mono.base)[end] - 1) * ones(Int, mono.exp)
+end
+function get_basis_indices(mono::Num)
+    return get_basis_indices(Symbolics.unwrap(mono))
+end
+function get_basis_indices(::Val{1})
+    return [0]
+end
+
+# Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries)
+# in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated.
+function grevlex(n::Int, grade::Int)
+    if n == 1
+        return reshape([grade], 1, 1)
+    end
+    if grade == 0
+        return zeros(Int, 1, n)
+    end
+    sub_ind = grevlex(n - 1, grade)
+    ind = hcat(sub_ind, zeros(Int, size(sub_ind, 1)))
+    for k in 1:grade
+        sub_ind = grevlex(n - 1, grade - k)
+        ind = vcat(ind, hcat(sub_ind, k * ones(Int, size(sub_ind, 1))))
+    end
+    return ind
+end
+function grevlex(n::Int, grades::AbstractVector{Int})
+    return reduce(vcat, [grevlex(n, grade) for grade in grades])
+end
+function grevlex(n::Int, grade::Int, max_degrees::Vector{Int})
+    return grevlex(n, grade, [0:d for d in max_degrees])
+end
+function grevlex(n::Int, grades::AbstractVector{Int}, max_degrees::Vector{Int})
+    return reduce(vcat, [grevlex(n, grade, max_degrees) for grade in grades])
+end
+function grevlex(n::Int, grade::Int, degree_constraints::Vector{<:AbstractVector})
+    if n == 1
+        return grade in degree_constraints[1] ? reshape([grade], 1, 1) : zeros(Int, 0, 1)
+    end
+    if grade == 0
+        return all(0 in degs for degs in degree_constraints) ? zeros(Int, 1, n) :
+               zeros(Int, 0, n)
+    end
+    filtered_grades = filter(x -> x <= grade, degree_constraints[end])
+    sub_ind = grevlex(n - 1, grade - filtered_grades[1], degree_constraints[1:(end - 1)])
+    ind = hcat(sub_ind, filtered_grades[1] * ones(Int, size(sub_ind, 1)))
+    for k in filtered_grades[2:end]
+        sub_ind = grevlex(n - 1, grade - k, degree_constraints[1:(end - 1)])
+        ind = vcat(ind, hcat(sub_ind, k * ones(Int, size(sub_ind, 1))))
+    end
+    return ind
+end
+function grevlex(n::Int, grades::AbstractVector{Int},
+                 degree_constraints::Vector{<:AbstractVector})
+    return reduce(vcat, [grevlex(n, grade, degree_constraints) for grade in grades])
+end
+
+# 1. apply PCE ansatz
+"""
+$(TYPEDSIGNATURES)
+
+Generate linear PCEs for the uncertain parameters.
+"""
+function generate_parameter_pce(pce::PCE)
+    par_dim = length(pce.parameters)
+    par_pce = Vector{Pair{eltype(pce.parameters), eltype(pce.sym_basis)}}(undef, par_dim)
+    for (i, basis) in enumerate(pce.uni_basis)
+        p, op = basis
+        par_pce[i] = p => pce.sym_basis[i + 1] + op.α[1]
+    end
+    return par_pce
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Substitute parameters shared between a set of symbolic `eqs` and the PCE `pce` for the corresponding linear PCEs.
+"""
+function substitute_parameters(eqs::AbstractVector, pce::PCE)
+    par_pce = generate_parameter_pce(pce)
+    subs_eqs = [substitute(eq, par_pce) for eq in eqs]
+    return subs_eqs
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Substitute PCE Ansatz defined in `pce` into a set of symbolic equations `eqs`.
+"""
+function substitute_pce_ansatz(eqs::AbstractVector, pce::PCE)
+    subs_eqs = [expand(expand(substitute(eq, pce.ansatz))) for eq in eqs]
+    return subs_eqs
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Apply PCE ansatz defined in `pce` to a given set of symbolic equations `eqs`.
+"""
+function apply_ansatz(eqs::AbstractVector, pce::PCE)
+    return substitute_pce_ansatz(substitute_parameters(eqs, pce), pce)
+end
+
+# 2. extract PCE expansion coeffs
+"""
+$(TYPEDSIGNATURES)
+
+Given a set of symbolic equations `eqs` involving the basis functions of `pce`,
+extract monomials of the basis functions and the corresponding coeffiecients.
+
+# Returns
+`Vector` of `Dict`s mapping monomial of basis functions to its coefficient in the individual equations.
+"""
+function extract_basismonomial_coeffs(eqs::AbstractVector, pce::PCE)
+    basismonomial_coeffs = [extract_coeffs(eq, pce.sym_basis) for eq in eqs]
+    basismonomial_indices = []
+    for coeffs in basismonomial_coeffs
+        union!(basismonomial_indices,
+               [mono => get_basis_indices(mono) for mono in keys(coeffs)])
+    end
+    return basismonomial_coeffs, basismonomial_indices
+end
+
+# 3. compute inner products
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate scalar products between all basis functions in `pce` and
+basis monomials as characterized by `mono_indices`.
+"""
+function eval_scalar_products(mono_indices, pce::PCE)
+    uni_degs = [deg(op) for op in pce.tensor_basis.uni]
+    max_degs = uni_degs
+    for (mono, id) in mono_indices
+        max_degs = max.(max_degs, vec(sum(pce.tensor_basis.ind[id .+ 1, :], dims = 1)))
+    end
+    quad_deg = max.(ceil.(Int, 0.5 * (max_degs + uni_degs .+ 1)))
+
+    integrators = map((uni, deg) -> bump_degree(uni, deg), pce.tensor_basis.uni, quad_deg)
+    scalar_products = Dict()
+    for k in 1:dim(pce.tensor_basis)
+        scalar_products[k] = Dict(mono => computeSP(vcat(id, k - 1), pce.tensor_basis,
+                                                    integrators)
+                                  for (mono, id) in mono_indices)
+    end
+    return scalar_products
+end
+
+# 4. Galerkin projection
+"""
+$(TYPEDSIGNATURES)
+
+perform Galerkin projection of polynomial expressions characterized by `Dict`s mapping
+basis monomials to coefficients.
+"""
+function galerkin_projection(bm_coeffs::Vector{<:Dict}, scalar_products::Dict,
+                             pce::PCE)
+    projected_eqs = []
+    scaling_factors = computeSP2(pce.tensor_basis)
+    for i in eachindex(bm_coeffs)
+        eqs = []
+        for k in 1:dim(pce.tensor_basis)
+            push!(eqs,
+                  sum(bm_coeffs[i][mono] * scalar_products[k][mono]
+                      for mono in keys(bm_coeffs[i])))
+        end
+        push!(projected_eqs, eqs ./ scaling_factors)
+    end
+    return projected_eqs
+end
+
+# 5. combine everything
+"""
+$(TYPEDSIGNATURES)
+
+perform Galerkin projection onto the `pce`.
+"""
+function pce_galerkin(eqs::AbstractVector, pce::PCE)
+    expanded_eqs = apply_ansatz(eqs, pce)
+    basismono_coeffs, basismono_idcs = extract_basismonomial_coeffs(expanded_eqs, pce)
+    scalar_products = eval_scalar_products(basismono_idcs, pce)
+    projected_eqs = galerkin_projection(basismono_coeffs, scalar_products, pce)
+    return projected_eqs
+end
+
+# 6. high-level interface
+# 6a. apply pce to explicit ODE
+"""
+$(TYPEDSIGNATURES)
+
+Generate moment equations of an `ODESystem` from a given `PCE`-Ansatz via Galerkin projection.
+"""
+function moment_equations(sys::ODESystem, pce::PCE)
+    eqs = [eq.rhs for eq in equations(sys)]
+    projected_eqs = pce_galerkin(eqs, pce)
+    moment_eqs = reduce(vcat, projected_eqs)
+    iv = ModelingToolkit.get_iv(sys)
+    params = setdiff(parameters(sys), pce.parameters)
+    D = Differential(iv)
+    moments = reduce(vcat, pce.moments)
+    name = Symbol(String(nameof(sys)) * "_pce")
+    pce_system = ODESystem([D(moments[i]) ~ moment_eqs[i] for i in eachindex(moments)],
+                           iv, moments, params, name = name)
+
+    n_moments = dim(pce.tensor_basis)
+    n_states = length(states(sys))
+    pce_eval = function (moment_vals, parameter_values)
+        shape_state = [moment_vals[(i * n_moments + 1):((i + 1) * n_moments)]
+                       for i in 0:(n_states - 1)]
+        return pce(shape_state, parameter_values)
+    end
+    return pce_system, pce_eval
+end

@@ -116,3 +116,52 @@ end
         end
     end
 end
+
+# testing GRevLex capabilities
+@testset "PCE: GRevLeX ordering" begin
+    @test MOR.grevlex(1, 5) == reshape([5], 1, 1)
+
+    ind = [2 0 0;
+           1 1 0;
+           0 2 0;
+           1 0 1;
+           0 1 1;
+           0 0 2]
+    @test ind == MOR.grevlex(3, 2)
+
+    ind = [1 1 0;
+           1 0 1;
+           0 1 1;
+           0 0 2]
+    @test ind == MOR.grevlex(3, 2, [1, 1, 2])
+
+    ind = [1 1 0;
+           0 1 1]
+    @test ind == MOR.grevlex(3, 2, [0:1, [1], 0:2])
+
+    @test zeros(Int, 0, 3) == MOR.grevlex(3, 0, [0:1, [1], 0:2])
+
+    ind0 = [0 0 0]
+    ind1 = [1 0 0;
+            0 1 0;
+            0 0 1]
+    ind2 = [2 0 0;
+            1 1 0;
+            0 2 0;
+            1 0 1;
+            0 1 1;
+            0 0 2]
+    @test vcat(ind0, ind1, ind2) == MOR.grevlex(3, 0:2)
+    @test vcat(ind1, ind2) == MOR.grevlex(3, 1:2)
+    @test vcat(ind0, ind2) == MOR.grevlex(3, [0, 2])
+    @test vcat(ind2, ind0) == MOR.grevlex(3, [2, 0])
+
+    degree_constraints = [0:1, [1], 1:2]
+    ind0 = zeros(Int, 0, 3)
+    ind1 = zeros(Int, 0, 3)
+    ind2 = [0 1 1]
+    @test vcat(ind0, ind1, ind2) == MOR.grevlex(3, 0:2, degree_constraints)
+    @test vcat(ind1, ind2) == MOR.grevlex(3, 1:2, degree_constraints)
+    @test vcat(ind0, ind2) == MOR.grevlex(3, [0, 2], degree_constraints)
+    @test vcat(ind2, ind0) == MOR.grevlex(3, [2, 0], degree_constraints)
+end

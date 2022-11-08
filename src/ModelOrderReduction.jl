@@ -1,23 +1,24 @@
 module ModelOrderReduction
 
+using Combinatorics: powerset, combinations
 using DocStringExtensions
-using Symbolics
-using ModelingToolkit
 using LinearAlgebra
+using ModelingToolkit
+using PolyChaos
+using RandomizedLinAlg: rsvd
 using Setfield
 using SparseArrays
-using PolyChaos
-using Combinatorics: powerset, combinations
+using Symbolics
+using TSVD: tsvd
 
 include("utils.jl")
 
 include("Types.jl")
 include("ErrorHandle.jl")
-
 include("DataReduction/POD.jl")
-export SVD, TSVD, RSVD
-export POD, reduce!
+export POD, reduce!, matricize
 
+using Setfield
 include("deim.jl")
 export deim
 
