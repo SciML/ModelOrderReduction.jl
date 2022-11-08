@@ -1,4 +1,6 @@
 using SafeTestsets
 
-@safetestset "POD" begin include("pod.jl") end
-@safetestset "Lift & Learn" begin include("lift_learn.jl") end
+@time @safetestset "POD" begin include("DataReduction.jl") end
+@time @safetestset "utils" begin include("utils.jl") end
+@time @safetestset "DEIM" begin include("deim.jl") end
+@time @safetestset "polynomialization" begin include("polynomialize.jl") end

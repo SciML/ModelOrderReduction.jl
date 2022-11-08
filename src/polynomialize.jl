@@ -1,6 +1,4 @@
-using SymbolicUtils, Symbolics, ModelingToolkit, Bijections
-
-function polynomialization(sys::ODESystem)::ODESystem
+function polynomialize(sys::ODESystem)::ODESystem
     # the input sys may include substitutions that have not been applied,
     # but this is an intrusive method and we need to access all operators,
     # so here we call `full_equations` instead of `equations`

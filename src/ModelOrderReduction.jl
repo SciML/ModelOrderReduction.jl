@@ -1,18 +1,26 @@
 module ModelOrderReduction
+
+using DocStringExtensions
+using Symbolics
+using ModelingToolkit
+using LinearAlgebra
+using Setfield
+using SparseArrays
+using Bijections
+
+include("utils.jl")
+
 include("Types.jl")
 include("ErrorHandle.jl")
 
-using LinearAlgebra
-using TSVD
-using RandomizedLinAlg
-
 include("DataReduction/POD.jl")
-
 export SVD, TSVD, RSVD
-export POD, reduce!, matricize
+export POD, reduce!
 
-include("lift_learn.jl")
+include("deim.jl")
+export deim
 
-export polynomialization
+include("polynomialize.jl")
+export polynomialize
 
 end

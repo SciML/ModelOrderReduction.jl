@@ -7,7 +7,7 @@ D = Differential(t)
 @testset "-eˣ" begin
     eqs = [D(x) ~ -exp(x)]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    new_sys = polynomialization(sys)
+    new_sys = polynomialize(sys)
     # expect
     # dx/dt = -y
     # dy/dt = -y²
@@ -27,7 +27,7 @@ end
 @testset "sin(x)" begin
     eqs = [D(x) ~ sin(x)]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    new_sys = polynomialization(sys)
+    new_sys = polynomialize(sys)
     # expect
     # dx/dt = y₁
     # dy₁/dt = y₁y₂
@@ -50,7 +50,7 @@ end
 @testset "sqrt(x)" begin
     eqs = [D(x) ~ sqrt(x)]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    new_sys = polynomialization(sys)
+    new_sys = polynomialize(sys)
     # expect
     # dx/dt = y
     # dy/dt = 1//2
@@ -69,7 +69,7 @@ end
 @testset "x²" begin
     eqs = [D(x) ~ x^2]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    new_sys = polynomialization(sys)
+    new_sys = polynomialize(sys)
     # expect no change
     new_eqs = ModelingToolkit.get_eqs(new_sys)
     @test new_eqs == eqs
@@ -80,17 +80,17 @@ end
 @testset "f^g" begin
     eqs = [D(x) ~ x + sin(x)^tan(x)]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    @test_throws ArgumentError polynomialization(sys)
+    @test_throws ArgumentError polynomialize(sys)
 end
 
 @testset "floating-point exponent" begin
     eqs = [D(x) ~ x + x^3.4]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    @test_throws ArgumentError polynomialization(sys)
+    @test_throws ArgumentError polynomialize(sys)
 end
 
 @testset "include independent variable" begin
     eqs = [D(x) ~ x + t]
     @named sys = ODESystem(eqs, t, [x], []; checks = false)
-    @test_throws ArgumentError polynomialization(sys)
+    @test_throws ArgumentError polynomialize(sys)
 end
