@@ -7,29 +7,33 @@ supp = (-1, 1)
 w(t) = 1 + t
 my_meas = Measure("my_meas", w, supp, false, Dict())
 deg = 4
-my_op = OrthoPoly("my_op", deg, my_meas; Nquad = 200)
+Nrec = 2 * deg
+my_op = OrthoPoly("my_op", deg, my_meas; Nrec)
 
 @testset "PCE constructor" begin
     @variables t x[1:4] y(t)[1:2]
     degrees = [3, 4, 5, 4]
+    Nrec = 2 * minimum(degrees) + 1
     uni_basis = [
-        HermiteOrthoPoly(degrees[1]),
-        Uniform01OrthoPoly(degrees[2]),
-        Uniform_11OrthoPoly(degrees[3]),
-        my_op,
+        HermiteOrthoPoly(degrees[1]; Nrec),
+        Uniform01OrthoPoly(degrees[2]; Nrec),
+        Uniform_11OrthoPoly(degrees[3]; Nrec),
+        OrthoPoly("my_op", degrees[4], my_meas; Nrec),
     ]
     pce = @test_nowarn PCE(y, [t], x, uni_basis)
     @test isequal(pce.states, Symbolics.scalarize(y))
     @test isequal(pce.parameters, Symbolics.scalarize(x))
     multi_indices_dim = MOR.multi_indices_size(degrees)
     @test size(pce.moments) == (multi_indices_dim, length(y))
+    Nrec = 2 * minimum(degrees[1:3]) + 1
     uni_basis = [
-        HermiteOrthoPoly(degrees[1]),
-        Uniform01OrthoPoly(degrees[2]),
-        Uniform_11OrthoPoly(degrees[3]),
+        HermiteOrthoPoly(degrees[1]; Nrec),
+        Uniform01OrthoPoly(degrees[2]; Nrec),
+        Uniform_11OrthoPoly(degrees[3]; Nrec),
     ]
     @test_nowarn PCE(y, [t], x[1:3], uni_basis)
-    uni_basis = [HermiteOrthoPoly(degrees[1]), HermiteOrthoPoly(degrees[2])]
+    Nrec = 2 * minimum(degrees[1:2]) + 1
+    uni_basis = [HermiteOrthoPoly(degrees[1]; Nrec), HermiteOrthoPoly(degrees[2]; Nrec)]
     @test_nowarn PCE(y, [t], x[1:2], uni_basis)
     uni_basis = [my_op, my_op]
     @test_nowarn PCE(y, [t], x[1:2], uni_basis)

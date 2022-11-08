@@ -206,6 +206,10 @@ struct PCE
     tensor_basis::TensorProductOrthoPoly
     "The coefficients ``C_{(α_1, α_2, …, α_n)}`` for each ``Y_i`` in the columns."
     moments::Matrix
+    "The mapping ``Y => ∑_α C_α Ψ_α`` for each ``Y``."
+    ansatz::Dict{Num, Num}
+    "Results of tensor inner products ``⟨Ψ_{i_1}Ψ_{i_2}⋯Ψ_{i_{m-1}},Ψ_{i_m}⟩``."
+    tensors::Dict{Int, Tensor}
 end
 """
 $(TYPEDSIGNATURES)
@@ -236,18 +240,34 @@ function PCE(states::AbstractVector{Num}, ivs::AbstractVector{Num},
     states = Symbolics.scalarize(states)
     parameters = Symbolics.scalarize(parameters)
     tensor_basis = TensorProductOrthoPoly(uni_basis)
-    moments = if isempty(ivs)
-        [(name = Symbol(:C, Symbolics.tosymbol(s),
-                        join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)), "ˏ"));
-          first(@variables $name [description = j]))
-         for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
-    else
-        [(name = Symbol(:C, Symbolics.tosymbol(s),
-                        join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)), "ˏ"));
-          first(@variables $name(ivs...) [description = j]))
-         for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
+    C = Matrix{Num}(undef, dim(tensor_basis), length(states))
+    Ψ = Vector{Num}(undef, dim(tensor_basis))
+    snames = Symbolics.tosymbol.(states)
+    for i in axes(tensor_basis.ind, 2)
+        name = join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)), "ˏ")
+        Ψname = Symbol(:Ψ, name)
+        # record index of multi-index α⃗ in symbolic metadata
+        Ψ[i] = first(@variables $Ψname [description = i])
+        for (j, sname) in enumerate(snames)
+            Cname = Symbol(:C, sname, name)
+            C[i, j] = if isempty(ivs)
+                first(@variables $Cname [description = i])
+            else
+                first(@variables $Cname(ivs...) [description = i])
+            end
+        end
     end
-    PCE(states, parameters, tensor_basis, moments)
+    # X => x₀ + x₁ψ₁(X)
+    # where x₀ and x₁ are affince PCE coefficients of X
+    # ψ₁(x) = x - α₀ is the first-order monic basis polynomial of X
+    # TODO: Use mean and std of the distribution of X to compute x₀ and x₁
+    x_dict = Dict(x => op.α[1] + Ψ[i + 1]
+                  for (i, (x, op)) in enumerate(zip(parameters, uni_basis)))
+    # Y => ∑_α C_α Ψ_α
+    y_dict = Dict(y => dot(view(C, :, i), Ψ) for (i, y) in enumerate(states))
+    t2 = Tensor(2, tensor_basis)
+    tensors = Dict(2 => t2)
+    PCE(states, parameters, tensor_basis, C, y_dict, tensors)
 end
 
 # extracting the indices of the factors of as basismonomial
