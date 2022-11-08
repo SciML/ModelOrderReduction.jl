@@ -224,21 +224,29 @@ where ``r_i`` is the degree upper bound for the univariate basis corresponding t
 
 # Arguments
 - `states`: Random vairables ``\\mathbf Y`` that are represented by other random variables.
+- `ivs`: Independent vairables of ``\\mathbf Y``. Enter an empty vector if there is none.
 - `parameters`: Independent random variables ``\\mathbf X``.
 - `uni_basis`: Univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for each ``X_i``.
 """
-function PCE(states::AbstractVector{Num}, parameters::AbstractVector{Num},
+function PCE(states::AbstractVector{Num}, ivs::AbstractVector{Num},
+             parameters::AbstractVector{Num},
              uni_basis::AbstractVector{
                                        <:Union{AbstractOrthoPoly, AbstractCanonicalOrthoPoly
                                                }})
     states = Symbolics.scalarize(states)
     parameters = Symbolics.scalarize(parameters)
     tensor_basis = TensorProductOrthoPoly(uni_basis)
-    moments = [(name = Symbol(:C, Symbolics.tosymbol(s),
-                              join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)),
-                                   "ˏ"));
-                first(@variables $name(..) [description = j]))
-               for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
+    moments = if isempty(ivs)
+        [(name = Symbol(:C, Symbolics.tosymbol(s),
+                        join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)), "ˏ"));
+          first(@variables $name [description = j]))
+         for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
+    else
+        [(name = Symbol(:C, Symbolics.tosymbol(s),
+                        join(Symbolics.map_subscripts.(view(tensor_basis.ind, :, i)), "ˏ"));
+          first(@variables $name(ivs...) [description = j]))
+         for j in axes(tensor_basis.ind, 2), (i, s) in enumerate(states)]
+    end
     PCE(states, parameters, tensor_basis, moments)
 end
 

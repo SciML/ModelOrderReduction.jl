@@ -99,24 +99,6 @@ function linear_terms(exprs::AbstractVector, vars)
     return linear, const_terms, nonlinear_terms
 end
 
-# getting independent variables
-function get_independent_vars(var)
-    return []
-end
-function get_independent_vars(var::Symbolics.Term)
-    if operation(var) isa Symbolics.Sym
-        return arguments(var)
-    else
-        return reduce(vcat, get_independent_vars(arguments(var)))
-    end
-end
-function get_independent_vars(var::Num)
-    return get_independent_vars(Symbolics.unwrap(var))
-end
-function get_independent_vars(vars::AbstractVector)
-    return [get_independent_vars(var) for var in vars]
-end
-
 # utiltiites to extracting coefficients of a polynomial in monomial basis in variables `vars`
 function split_term(term::Symbolics.Mul, vars)
     coeff = term.coeff
