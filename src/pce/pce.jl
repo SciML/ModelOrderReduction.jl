@@ -181,11 +181,11 @@ y(x_1, …, x_n) = ∑_{α_1=0}^∞ ∑_{α_2=0}^∞ ⋯ ∑_{α_n=0}^∞
 C_{(α_1, α_2, …, α_n)} Ψ_{(α_1, α_2, …, α_n)}(x_1, …, x_n)
 ```
 Here the summation runs across all possible combinations of the multi-index
-``α⃗ = (α_1, …, α_n)``.
+``\\vec α = (α_1, …, α_n)``.
 
 The set of multivariate orthogonal polynomials is defined as
 ```math
-Ψ_{α⃗}(x_1, …, x_n) = ∏_{i=1}^n ψ_{α_i}^{(i)}(x_i)
+Ψ_{\\vec α}(x_1, …, x_n) = ∏_{i=1}^n ψ_{α_i}^{(i)}(x_i)
 ```
 where ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^∞`` is the family of univariate orthogonal
 polynomials with respect to ``p_i``.
@@ -201,7 +201,7 @@ struct PCE
     """
     The tensor-product-based multivariate basis underpinning the PCE, which stores the
     univariate orthogonal polynomial basis ``\\{ψ_{α_i}^{(i)}(x_i)\\}_{α_i=0}^{r_i}`` for
-    each ``X_i`` and multi-indices ``α⃗``.
+    each ``X_i`` and multi-indices ``\\vec α``.
     """
     tensor_basis::TensorProductOrthoPoly
     "The coefficients ``C_{(α_1, α_2, …, α_n)}`` for each ``Y_i`` in the columns."
