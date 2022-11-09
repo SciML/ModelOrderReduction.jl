@@ -185,6 +185,13 @@ struct BasisProduct
     "The indices of the multi-indices ``\\vec α_1, \\vec α_2, …, \\vec α_m``."
     idx::Vector{Int}
 end
+function Base.:+(p::BasisProduct, s)
+    if istree(s) && operation(s) == +
+        return SymbolicUtils.Term{Float64}(+, [SymbolicUtils.unsorted_arguments(s); p])
+    end
+    SymbolicUtils.Term{Float64}(+, [s, p])
+end
+Base.:+(s, p::BasisProduct) = p + s
 Base.:*(p::BasisProduct) = p
 Base.:*(p::BasisProduct, q::BasisProduct) = BasisProduct(vcat(p.idx, q.idx))
 function Base.:*(p::BasisProduct, s)
@@ -195,21 +202,27 @@ function Base.:*(p::BasisProduct, s)
             return p
         end
     elseif istree(s) && operation(s) == *
-        return SymbolicUtils.Term(*, [unsorted_arguments(s); p])
+        return SymbolicUtils.Term(*, [SymbolicUtils.unsorted_arguments(s); p])
     end
     SymbolicUtils.Term(*, [s, p])
 end
 Base.:*(s, p::BasisProduct) = p * s
 function Base.:^(p::BasisProduct, exp)
-    if iszero(exp)
-        1
-    elseif isone(exp)
-        p
-    else
-        SymbolicUtils.Term{Float64}(^, [p, exp])
+    if exp isa Number
+        if iszero(exp)
+            return 1
+        elseif isone(exp)
+            return p
+        elseif exp isa Integer && exp > 1
+            return BasisProduct(repeat(p.idx, exp))
+        end
     end
+    SymbolicUtils.Term{Float64}(^, [p, exp])
 end
+Base.:(==)(p::BasisProduct, q::BasisProduct) = p.idx == q.idx
+SymbolicUtils.:<ₑ(p::BasisProduct, q::BasisProduct) = p.idx < q.idx
 SymbolicUtils.issym(::BasisProduct) = true
+SymbolicUtils.symtype(::BasisProduct) = Float64
 Base.nameof(p::BasisProduct) = Symbol(p)
 
 """
