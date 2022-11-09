@@ -172,6 +172,45 @@ end
 
 """
 $(TYPEDEF)
+Represents inner product tensor
+``⟨Ψ_{\\vec α_1} Ψ_{\\vec α_2} ⋯ Ψ_{\\vec α_{m-1}}, Ψ_{\\vec α_m}⟩``.
+
+# Fields
+$(TYPEDFIELDS)
+"""
+struct Inner
+    "The indices of the multi-indices ``\\vec α_1, \\vec α_2, …, \\vec α_m``."
+    idx::Vector{Int}
+end
+Base.:*(i::Inner) = i
+Base.:*(i::Inner, j::Inner) = Inner(vcat(i.idx, j.idx))
+function Base.:*(i::Inner, s)
+    if s isa Number
+        if iszero(s)
+            return s
+        elseif isone(s)
+            return i
+        end
+    elseif istree(s) && operation(s) == *
+        return SymbolicUtils.Term(*, [unsorted_arguments(s); i])
+    else
+        return SymbolicUtils.Term(*, [s, i])
+    end
+end
+Base.:*(s, i::Inner) = i * s
+function Base.:^(i::Inner, exp)
+    if iszero(exp)
+        return 1
+    elseif isone(exp)
+        return i
+    end
+    SymbolicUtils.Term{Float64}(^, [i, exp])
+end
+SymbolicUtils.issym(::Inner) = true
+Base.nameof(i::Inner) = Symbol(i)
+
+"""
+$(TYPEDEF)
 Suppose a variable ``Y`` with finite variance is a function of ``n`` independent but not
 identically distributed random variables ``X_1, …, X_n`` with joint density
 ``p(x_1, …, x_n) = p_1(x_1) p_2(x_2) ⋯ p_n(x_n)``. Then the Polynomial Chaos Expansion
