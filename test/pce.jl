@@ -169,3 +169,23 @@ end
     @test vcat(ind0, ind2) == MOR.grevlex(3, [0, 2], degree_constraints)
     @test vcat(ind2, ind0) == MOR.grevlex(3, [2, 0], degree_constraints)
 end
+
+@testset "BasisProduct" begin
+    @test MOR.BasisProduct(Int[]) == MOR.BasisProduct(Int[])
+    @test MOR.BasisProduct([1, 3]) == MOR.BasisProduct([1, 3])
+
+    @variables x y z
+    yv = Symbolics.value(y)
+    Ψ₁ = MOR.BasisProduct([4])
+    Ψ₂ = MOR.BasisProduct([7])
+
+    expr1 = x * y * z
+    dict = Dict(x => Ψ₁, z => Ψ₂)
+    expr2 = substitute(expr1, dict)
+    expr3 = expand(expr2)
+    @test isequal(expr3, yv * MOR.BasisProduct([4, 7]))
+
+    expr4 = (yv + Ψ₁)^2
+    expr5 = expand(expr4)
+    @test isequal(expr5, yv^2 + 2yv * MOR.BasisProduct([4]) + MOR.BasisProduct([4, 4]))
+end
