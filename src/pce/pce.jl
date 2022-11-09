@@ -224,6 +224,7 @@ SymbolicUtils.:<ₑ(p::BasisProduct, q::BasisProduct) = p.idx < q.idx
 SymbolicUtils.issym(::BasisProduct) = true
 SymbolicUtils.symtype(::BasisProduct) = Float64
 Base.nameof(p::BasisProduct) = Symbol(p)
+Base.hash(p::BasisProduct, h::UInt) = hash(p.idx, h)
 
 """
 $(TYPEDEF)
