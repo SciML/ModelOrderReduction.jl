@@ -172,42 +172,45 @@ end
 
 """
 $(TYPEDEF)
-Represents inner product tensor
-``⟨Ψ_{\\vec α_1} Ψ_{\\vec α_2} ⋯ Ψ_{\\vec α_{m-1}}, Ψ_{\\vec α_m}⟩``.
+Represents product of orthogonal polynomial basis functions
+``Ψ_{\\vec α_1} Ψ_{\\vec α_2} ⋯ Ψ_{\\vec α_m}``.
+
+This is used to combine product of basis functions into one single object and conveniently
+take inner product tensor ``⟨⋅, Ψ_{\\vec β}⟩``.
 
 # Fields
 $(TYPEDFIELDS)
 """
-struct Inner
+struct BasisProduct
     "The indices of the multi-indices ``\\vec α_1, \\vec α_2, …, \\vec α_m``."
     idx::Vector{Int}
 end
-Base.:*(i::Inner) = i
-Base.:*(i::Inner, j::Inner) = Inner(vcat(i.idx, j.idx))
-function Base.:*(i::Inner, s)
+Base.:*(p::BasisProduct) = p
+Base.:*(p::BasisProduct, q::BasisProduct) = BasisProduct(vcat(p.idx, q.idx))
+function Base.:*(p::BasisProduct, s)
     if s isa Number
         if iszero(s)
             return s
         elseif isone(s)
-            return i
+            return p
         end
     elseif istree(s) && operation(s) == *
-        return SymbolicUtils.Term(*, [unsorted_arguments(s); i])
-    else
-        return SymbolicUtils.Term(*, [s, i])
+        return SymbolicUtils.Term(*, [unsorted_arguments(s); p])
     end
+    SymbolicUtils.Term(*, [s, p])
 end
-Base.:*(s, i::Inner) = i * s
-function Base.:^(i::Inner, exp)
+Base.:*(s, p::BasisProduct) = p * s
+function Base.:^(p::BasisProduct, exp)
     if iszero(exp)
-        return 1
+        1
     elseif isone(exp)
-        return i
+        p
+    else
+        SymbolicUtils.Term{Float64}(^, [p, exp])
     end
-    SymbolicUtils.Term{Float64}(^, [i, exp])
 end
-SymbolicUtils.issym(::Inner) = true
-Base.nameof(i::Inner) = Symbol(i)
+SymbolicUtils.issym(::BasisProduct) = true
+Base.nameof(p::BasisProduct) = Symbol(p)
 
 """
 $(TYPEDEF)
