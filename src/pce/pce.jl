@@ -186,10 +186,12 @@ struct BasisProduct
     idx::Vector{Int}
 end
 function Base.:+(p::BasisProduct, s)
-    if istree(s) && operation(s) == +
-        return SymbolicUtils.Term{Float64}(+, [SymbolicUtils.unsorted_arguments(s); p])
+    if SymbolicUtils.isadd(s)
+        d = SymbolicUtils._merge(+, s.dict, Base.ImmutableDict(p => 1);
+                                 filter = SymbolicUtils._iszero)
+        return SymbolicUtils.Add(Float64, s.coeff, d)
     end
-    SymbolicUtils.Term{Float64}(+, [s, p])
+    SymbolicUtils.Add(Float64, SymbolicUtils.makeadd(1, 0, s, p)...)
 end
 Base.:+(s, p::BasisProduct) = p + s
 Base.:*(p::BasisProduct) = p
@@ -201,10 +203,20 @@ function Base.:*(p::BasisProduct, s)
         elseif isone(s)
             return p
         end
-    elseif istree(s) && operation(s) == *
-        return SymbolicUtils.Term(*, [SymbolicUtils.unsorted_arguments(s); p])
+        return SymbolicUtils.Mul(Float64, SymbolicUtils.makemul(s, p)...)
+    elseif SymbolicUtils.ismul(s)
+        d = copy(s.dict)
+        for (k, v) in s.dict
+            if k isa BasisProduct
+                delete!(d, k)
+                d[p * k^v] = 1
+                return SymbolicUtils.Mul(SymbolicUtils.symtype(s), s.coeff, d)
+            end
+        end
+        d[p] = 1
+        return SymbolicUtils.Mul(SymbolicUtils.symtype(s), s.coeff, d)
     end
-    SymbolicUtils.Term(*, [s, p])
+    SymbolicUtils.Mul(Float64, SymbolicUtils.makemul(1, s, p)...)
 end
 Base.:*(s, p::BasisProduct) = p * s
 function Base.:^(p::BasisProduct, exp)
@@ -217,7 +229,7 @@ function Base.:^(p::BasisProduct, exp)
             return BasisProduct(repeat(p.idx, exp))
         end
     end
-    SymbolicUtils.Term{Float64}(^, [p, exp])
+    SymbolicUtils.Pow(p, exp)
 end
 Base.:(==)(p::BasisProduct, q::BasisProduct) = p.idx == q.idx
 SymbolicUtils.:<ₑ(p::BasisProduct, q::BasisProduct) = p.idx < q.idx

@@ -188,4 +188,18 @@ end
     expr4 = (yv + Ψ₁)^2
     expr5 = expand(expr4)
     @test isequal(expr5, yv^2 + 2yv * MOR.BasisProduct([4]) + MOR.BasisProduct([4, 4]))
+
+    expr6 = Ψ₁ * yv
+    @test expr6 isa SymbolicUtils.Mul
+    @test expr6.coeff == 1
+    @test length(expr6.dict) == 2
+    @test (Ψ₁ => 1) in expr6.dict
+    @test (yv => 1) in expr6.dict
+
+    expr7 = 2 * Ψ₁ * yv * Ψ₂
+    @test expr7 isa SymbolicUtils.Mul
+    @test expr7.coeff == 2
+    @test length(expr7.dict) == 2
+    @test (MOR.BasisProduct([7, 4]) => 1) in expr7.dict
+    @test (yv => 1) in expr7.dict
 end
