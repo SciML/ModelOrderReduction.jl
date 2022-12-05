@@ -18,7 +18,6 @@ include("ErrorHandle.jl")
 include("DataReduction/POD.jl")
 export POD, reduce!, matricize
 
-using Setfield
 include("deim.jl")
 export deim
 
