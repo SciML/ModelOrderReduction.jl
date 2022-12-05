@@ -338,27 +338,6 @@ function PCE(states::AbstractVector{Num}, ivs::AbstractVector{Num},
     PCE(states, parameters, tensor_basis, C, y_dict, tensors)
 end
 
-# extracting the indices of the factors of as basismonomial
-function get_basis_indices(mono::Symbolics.Mul)
-    basis_indices = Int[]
-    for (term, pow) in mono.dict
-        append!(basis_indices, (arguments(term)[end] - 1) * ones(Int, pow))
-    end
-    return basis_indices
-end
-function get_basis_indices(mono::Symbolics.Term)
-    return [arguments(mono)[end] - 1]
-end
-function get_basis_indices(mono::Symbolics.Pow)
-    return (arguments(mono.base)[end] - 1) * ones(Int, mono.exp)
-end
-function get_basis_indices(mono::Num)
-    return get_basis_indices(Symbolics.unwrap(mono))
-end
-function get_basis_indices(::Val{1})
-    return [0]
-end
-
 # Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries)
 # in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated.
 function grevlex(n::Int, grade::Int)
