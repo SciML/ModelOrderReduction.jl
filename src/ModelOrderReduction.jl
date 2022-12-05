@@ -1,6 +1,7 @@
 module ModelOrderReduction
 
 using Combinatorics: powerset, combinations
+using Distributions
 using DocStringExtensions
 using LinearAlgebra
 using ModelingToolkit

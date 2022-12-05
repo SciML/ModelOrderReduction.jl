@@ -337,6 +337,44 @@ function PCE(states::AbstractVector{Num}, ivs::AbstractVector{Num},
     tensors = Dict(2 => t2)
     PCE(states, parameters, tensor_basis, C, y_dict, tensors)
 end
+function PCE(sys::ModelingToolkit.AbstractSystem)
+    ps = parameters(sys) # all parameters
+    stochastic_ps = filter(hasdist, ps) # stochastic parameters
+    dists = getdist.(stochastic_ps)
+    # TODO: find a way for inputing maximum degrees
+    uni_basis = to_ortho_poly.(dists, 3) # orthogonal polynomial basis
+    tensor_basis = TensorProductOrthoPoly(uni_basis)
+    Ψ = map(BasisProduct, 1:dim(tensor_basis)) # indices of the multi-indices
+    x_dict = Dict{Num, BasisProduct}()
+    sizehint!(x_dict, length(stochastic_ps)) # reserve sufficient capacity to avoid growing
+    for (i, (p, d, op)) in enumerate(zip(stochastic_ps, dists, uni_basis))
+        # TODO: deal with non-canonical ortho poly
+        x₀, x₁ = convert2affinePCE(mean(d), std(d), op)
+        x_dict[p] = x₀ + x₁ * Ψ[i + 1]
+    end
+    # TODO: transformation of states
+    # TDDO: tensor
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Construct univariate monic orthogonal polynomials accroding to the input continuous
+univariate distribution.
+
+The input argument `deg` is the maximum degree.
+"""
+function to_ortho_poly(::Normal, deg::Integer)
+    GaussOrthoPoly(deg)
+end
+# TODO: add other distributions
+function to_ortho_poly(dist::ContinuousUnivariateDistribution, deg::Integer)
+    error("unimplmented") # TODO
+    w(t) = pdf(dist, t) # weight function
+    supp = extrema(dist) # minimum and maximum
+    meas = Measure("measure", w, supp, false, Dict())
+    OrthoPoly("op", deg, meas)
+end
 
 # Compute the an ascending list of `n`-dimensional multi-indices with fixed `grade` (= sum of entries)
 # in graded reverse lexicographic order. Constraints on the degrees considered can be incorporated.

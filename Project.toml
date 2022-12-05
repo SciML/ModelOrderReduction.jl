@@ -5,6 +5,7 @@ version = "0.1.1"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
@@ -17,6 +18,7 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
 Combinatorics = "1.0"
+Distributions = "0.25"
 DocStringExtensions = "0.8, 0.9"
 ModelingToolkit = "8.21"
 PolyChaos = "0.2"
