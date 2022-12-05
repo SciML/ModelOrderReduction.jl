@@ -1,5 +1,6 @@
 using Test, ModelOrderReduction
 using Symbolics
+import ModelOrderReduction as MOR
 
 @variables t w(t) x(t) y(t) z(t)
 
@@ -10,7 +11,7 @@ using Symbolics
                  2.0z + 3.4w + 7.0 + sin(x)
                  9.8 + x * (1.0 - y)
                  5.6y + 1.3z^2]
-        A, c, n = ModelOrderReduction.linear_terms(exprs, vars)
+        A, c, n = MOR.linear_terms(exprs, vars)
         @test size(A) == (length(exprs), length(vars))
         @test A == [3.0 4.5 0.0
                     0.0 0.0 2.0

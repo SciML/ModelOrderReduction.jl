@@ -1,5 +1,6 @@
 using Test, ModelOrderReduction
 using DifferentialEquations
+import ModelOrderReduction as MOR
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
@@ -29,7 +30,7 @@ end
     solution = Array(sol)
 
     order = 2
-    solver = SVD()
+    solver = MOR.SVD()
     matrix_reducer = POD(solution, order)
     snapshot_reducer = POD(sol.u, order)
     reduce!(matrix_reducer, solver)
@@ -48,7 +49,7 @@ end
     @test reducer.nmodes == 1
 
     order = 2
-    solver = TSVD()
+    solver = MOR.TSVD()
     reducer = POD(solution, order)
     reduce!(reducer, solver)
 
@@ -57,7 +58,7 @@ end
     @test reducer.renergy > 0.7
 
     order = 2
-    solver = RSVD()
+    solver = MOR.RSVD()
     reducer = POD(solution, order)
     reduce!(reducer, solver)
 
