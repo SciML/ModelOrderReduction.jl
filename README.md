@@ -6,13 +6,13 @@
 [![codecov](https://codecov.io/gh/SciML/ModelOrderReduction.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/ModelOrderReduction.jl)
 [![Build Status](https://github.com/SciML/ModelOrderReduction.jl/workflows/CI/badge.svg)](https://github.com/SciML/ModelOrderReduction.jl/actions?query=workflow%3ACI)
 
-[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 ModelOrderReduction.jl is a package for automatically reducing the computational complexity
-of mathematical models, while keeping expected fidelity within a controlled error bound. 
+of mathematical models, while keeping expected fidelity within a controlled error bound.
 These methods function a submodel with a projection
-where solving the smaller model gives approximation information about the full model. 
+where solving the smaller model gives approximation information about the full model.
 MOR.jl uses [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/)
 as a system description and automatically transforms equations
 to the subform, defining the observables to automatically lazily reconstruct the full
@@ -26,7 +26,9 @@ For information on using the package,
 the documentation, which contains the unreleased features.
 
 ## Example
+
 #### Proper Orthogonal Decomposition and Discrete Empirical Interpolation Method (POD-DEIM) on the FitzHugh-Nagumo system
+
 ```julia
 using ModelingToolkit, MethodOfLines, DifferentialEquations, ModelOrderReduction
 
