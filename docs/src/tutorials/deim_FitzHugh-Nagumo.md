@@ -1,12 +1,12 @@
 # Discrete Empirical Interpolation Method (DEIM)
 
-This section illustrates how ModelOrderReduction.jl can be used to build a reduced order 
-model via Petrov-Galerkin projection using the Proper Orthogonal Decomposition (POD) and 
-the Discrete Empirical Interpolation Method (DEIM). As an illustrative example, we consider 
+This section illustrates how ModelOrderReduction.jl can be used to build a reduced order
+model via Petrov-Galerkin projection using the Proper Orthogonal Decomposition (POD) and
+the Discrete Empirical Interpolation Method (DEIM). As an illustrative example, we consider
 a nonlinear 1-D PDE from the realm of neuroscience.
 
-The FitzHugh-Nagumo system used in neuron modeling is a simplified version of the 
-Hodgkin-Huxley model, which describes in a detailed manner activation and deactivation 
+The FitzHugh-Nagumo system used in neuron modeling is a simplified version of the
+Hodgkin-Huxley model, which describes in a detailed manner activation and deactivation
 dynamics of a spiking neuron. The system is given as follows. For ``x\in [0,L], t\geq 0``,
 
 ```math
@@ -25,19 +25,19 @@ v_x(0,t)=-i_0(t),\quad v_x(L,t)=0,\quad t\geq 0,
 \end{aligned}
 ```
 
-where the parameters are ``L=1``, ``\varepsilon=0.015``, ``b=0.5``, ``\gamma =2``, 
-``c=0.05``. The stimulus is ``i_0(t)=50000t^3\exp(-15t)``. The variables ``v`` and ``w`` 
+where the parameters are ``L=1``, ``\varepsilon=0.015``, ``b=0.5``, ``\gamma =2``,
+``c=0.05``. The stimulus is ``i_0(t)=50000t^3\exp(-15t)``. The variables ``v`` and ``w``
 are voltage and recovery of voltage, respectively.
 
-In order to generate a POD-DEIM reduced-order model, we need to work through the following 
+In order to generate a POD-DEIM reduced-order model, we need to work through the following
 steps:
 
-1. Collect data on full-order model trajectories and the nonlinear terms describing its evolution equation along the way.
-1. Based on the collected data, use POD to identify a low dimensional linear subspace of the system's state space that allows for embedding the full-order model's trajectories with minimal error.
-1. Project the model onto the identified subspace using DEIM to approximate nonlinear terms.
+ 1. Collect data on full-order model trajectories and the nonlinear terms describing its evolution equation along the way.
+ 2. Based on the collected data, use POD to identify a low dimensional linear subspace of the system's state space that allows for embedding the full-order model's trajectories with minimal error.
+ 3. Project the model onto the identified subspace using DEIM to approximate nonlinear terms.
 
-For step 1, we first construct a 
-[`ModelingToolkit.PDESystem`](https://mtk.sciml.ai/stable/systems/PDESystem/) 
+For step 1, we first construct a
+[`ModelingToolkit.PDESystem`](https://mtk.sciml.ai/stable/systems/PDESystem/)
 describing the original FitzHugh-Nagumo model.
 
 ```@example deim_FitzHugh_Nagumo
@@ -67,7 +67,7 @@ pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = Symbol("FitzHugh-Nagumo"
 nothing # hide
 ```
 
-Next, we apply finite difference discretization using 
+Next, we apply finite difference discretization using
 [MethodOfLines.jl](https://docs.sciml.ai/MethodOfLines/stable/).
 
 ```@example deim_FitzHugh_Nagumo
@@ -83,7 +83,7 @@ ode_prob = ODEProblem(simp_sys, nothing, tspan)
 nothing # hide
 ```
 
-The snapshot trajectories are obtained by solving the full-order system. 
+The snapshot trajectories are obtained by solving the full-order system.
 
 ```@example deim_FitzHugh_Nagumo
 using DifferentialEquations
@@ -128,7 +128,7 @@ plot!(full_plt)
 ```
 
 Then, we use POD to construct a linear subspace of dimension, say, 5 for the system's state
-space and project the model onto the subspace. DEIM is employed to approximate nonlinear 
+space and project the model onto the subspace. DEIM is employed to approximate nonlinear
 terms. This can be done by simply calling [`deim`](@ref).
 
 ```@example deim_FitzHugh_Nagumo
@@ -159,6 +159,7 @@ plot!(deim_plt)
 ```
 
 Finally, we put the two solutions in one figure.
+
 ```@example deim_FitzHugh_Nagumo
 # create data for plotting unconnected lines
 function unconnected(m::AbstractMatrix)
@@ -185,5 +186,5 @@ plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
       unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
 ```
 
-As we can see, the reduced-order system captures the limit cycle of the original full-order 
+As we can see, the reduced-order system captures the limit cycle of the original full-order
 system very well.

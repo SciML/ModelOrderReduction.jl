@@ -31,7 +31,7 @@ $(SIGNATURES)
 
 Compute the reduced model by applying the Discrete Empirical Interpolation Method (DEIM).
 
-This method allows users to input the projection matrices of their own choices.
+This method allows users to input the projection matrices of their choice.
 
 Given the projection matrix ``V\\in\\mathbb R^{n\\times k}`` for the dependent variables
 ``\\mathbf y\\in\\mathbb R^n`` and the projection matrix
@@ -61,7 +61,7 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 - `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
 
 # Return
-- `reduced_rhss`: the right hand side of ROM.
+- `reduced_rhss`: the right-hand side of ROM.
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
 """
 function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
