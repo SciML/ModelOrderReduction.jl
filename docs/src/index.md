@@ -2,7 +2,7 @@
 
 ## Installation
 
-To install LinearSolve.jl, use the Julia package manager:
+To install ModelOrderReduction.jl, use the Julia package manager:
 
 ```julia
 using Pkg
