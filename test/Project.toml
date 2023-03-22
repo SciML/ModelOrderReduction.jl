@@ -8,7 +8,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 DifferentialEquations = "7.6"
-MethodOfLines = "0.6, 0.7"
+MethodOfLines = "0.6, 0.7, 0.9"
 ModelingToolkit = "8.33"
 SafeTestsets = "0.0.1"
 Symbolics = "4.13"
