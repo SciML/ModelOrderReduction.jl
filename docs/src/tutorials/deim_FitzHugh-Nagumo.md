@@ -6,7 +6,7 @@ the Discrete Empirical Interpolation Method (DEIM). As an illustrative example, 
 a nonlinear 1-D PDE from the realm of neuroscience.
 
 The FitzHugh-Nagumo system used in neuron modeling is a simplified version of the
-Hodgkin-Huxley model, which describes in a detailed manner activation and deactivation
+Hodgkin-Huxley model, which describes in a detailed manner, the activation and deactivation
 dynamics of a spiking neuron. The system is given as follows. For ``x\in [0,L], t\geq 0``,
 
 ```math
@@ -16,7 +16,7 @@ w_t(x,t)&=bv(x,t)-\gamma w(x,t)+c,
 \end{aligned}
 ```
 
-with nonlinear function ``f(v)=v(v-0.1)(1-v)``. The initial and boundary conditions are
+with the nonlinear function ``f(v)=v(v-0.1)(1-v)``. The initial and boundary conditions are
 
 ```math
 \begin{aligned}
@@ -29,7 +29,7 @@ where the parameters are ``L=1``, ``\varepsilon=0.015``, ``b=0.5``, ``\gamma =2`
 ``c=0.05``. The stimulus is ``i_0(t)=50000t^3\exp(-15t)``. The variables ``v`` and ``w``
 are voltage and recovery of voltage, respectively.
 
-In order to generate a POD-DEIM reduced-order model, we need to work through the following
+To generate a POD-DEIM reduced-order model, we need to work through the following
 steps:
 
  1. Collect data on full-order model trajectories and the nonlinear terms describing its evolution equation along the way.
@@ -158,7 +158,7 @@ end
 plot!(deim_plt)
 ```
 
-Finally, we put the two solutions in one figure.
+Finally, we put the two solutions into one figure.
 
 ```@example deim_FitzHugh_Nagumo
 # create data for plotting unconnected lines
