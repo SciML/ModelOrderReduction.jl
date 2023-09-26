@@ -1,12 +1,12 @@
 module ModelOrderReduction
 
 using DocStringExtensions
-
 using Symbolics
 using ModelingToolkit
 using LinearAlgebra
-
 using Setfield
+using SparseArrays
+using Bijections
 
 include("utils.jl")
 
@@ -19,5 +19,8 @@ export POD, reduce!
 
 include("deim.jl")
 export deim
+
+include("polynomialize.jl")
+export polynomialize
 
 end
