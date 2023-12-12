@@ -49,6 +49,6 @@ deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 nₓ = length(sol[x])
 nₜ = length(sol[t])
 
-# test solution retrival
+# test solution retrieva
 @test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
 @test size(deim_sol[w(x, t)]) == (nₓ, nₜ)

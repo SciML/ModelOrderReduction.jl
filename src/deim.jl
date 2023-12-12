@@ -170,6 +170,6 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
                                                             kwargs...)
     @set! sys.observed = new_sorted_observed
 
-    inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to orignial vars
+    inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
     @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
 end
