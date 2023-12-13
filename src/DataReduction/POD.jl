@@ -37,7 +37,7 @@ mutable struct POD <: AbstractDRProblem
     rbasis::Any
     renergy::Any
     spectrum::Any
-    # constructers
+    # constructors
     function POD(snaps;
                  min_renergy = 1.0,
                  min_nmodes::Int = 1,
