@@ -17,7 +17,7 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 [compat]
 DocStringExtensions = "0.8, 0.9"
 LinearAlgebra = "1"
-ModelingToolkit = "8.21"
+ModelingToolkit = "8.21, 9"
 RandomizedLinAlg = "0.1"
 Setfield = "0.8, 1"
 SparseArrays = "1"
