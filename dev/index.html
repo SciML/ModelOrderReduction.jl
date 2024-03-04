@@ -2,15 +2,15 @@
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · ModelOrderReduction.jl</title><meta name="title" content="Home · ModelOrderReduction.jl"/><meta property="og:title" content="Home · ModelOrderReduction.jl"/><meta property="twitter:title" content="Home · ModelOrderReduction.jl"/><meta name="description" content="Documentation for ModelOrderReduction.jl."/><meta property="og:description" content="Documentation for ModelOrderReduction.jl."/><meta property="twitter:description" content="Documentation for ModelOrderReduction.jl."/><meta property="og:url" content="https://docs.sciml.ai/ModelOrderReduction/stable/"/><meta property="twitter:url" content="https://docs.sciml.ai/ModelOrderReduction/stable/"/><link rel="canonical" href="https://docs.sciml.ai/ModelOrderReduction/stable/"/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script><link href="assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="ModelOrderReduction.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href>ModelOrderReduction.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>Home</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Contributing"><span>Contributing</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li><li><a class="tocitem" href="functions/">Functions</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="tutorials/deim_FitzHugh-Nagumo/">Discrete Empirical Interpolation Method (DEIM)</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Home</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Home</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/ModelOrderReduction.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/ModelOrderReduction.jl/blob/main/docs/src/index.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="ModelOrderReduction.jl"><a class="docs-heading-anchor" href="#ModelOrderReduction.jl">ModelOrderReduction.jl</a><a id="ModelOrderReduction.jl-1"></a><a class="docs-heading-anchor-permalink" href="#ModelOrderReduction.jl" title="Permalink"></a></h1><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>To install ModelOrderReduction.jl, use the Julia package manager:</p><pre><code class="language-julia hljs">using Pkg
 Pkg.add(&quot;ModelOrderReduction&quot;)</code></pre><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/ModelOrderReduction.jl/ModelOrderReduction.jl/docs/Project.toml`
 ⌃ [0c46a032] DifferentialEquations v7.10.0
-  [e30172f5] Documenter v1.2.1
+  [e30172f5] Documenter v1.3.0
   [b964fa9f] LaTeXStrings v1.3.1
 ⌅ [94925ecb] MethodOfLines v0.7.6
   [207801d6] ModelOrderReduction v0.1.1 `~/work/ModelOrderReduction.jl/ModelOrderReduction.jl`
 ⌅ [961ee093] ModelingToolkit v8.46.1
   [91a5bcdd] Plots v1.40.1
   [37e2e46d] LinearAlgebra
-Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.1
-Commit 7790d6f0641 (2024-02-13 20:41 UTC)
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.2
+Commit bd47eca2c8a (2024-03-01 10:14 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
@@ -24,11 +24,11 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [a4c015fc] ANSIColoredPrinters v0.0.1
 ⌅ [c3fe647b] AbstractAlgebra v0.27.10
   [1520ce14] AbstractTrees v0.4.5
-  [7d9f7c33] Accessors v0.1.35
+  [7d9f7c33] Accessors v0.1.36
 ⌅ [79e6a3ab] Adapt v3.7.2
   [dce04be8] ArgCheck v2.3.0
 ⌅ [ec485272] ArnoldiMethod v0.2.0
-  [4fba245c] ArrayInterface v7.7.1
+⌃ [4fba245c] ArrayInterface v7.7.1
   [30b0a656] ArrayInterfaceCore v0.1.29
   [4c555306] ArrayLayouts v1.6.0
 ⌅ [15f4f7f2] AutoHashEquals v0.2.0
@@ -74,14 +74,14 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [8bb1440f] DelimitedFiles v1.9.1
 ⌃ [2b5f629d] DiffEqBase v6.130.0
 ⌅ [459566f4] DiffEqCallbacks v2.35.0
-  [77a26b50] DiffEqNoiseProcess v5.20.1
+  [77a26b50] DiffEqNoiseProcess v5.21.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
 ⌃ [0c46a032] DifferentialEquations v7.10.0
   [b4f34e82] Distances v0.10.11
   [31c24e10] Distributions v0.25.107
   [ffbed154] DocStringExtensions v0.9.3
-  [e30172f5] Documenter v1.2.1
+  [e30172f5] Documenter v1.3.0
 ⌅ [5b8099bc] DomainSets v0.5.14
   [fa6b7ba4] DualNumbers v0.6.8
 ⌅ [7c1d4256] DynamicPolynomials v0.4.6
@@ -111,7 +111,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [42e2da0e] Grisu v1.0.2
 ⌅ [0b43b601] Groebner v0.2.11
 ⌅ [d5909c97] GroupsCore v0.4.2
-  [cd3eb016] HTTP v1.10.2
+  [cd3eb016] HTTP v1.10.3
   [3e5b6fbb] HostCPUFeatures v0.1.16
   [34004b35] HypergeometricFunctions v0.3.23
   [b5f81e59] IOCapture v0.2.4
@@ -127,7 +127,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [1019f520] JLFzf v0.1.7
   [692b3bcd] JLLWrappers v1.5.0
   [682c06a0] JSON v0.21.4
-  [98e50ef6] JuliaFormatter v1.0.50
+  [98e50ef6] JuliaFormatter v1.0.51
   [ccbc3e58] JumpProcesses v9.10.1
 ⌅ [ef3ab10e] KLU v0.4.1
   [ba0b0d4f] Krylov v0.9.5
@@ -163,7 +163,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [77ba4419] NaNMath v1.0.2
 ⌅ [8913a72c] NonlinearSolve v1.10.1
   [6fe1bfb0] OffsetArrays v1.13.0
-  [4d8831e6] OpenSSL v1.4.1
+  [4d8831e6] OpenSSL v1.4.2
   [429524aa] Optim v1.9.2
   [bac558e1] OrderedCollections v1.6.3
 ⌃ [1dea7af3] OrdinaryDiffEq v6.58.2
@@ -181,7 +181,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [85a6dd25] PositiveFactorizations v0.2.4
   [d236fae5] PreallocationTools v0.4.20
   [aea7be01] PrecompileTools v1.2.0
-  [21216c6a] Preferences v1.4.2
+  [21216c6a] Preferences v1.4.3
   [27ebfcd6] Primes v0.5.6
   [1fd47b50] QuadGK v2.9.4
   [74087812] Random123 v1.7.0
@@ -242,7 +242,7 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [ac1d9e8a] ThreadsX v0.1.12
   [a759f4b9] TimerOutputs v0.5.23
   [0796e94c] Tokenize v0.5.28
-  [3bb67fe8] TranscodingStreams v0.10.3
+  [3bb67fe8] TranscodingStreams v0.10.4
   [28d57a85] Transducers v0.4.81
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.20
@@ -390,4 +390,4 @@ Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></detai
   [8e850b90] libblastrampoline_jll v5.8.0+1
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+2
-Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/ModelOrderReduction.jl/tree/gh-pages/v0.1.1/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/ModelOrderReduction.jl/tree/gh-pages/v0.1.1/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Friday 1 March 2024 10:47">Friday 1 March 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`</code></pre></details><p>You can also download the <a href="https://github.com/SciML/ModelOrderReduction.jl/tree/gh-pages/v0.1.1/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/ModelOrderReduction.jl/tree/gh-pages/v0.1.1/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Monday 4 March 2024 21:53">Monday 4 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
