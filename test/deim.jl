@@ -60,17 +60,16 @@ nₜ = length(sol[t])
 # QDEIM: check the number of dependent variables in the new system
 @test length(ModelingToolkit.get_states(qdeim_sys)) == pod_dim
 deim_prob = ODEProblem(qdeim_sys, nothing, tspan)
-deim_sol = solve(qdeim_prob, Tsit5(), saveat = 1.0)
+deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 
 # test solution retrieval
 @test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
 @test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
 
-
 # ODEIM: check the number of dependent variables in the new system
-@test length(ModelingToolkit.get_states(qdeim_sys)) == pod_dim
-deim_prob = ODEProblem(qdeim_sys, nothing, tspan)
-deim_sol = solve(qdeim_prob, Tsit5(), saveat = 1.0)
+@test length(ModelingToolkit.get_states(odeim_sys)) == pod_dim
+deim_prob = ODEProblem(odeim_sys, nothing, tspan)
+deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 
 # test solution retrieval
 @test size(deim_sol[v(x, t)]) == (nₓ, nₜ)

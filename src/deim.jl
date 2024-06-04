@@ -26,28 +26,36 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Compute the QDEIM interpolation indices for the given projection basis.
+"""
 function qdeim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
     return qr(basis', ColumnNorm()).p[1:dim]
 end
 
-function odeim_interpolation_indices(basis::AbstractMatrix, sampling_dim::Int)::Vector{Int}
+"""
+$(TYPEDSIGNATURES)
+
+Compute the ODEIM interpolation indices for the given projection basis.
+"""
+function odeim_interpolation_indices(basis::AbstractMatrix, m::Int)::Vector{Int}
     dim = size(basis, 2)
-    @assert sampling_dim >= dim && sampling_dim <= size(basis,1) "Invalid sampling dimension"
+    @assert m >= dim && m <= size(basis,1) "Invalid sampling dimension"
 
     # Compute the first dim points with QDEIM
     p = qdeim_interpolation_indices(basis)
 
-    # select points n, ..., m
+    # select points n+1, ..., m
     for _ in (length(p) + 1):m
-        F = svd(p' * basis)
-        S = F.S
-        W = F.V
+        _, S, W = svd(basis[p, :])
         gap = S[end - 1]^2 - S[end]^2  # eigengap
-        proj_basis = transpose(W) * basis
+        proj_basis = W' * basis'
         r = gap .+ sum(proj_basis.^2, dims=1)
-        r .= r .- sqrt.((gap + sum(proj_basis.^2, dims=1)).^2 .- 4 * gap * proj_basis[end, :].^2)
-        indices = sortperm(r, rev=true)
+        r -= sqrt.((gap .+ sum(proj_basis.^2, dims=1)).^2 - 4 * gap * (proj_basis[end, :].^2)')
+        indices = sortperm(vec(r), rev=true)
         e = 1
         while any(indices[e] .== p)
             e += 1
@@ -109,7 +117,7 @@ function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
               constant_part::AbstractVector, nonlinear_part::AbstractVector,
               reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
               nonlinear_projection_matrix::AbstractMatrix,
-              interpolation_algo::Symbol; odeim_dim::Integer, kwargs...)
+              interpolation_algo::Symbol, odeim_dim::Integer; kwargs...)
     # rename variables for convenience
     y = full_vars
     A = linear_coeffs
@@ -172,7 +180,7 @@ Additional to the DEIM algorithm, this function also supports the QDEIM and ODEI
 the `odeim_dim` parameter specifies the number of oversampled interpolation points.
 """
 function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
-              deim_dim::Integer = pod_dim, odeim_dim::Integer = pod_dim,
+              deim_dim::Integer = pod_dim, odeim_dim::Integer = 2*pod_dim,
               name::Symbol = Symbol(nameof(sys), :_deim),
               interpolation_algo::Symbol = :deim, kwargs...)::ODESystem
     @assert interpolation_algo ∈ (:deim, :qdeim, :odeim) "Invalid interpolation algorithm"
@@ -213,7 +221,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     reduce!(deim_reducer, TSVD())
     U = deim_reducer.rbasis # DEIM projection basis
 
-    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U, interpolation_algo; odeim_dim, kwargs...)
+    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U, interpolation_algo, odeim_dim; kwargs...)
 
     reduced_deqs = D.(ŷ) ~ reduced_rhss
     @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
