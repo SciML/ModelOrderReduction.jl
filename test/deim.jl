@@ -37,18 +37,41 @@ sol = solve(ode_prob, Tsit5(), saveat = 1.0)
 
 snapshot_simpsys = Array(sol.original_sol)
 pod_dim = 3
+
+# test DEIM
 deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
+# test QDEIM
+qdeim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim; interpolation_algo=:qdeim)
+# test ODEIM
+odeim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim; interpolation_algo=:odeim)
 
-# check the number of dependent variables in the new system
+# DEIM: check the number of dependent variables in the new system
 @test length(ModelingToolkit.get_states(deim_sys)) == pod_dim
-
 deim_prob = ODEProblem(deim_sys, nothing, tspan)
-
 deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 
 nₓ = length(sol[x])
 nₜ = length(sol[t])
 
-# test solution retrieva
+# test solution retrieval
+@test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
+@test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
+
+# QDEIM: check the number of dependent variables in the new system
+@test length(ModelingToolkit.get_states(qdeim_sys)) == pod_dim
+deim_prob = ODEProblem(qdeim_sys, nothing, tspan)
+deim_sol = solve(qdeim_prob, Tsit5(), saveat = 1.0)
+
+# test solution retrieval
+@test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
+@test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
+
+
+# ODEIM: check the number of dependent variables in the new system
+@test length(ModelingToolkit.get_states(qdeim_sys)) == pod_dim
+deim_prob = ODEProblem(qdeim_sys, nothing, tspan)
+deim_sol = solve(qdeim_prob, Tsit5(), saveat = 1.0)
+
+# test solution retrieval
 @test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
 @test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
