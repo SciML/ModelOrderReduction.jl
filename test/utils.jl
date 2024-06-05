@@ -1,5 +1,5 @@
 using Test, ModelOrderReduction
-using Symbolics
+using ModelingToolkit
 
 @variables t w(t) x(t) y(t) z(t)
 
