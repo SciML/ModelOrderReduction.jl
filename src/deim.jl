@@ -130,7 +130,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
 
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
-    dvs = ModelingToolkit.get_states(sys) # dependent variables
+    dvs = ModelingToolkit.get_unknowns(sys) # dependent variables
 
     pod_reducer = POD(snapshot, pod_dim)
     reduce!(pod_reducer, TSVD())
@@ -138,7 +138,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
 
     var_name = gensym(:ŷ)
     ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
-    @set! sys.states = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
+    @set! sys.unknowns = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
     ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
@@ -164,7 +164,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
 
     old_observed = ModelingToolkit.get_observed(sys)
-    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
+    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_unknowns(sys)]
     new_observed = [old_observed; linear_projection_eqs]
     new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates;
                                                             kwargs...)
