@@ -107,7 +107,7 @@ svdval_w = svdvals(snapshot_w)
 svdval_fv = svdvals(snapshot_fv)
 using Plots, LaTeXStrings
 svd_plt = plot(yscale = :log10, xticks = eachindex(svdval_v), titlefont = 11,
-               legendfont = 10, title = "Singular values of the snapshots")
+    legendfont = 10, title = "Singular values of the snapshots")
 plot!(svd_plt, svdval_v, markershape = :circle, label = L"Singular Val of $v$")
 plot!(svd_plt, svdval_w, markershape = :circle, label = L"Singular Val of $w$")
 plot!(svd_plt, svdval_fv, markershape = :circle, label = L"Singular Val of $f(v)$")
@@ -118,9 +118,9 @@ points ``x`` from the full-order system.
 
 ```@example deim_FitzHugh_Nagumo
 full_plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-                ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
-                camera = (50, 30), titlefont = 10,
-                title = "Phase−Space diagram of full $(nameof(pde_sys)) system")
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = "Phase−Space diagram of full $(nameof(pde_sys)) system")
 @views for i in 1:nₓ
     plot!(full_plt, snapshot_v[i, :], _ -> sol_x[i], snapshot_w[i, :])
 end
@@ -149,9 +149,9 @@ And plot the result from the POD-DEIM reduced system.
 
 ```@example deim_FitzHugh_Nagumo
 deim_plt = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-                ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
-                camera = (50, 30), titlefont = 10,
-                title = "Phase−Space diagram of reduced $(nameof(pde_sys)) system")
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = "Phase−Space diagram of reduced $(nameof(pde_sys)) system")
 @views for i in 1:nₓ
     plot!(deim_plt, sol_deim_v[i, :], _ -> sol_deim_x[i], sol_deim_w[i, :])
 end
@@ -178,12 +178,12 @@ function unconnected(v::AbstractVector, nₜ::Integer)
     vec(data)
 end
 plt_2 = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.5, 2.0),
-             ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
-             titlefont = 10, title = "Comparison of full and reduced systems")
+    ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
+    titlefont = 10, title = "Comparison of full and reduced systems")
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
-      label = "Full$(length(ode_sys.eqs))")
+    label = "Full$(length(ode_sys.eqs))")
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
-      unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
+    unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
 ```
 
 As we can see, the reduced-order system captures the limit cycle of the original full-order

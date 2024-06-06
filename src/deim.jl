@@ -65,9 +65,9 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
 """
 function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
-              constant_part::AbstractVector, nonlinear_part::AbstractVector,
-              reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
-              nonlinear_projection_matrix::AbstractMatrix; kwargs...)
+        constant_part::AbstractVector, nonlinear_part::AbstractVector,
+        reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
+        nonlinear_projection_matrix::AbstractMatrix; kwargs...)
     # rename variables for convenience
     y = full_vars
     A = linear_coeffs
@@ -119,8 +119,8 @@ nonlinear terms, which is computed by executing the runtime-generated function f
 nonlinear expressions.
 """
 function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
-              deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
-              kwargs...)::ODESystem
+        deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
+        kwargs...)::ODESystem
     sys = deepcopy(sys)
     @set! sys.name = name
 
@@ -167,7 +167,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_unknowns(sys)]
     new_observed = [old_observed; linear_projection_eqs]
     new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates;
-                                                            kwargs...)
+        kwargs...)
     @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
