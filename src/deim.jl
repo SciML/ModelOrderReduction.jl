@@ -145,7 +145,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     rhs = Symbolics.rhss(deqs)
     # a sparse matrix of coefficients for the linear part,
     # a vector of constant terms and a vector of nonlinear terms about dvs
-    A, g, F = linear_terms(rhs, dvs)
+    A, g, F = separate_terms(rhs, dvs, iv)
 
     # generate an in-place function from the symbolic expression of the nonlinear functions
     F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
