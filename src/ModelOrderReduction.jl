@@ -2,7 +2,6 @@ module ModelOrderReduction
 
 using DocStringExtensions
 
-using Symbolics
 using ModelingToolkit
 using LinearAlgebra
 
