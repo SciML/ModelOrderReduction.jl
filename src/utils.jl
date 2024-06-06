@@ -60,6 +60,7 @@ Variables in `vars` must be unique.
 function separate_terms(exprs::AbstractVector, vars, iv)
     vars = Symbolics.unwrap.(vars)
     exprs = Symbolics.unwrap.(exprs)
+    # expand is helpful for separating terms but is harmful for generating efficient runtime functions
     exprs = expand.(exprs)
     linear_I = Int[] # row idx for sparse matrix
     linear_J = Int[] # col idx for sparse matrix
