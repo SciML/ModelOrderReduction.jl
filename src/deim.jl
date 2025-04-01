@@ -65,9 +65,9 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
 """
 function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
-              constant_part::AbstractVector, nonlinear_part::AbstractVector,
-              reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
-              nonlinear_projection_matrix::AbstractMatrix; kwargs...)
+        constant_part::AbstractVector, nonlinear_part::AbstractVector,
+        reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
+        nonlinear_projection_matrix::AbstractMatrix; kwargs...)
     # rename variables for convenience
     y = full_vars
     A = linear_coeffs
@@ -119,8 +119,8 @@ nonlinear terms, which is computed by executing the runtime-generated function f
 nonlinear expressions.
 """
 function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
-              deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
-              kwargs...)::ODESystem
+        deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
+        kwargs...)::ODESystem
     sys = deepcopy(sys)
     @set! sys.name = name
 
@@ -130,7 +130,7 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
 
     iv = ModelingToolkit.get_iv(sys) # the single independent variable
     D = Differential(iv)
-    dvs = ModelingToolkit.get_states(sys) # dependent variables
+    dvs = ModelingToolkit.get_unknowns(sys) # dependent variables
 
     pod_reducer = POD(snapshot, pod_dim)
     reduce!(pod_reducer, TSVD())
@@ -138,14 +138,14 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
 
     var_name = gensym(:ŷ)
     ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
-    @set! sys.states = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
+    @set! sys.unknowns = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
     ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
     rhs = Symbolics.rhss(deqs)
     # a sparse matrix of coefficients for the linear part,
     # a vector of constant terms and a vector of nonlinear terms about dvs
-    A, g, F = linear_terms(rhs, dvs)
+    A, g, F = separate_terms(rhs, dvs, iv)
 
     # generate an in-place function from the symbolic expression of the nonlinear functions
     F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
@@ -164,10 +164,10 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
 
     old_observed = ModelingToolkit.get_observed(sys)
-    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_states(sys)]
+    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_unknowns(sys)]
     new_observed = [old_observed; linear_projection_eqs]
     new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates;
-                                                            kwargs...)
+        kwargs...)
     @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
