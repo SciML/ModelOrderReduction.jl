@@ -35,7 +35,7 @@ function only_dvs(expr, dvs, iv)
         return false
     elseif expr in dvs
         return true
-    elseif SymbolicUtils.istree(expr)
+    elseif SymbolicUtils.iscall(expr)
         args = arguments(expr)
         for arg in args
             if only_dvs(arg, dvs, iv)
