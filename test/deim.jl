@@ -1,5 +1,5 @@
 using Test, ModelOrderReduction
-using ModelingToolkit, MethodOfLines, DifferentialEquations
+using ModelingToolkit, MethodOfLines, OrdinaryDiffEq
 
 # construct an ModelingToolkit.ODESystem with non-empty field substitutions
 @variables x t v(..) w(..)
