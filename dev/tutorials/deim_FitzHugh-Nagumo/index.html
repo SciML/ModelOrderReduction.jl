@@ -36,16 +36,29 @@ discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = structural_simplify(ode_sys)
 ode_prob = ODEProblem(simp_sys, nothing, tspan)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Precompiling MethodOfLines...
-   1362.1 ms  ? DomainSets
-   1148.3 ms  ? Symbolics
-   3103.3 ms  ? ModelingToolkit
+   1392.6 ms  ? DomainSets
+   2927.7 ms  ? SciMLBase
+   1102.6 ms  ? Symbolics
+   1686.7 ms  ? DiffEqBase
+   1993.7 ms  ? LinearSolve
+   1112.0 ms  ? DiffEqBase → DiffEqBaseUnitfulExt
+   1290.2 ms  ? Latexify → ParameterizedFunctionsExt
+   1976.6 ms  ? SimpleNonlinearSolve
+   2175.2 ms  ? SciMLNLSolve
+   2198.2 ms  ? DiffEqBase → DiffEqBaseDistributionsExt
+   1189.4 ms  ? DiffEqCallbacks
+    946.0 ms  ? JumpProcesses
+    621.9 ms  ? JumpProcesses → JumpProcessFastBroadcastExt
+    620.8 ms  ? ModelingToolkit
+   2236.7 ms  ? NonlinearSolve
+    692.9 ms  ? OrdinaryDiffEq
 Info Given MethodOfLines was explicitly requested, output will be shown live 
-┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-0000-009069a0ccfd is missing from the cache.
-│ This may mean ModelingToolkit [961ee093-0014-501f-94e3-6117800e7a78] does not support precompilation but is imported by a module that does.
+┌ Warning: Module SciMLBase with build ID ffffffff-ffff-ffff-0000-008e1c8a9871 is missing from the cache.
+│ This may mean SciMLBase [0bca4576-84f4-4d90-8ffe-ffa030f20462] does not support precompilation but is imported by a module that does.
 └ @ Base loading.jl:2541
-   1514.0 ms  ? MethodOfLines
-┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-0000-009069a0ccfd is missing from the cache.
-│ This may mean ModelingToolkit [961ee093-0014-501f-94e3-6117800e7a78] does not support precompilation but is imported by a module that does.
+    618.4 ms  ? MethodOfLines
+┌ Warning: Module SciMLBase with build ID ffffffff-ffff-ffff-0000-008e1c8a9871 is missing from the cache.
+│ This may mean SciMLBase [0bca4576-84f4-4d90-8ffe-ffa030f20462] does not support precompilation but is imported by a module that does.
 └ @ Base loading.jl:2541</code></pre><p>The snapshot trajectories are obtained by solving the full-order system.</p><pre><code class="language- hljs">using DifferentialEquations
 sol = solve(ode_prob, Tsit5())
 sol_x = sol[x]
@@ -109,4 +122,4 @@ plt_2 = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&q
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
       label = &quot;Full$(length(ode_sys.eqs))&quot;)
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
-      unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Tuesday 4 March 2025 02:22">Tuesday 4 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.0 on <span class="colophon-date" title="Tuesday 1 April 2025 00:07">Tuesday 1 April 2025</span>. Using Julia version 1.11.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
