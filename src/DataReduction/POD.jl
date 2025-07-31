@@ -39,9 +39,9 @@ mutable struct POD <: AbstractDRProblem
     spectrum::Any
     # constructors
     function POD(snaps;
-                 min_renergy = 1.0,
-                 min_nmodes::Int = 1,
-                 max_nmodes::Int = length(snaps[1]))
+            min_renergy = 1.0,
+            min_nmodes::Int = 1,
+            max_nmodes::Int = length(snaps[1]))
         nmodes = min_nmodes
         errorhandle(snaps, nmodes, min_renergy, min_nmodes, max_nmodes)
         new(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0, missing)
@@ -65,8 +65,9 @@ end
 
 function reduce!(pod::POD, alg::SVD)
     u, s, v = _svd(pod.snapshots; alg.kwargs...)
-    pod.nmodes, pod.renergy = determine_truncation(s, pod.min_nmodes, pod.max_nmodes,
-                                                   pod.min_renergy)
+    pod.nmodes,
+    pod.renergy = determine_truncation(s, pod.min_nmodes, pod.max_nmodes,
+        pod.min_renergy)
     pod.rbasis = u[:, 1:(pod.nmodes)]
     pod.spectrum = s
     nothing
@@ -94,6 +95,6 @@ function Base.show(io::IO, pod::POD)
     print(io, "POD \n")
     print(io, "Reduction Order = ", pod.nmodes, "\n")
     print(io, "Snapshot size = (", size(pod.snapshots, 1), ",", size(pod.snapshots[1], 2),
-          ")\n")
+        ")\n")
     print(io, "Relative Energy = ", pod.renergy, "\n")
 end
