@@ -36,15 +36,15 @@ discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = structural_simplify(ode_sys)
 ode_prob = ODEProblem(simp_sys, nothing, tspan)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Precompiling MethodOfLines...
-   1384.2 ms  ? DomainSets
-   1111.1 ms  ? Symbolics
-   3168.1 ms  ? ModelingToolkit
+   1386.2 ms  ? DomainSets
+   1151.7 ms  ? Symbolics
+   3208.1 ms  ? ModelingToolkit
 Info Given MethodOfLines was explicitly requested, output will be shown live 
-┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-53e8-d756e0879e15 is missing from the cache.
+┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-1782-7eda4c041137 is missing from the cache.
 │ This may mean ModelingToolkit [961ee093-0014-501f-94e3-6117800e7a78] does not support precompilation but is imported by a module that does.
 └ @ Base loading.jl:2541
-   1537.8 ms  ? MethodOfLines
-┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-53e8-d756e0879e15 is missing from the cache.
+   1536.5 ms  ? MethodOfLines
+┌ Warning: Module ModelingToolkit with build ID ffffffff-ffff-ffff-1782-7eda4c041137 is missing from the cache.
 │ This may mean ModelingToolkit [961ee093-0014-501f-94e3-6117800e7a78] does not support precompilation but is imported by a module that does.
 └ @ Base loading.jl:2541</code></pre><p>The snapshot trajectories are obtained by solving the full-order system.</p><pre><code class="language- hljs">using DifferentialEquations
 sol = solve(ode_prob, Tsit5())
@@ -60,13 +60,13 @@ svdval_w = svdvals(snapshot_w)
 svdval_fv = svdvals(snapshot_fv)
 using Plots, LaTeXStrings
 svd_plt = plot(yscale = :log10, xticks = eachindex(svdval_v), titlefont = 11,
-               legendfont = 10, title = &quot;Singular values of the snapshots&quot;)
+    legendfont = 10, title = &quot;Singular values of the snapshots&quot;)
 plot!(svd_plt, svdval_v, markershape = :circle, label = L&quot;Singular Val of $v$&quot;)
 plot!(svd_plt, svdval_w, markershape = :circle, label = L&quot;Singular Val of $w$&quot;)
 plot!(svd_plt, svdval_fv, markershape = :circle, label = L&quot;Singular Val of $f(v)$&quot;)</code></pre><p>The following figure shows the phase-space diagram of <span>$v$</span> and <span>$w$</span> at different spatial points <span>$x$</span> from the full-order system.</p><pre><code class="language- hljs">full_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
-                ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
-                camera = (50, 30), titlefont = 10,
-                title = &quot;Phase−Space diagram of full $(nameof(pde_sys)) system&quot;)
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = &quot;Phase−Space diagram of full $(nameof(pde_sys)) system&quot;)
 @views for i in 1:nₓ
     plot!(full_plt, snapshot_v[i, :], _ -&gt; sol_x[i], snapshot_w[i, :])
 end
@@ -81,9 +81,9 @@ sol_deim_x = deim_sol[x]
 sol_deim_v = deim_sol[v(x, t)]
 sol_deim_w = deim_sol[w(x, t)]
 nothing # hide</code></pre><p>And plot the result from the POD-DEIM reduced system.</p><pre><code class="language- hljs">deim_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
-                ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
-                camera = (50, 30), titlefont = 10,
-                title = &quot;Phase−Space diagram of reduced $(nameof(pde_sys)) system&quot;)
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = &quot;Phase−Space diagram of reduced $(nameof(pde_sys)) system&quot;)
 @views for i in 1:nₓ
     plot!(deim_plt, sol_deim_v[i, :], _ -&gt; sol_deim_x[i], sol_deim_w[i, :])
 end
@@ -104,9 +104,9 @@ function unconnected(v::AbstractVector, nₜ::Integer)
     vec(data)
 end
 plt_2 = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
-             ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
-             titlefont = 10, title = &quot;Comparison of full and reduced systems&quot;)
+    ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
+    titlefont = 10, title = &quot;Comparison of full and reduced systems&quot;)
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
-      label = &quot;Full$(length(ode_sys.eqs))&quot;)
+    label = &quot;Full$(length(ode_sys.eqs))&quot;)
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
-      unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Wednesday 30 July 2025 08:35">Wednesday 30 July 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.14.1 on <span class="colophon-date" title="Friday 1 August 2025 10:48">Friday 1 August 2025</span>. Using Julia version 1.11.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
