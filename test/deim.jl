@@ -31,7 +31,7 @@ dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = structural_simplify(ode_sys) # field substitutions is non-empty
+simp_sys = mtkcompile(ode_sys) # field substitutions is non-empty
 ode_prob = ODEProblem(simp_sys, nothing, tspan)
 sol = solve(ode_prob, Tsit5(), saveat = 1.0)
 

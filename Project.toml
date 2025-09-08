@@ -1,7 +1,7 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
 authors = ["Bowen S. Zhu <bowenzhu@mit.edu> and contributors"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
@@ -15,7 +15,7 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 [compat]
 DocStringExtensions = "0.8, 0.9"
 LinearAlgebra = "1"
-ModelingToolkit = "9"
+ModelingToolkit = "10"
 RandomizedLinAlg = "0.1"
 Setfield = "0.8, 1"
 SparseArrays = "1"

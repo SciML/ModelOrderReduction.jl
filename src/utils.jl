@@ -7,7 +7,7 @@ $(TYPEDSIGNATURES)
 Return the differential equations and other non-differential equations.
 
 For differential equations, this function assume the derivative is the only single term at
-the left hand side, which is typically the result of `ModelingToolkit.structural_simplify`.
+the left hand side, which is typically the result of `ModelingToolkit.mtkcompile`.
 
 Equations from subsystems are not included.
 """
