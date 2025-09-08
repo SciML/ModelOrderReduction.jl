@@ -1,5 +1,5 @@
 using Test, ModelOrderReduction
-using ModelingToolkit, MethodOfLines, DifferentialEquations
+using ModelingToolkit, MethodOfLines, OrdinaryDiffEq
 
 # construct an ModelingToolkit.ODESystem with non-empty field substitutions
 @variables x t v(..) w(..)
@@ -40,9 +40,9 @@ pod_dim = 3
 deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
 # check the number of dependent variables in the new system
-@test length(ModelingToolkit.get_states(deim_sys)) == pod_dim
+@test length(ModelingToolkit.get_unknowns(deim_sys)) == pod_dim
 
-deim_prob = ODEProblem(deim_sys, nothing, tspan)
+deim_prob = ODEProblem(complete(deim_sys), nothing, tspan)
 
 deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
 
