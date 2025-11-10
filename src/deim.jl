@@ -172,4 +172,11 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
     @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
+
+    # CRITICAL: Call complete() on the system before returning to ensure all subsystems,
+    # variables, and parameters are properly registered and namespaced. Without this, 
+    # attempting to create an ODEProblem from the DEIM system will fail with errors about
+    # missing initial conditions for variables that should exist in the system.
+    # This is required due to changes in ModelingToolkit.jl's internal structure handling.
+    return complete(sys)
 end
