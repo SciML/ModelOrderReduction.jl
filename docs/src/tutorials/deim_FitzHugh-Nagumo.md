@@ -181,7 +181,7 @@ plt_2 = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.
     ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
     titlefont = 10, title = "Comparison of full and reduced systems")
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
-    label = "Full$(length(ode_sys.eqs))")
+    label = "Full$(length(ModelingToolkit.get_eqs(ode_sys)))")
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
     unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
 ```
