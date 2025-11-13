@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Discrete Empirical Interpolation Method (DEIM) · ModelOrderReduction.jl</title><meta name="title" content="Discrete Empirical Interpolation Method (DEIM) · ModelOrderReduction.jl"/><meta property="og:title" content="Discrete Empirical Interpolation Method (DEIM) · ModelOrderReduction.jl"/><meta property="twitter:title" content="Discrete Empirical Interpolation Method (DEIM) · ModelOrderReduction.jl"/><meta name="description" content="Documentation for ModelOrderReduction.jl."/><meta property="og:description" content="Documentation for ModelOrderReduction.jl."/><meta property="twitter:description" content="Documentation for ModelOrderReduction.jl."/><meta property="og:url" content="https://docs.sciml.ai/ModelOrderReduction/stable/tutorials/deim_FitzHugh-Nagumo/"/><meta property="twitter:url" content="https://docs.sciml.ai/ModelOrderReduction/stable/tutorials/deim_FitzHugh-Nagumo/"/><link rel="canonical" href="https://docs.sciml.ai/ModelOrderReduction/stable/tutorials/deim_FitzHugh-Nagumo/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="ModelOrderReduction.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ModelOrderReduction.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../functions/">Functions</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Discrete Empirical Interpolation Method (DEIM)</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Discrete Empirical Interpolation Method (DEIM)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Discrete Empirical Interpolation Method (DEIM)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/ModelOrderReduction.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/ModelOrderReduction.jl/blob/main/docs/src/tutorials/deim_FitzHugh-Nagumo.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Discrete-Empirical-Interpolation-Method-(DEIM)"><a class="docs-heading-anchor" href="#Discrete-Empirical-Interpolation-Method-(DEIM)">Discrete Empirical Interpolation Method (DEIM)</a><a id="Discrete-Empirical-Interpolation-Method-(DEIM)-1"></a><a class="docs-heading-anchor-permalink" href="#Discrete-Empirical-Interpolation-Method-(DEIM)" title="Permalink"></a></h1><p>This section illustrates how ModelOrderReduction.jl can be used to build a reduced order model via Petrov-Galerkin projection using the Proper Orthogonal Decomposition (POD) and the Discrete Empirical Interpolation Method (DEIM). As an illustrative example, we consider a nonlinear 1-D PDE from the realm of neuroscience.</p><p>The FitzHugh-Nagumo system used in neuron modeling is a simplified version of the Hodgkin-Huxley model, which describes in a detailed manner, the activation and deactivation dynamics of a spiking neuron. The system is given as follows. For <span>$x\in [0,L], t\geq 0$</span>,</p><p class="math-container">\[\begin{aligned}
+\varepsilon v_t(x,t)&amp;=\varepsilon^2 v_{xx}(x,t)+f(v(x,t))-w(x,t)+c,\\
+w_t(x,t)&amp;=bv(x,t)-\gamma w(x,t)+c,
+\end{aligned}\]</p><p>with the nonlinear function <span>$f(v)=v(v-0.1)(1-v)$</span>. The initial and boundary conditions are</p><p class="math-container">\[\begin{aligned}
+v(x,0)=0,\quad w(x,0)=0,\quad x\in [0,L],\\
+v_x(0,t)=-i_0(t),\quad v_x(L,t)=0,\quad t\geq 0,
+\end{aligned}\]</p><p>where the parameters are <span>$L=1$</span>, <span>$\varepsilon=0.015$</span>, <span>$b=0.5$</span>, <span>$\gamma =2$</span>, <span>$c=0.05$</span>. The stimulus is <span>$i_0(t)=50000t^3\exp(-15t)$</span>. The variables <span>$v$</span> and <span>$w$</span> are voltage and recovery of voltage, respectively.</p><p>To generate a POD-DEIM reduced-order model, we need to work through the following steps:</p><ol><li>Collect data on full-order model trajectories and the nonlinear terms describing its evolution equation along the way.</li><li>Based on the collected data, use POD to identify a low dimensional linear subspace of the system&#39;s state space that allows for embedding the full-order model&#39;s trajectories with minimal error.</li><li>Project the model onto the identified subspace using DEIM to approximate nonlinear terms.</li></ol><p>For step 1, we first construct a <a href="https://mtk.sciml.ai/stable/systems/PDESystem/"><code>ModelingToolkit.PDESystem</code></a> describing the original FitzHugh-Nagumo model.</p><pre><code class="language-julia hljs">using ModelingToolkit
+@variables x t v(..) w(..)
+Dx = Differential(x)
+Dxx = Dx^2
+Dt = Differential(t)
+const L = 1.0
+const ε = 0.015
+const b = 0.5
+const γ = 2.0
+const c = 0.05
+f(v) = v * (v - 0.1) * (1.0 - v)
+i₀(t) = 50000.0t^3 * exp(-15.0t)
+eqs = [ε * Dt(v(x, t)) ~ ε^2 * Dxx(v(x, t)) + f(v(x, t)) - w(x, t) + c,
+    Dt(w(x, t)) ~ b * v(x, t) - γ * w(x, t) + c]
+bcs = [v(x, 0.0) ~ 0.0,
+    w(x, 0) ~ 0.0,
+    Dx(v(0, t)) ~ -i₀(t),
+    Dx(v(L, t)) ~ 0.0]
+domains = [x ∈ (0.0, L),
+    t ∈ (0.0, 14.0)]
+ivs = [x, t]
+dvs = [v(x, t), w(x, t)]
+pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = Symbol(&quot;FitzHugh-Nagumo&quot;))</code></pre><p>Next, we apply finite difference discretization using <a href="https://docs.sciml.ai/MethodOfLines/stable/">MethodOfLines.jl</a>.</p><pre><code class="language-julia hljs">using MethodOfLines
+N = 15 # equidistant discretization intervals
+dx = (L - 0.0) / N
+dxs = [x =&gt; dx]
+order = 2
+discretization = MOLFiniteDifference(dxs, t; approx_order = order)
+ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
+simp_sys = structural_simplify(ode_sys)
+ode_prob = ODEProblem(simp_sys, nothing, tspan)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Independent variable t should be defined with @independent_variables t.
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/utils.jl:121
+┌ Warning: Initialization system is overdetermined. 2 equations for 0 unknowns. Initialization will default to using least squares. `SCCNonlinearProblem` can only be used for initialization of fully determined systems and hence will not be used here. To suppress this warning pass warn_initialize_determined = false. To make this warning into an error, pass fully_determined = true
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/problems/initializationproblem.jl:106</code></pre><p>The snapshot trajectories are obtained by solving the full-order system.</p><pre><code class="language-julia hljs">using DifferentialEquations
+sol = solve(ode_prob, Tsit5())
+sol_x = sol[x]
+nₓ = length(sol_x) # number of discretization points in x
+nₜ = length(sol[t]) # number of discretization points in time</code></pre><p>Let&#39;s see the fast decay of the singular values of the snapshot solutions for <span>$v$</span>, <span>$w$</span>, and the nonlinear snapshots <span>$f(v)$</span>.</p><pre><code class="language-julia hljs">using LinearAlgebra
+snapshot_v = sol[v(x, t)]
+snapshot_w = sol[w(x, t)]
+snapshot_fv = f.(snapshot_v)
+svdval_v = svdvals(snapshot_v)
+svdval_w = svdvals(snapshot_w)
+svdval_fv = svdvals(snapshot_fv)
+using Plots, LaTeXStrings
+svd_plt = plot(yscale = :log10, xticks = eachindex(svdval_v), titlefont = 11,
+    legendfont = 10, title = &quot;Singular values of the snapshots&quot;)
+plot!(svd_plt, svdval_v, markershape = :circle, label = L&quot;Singular Val of $v$&quot;)
+plot!(svd_plt, svdval_w, markershape = :circle, label = L&quot;Singular Val of $w$&quot;)
+plot!(svd_plt, svdval_fv, markershape = :circle, label = L&quot;Singular Val of $f(v)$&quot;)</code></pre><img src="74dd43e8.svg" alt="Example block output"/><p>The following figure shows the phase-space diagram of <span>$v$</span> and <span>$w$</span> at different spatial points <span>$x$</span> from the full-order system.</p><pre><code class="language-julia hljs">full_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = &quot;Phase−Space diagram of full $(nameof(pde_sys)) system&quot;)
+@views for i in 1:nₓ
+    plot!(full_plt, snapshot_v[i, :], _ -&gt; sol_x[i], snapshot_w[i, :])
+end
+plot!(full_plt)</code></pre><img src="85540e8e.svg" alt="Example block output"/><p>Then, we use POD to construct a linear subspace of dimension, say, 5 for the system&#39;s state space and project the model onto the subspace. DEIM is employed to approximate nonlinear terms. This can be done by simply calling <a href="../../functions/#ModelOrderReduction.deim"><code>deim</code></a>.</p><pre><code class="language-julia hljs">using ModelOrderReduction
+snapshot_simpsys = Array(sol.original_sol)
+pod_dim = deim_dim = 5
+deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
+deim_prob = ODEProblem(deim_sys, nothing, tspan)
+deim_sol = solve(deim_prob, Tsit5())
+nₜ_deim = length(deim_sol[t])
+sol_deim_x = deim_sol[x]
+sol_deim_v = deim_sol[v(x, t)]
+sol_deim_w = deim_sol[w(x, t)]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Initialization system is overdetermined. 32 equations for 0 unknowns. Initialization will default to using least squares. `SCCNonlinearProblem` can only be used for initialization of fully determined systems and hence will not be used here. To suppress this warning pass warn_initialize_determined = false. To make this warning into an error, pass fully_determined = true
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/problems/initializationproblem.jl:106</code></pre><p>And plot the result from the POD-DEIM reduced system.</p><pre><code class="language-julia hljs">deim_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
+    ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
+    camera = (50, 30), titlefont = 10,
+    title = &quot;Phase−Space diagram of reduced $(nameof(pde_sys)) system&quot;)
+@views for i in 1:nₓ
+    plot!(deim_plt, sol_deim_v[i, :], _ -&gt; sol_deim_x[i], sol_deim_w[i, :])
+end
+plot!(deim_plt)</code></pre><img src="65437673.svg" alt="Example block output"/><p>Finally, we put the two solutions into one figure.</p><pre><code class="language-julia hljs"># create data for plotting unconnected lines
+function unconnected(m::AbstractMatrix)
+    row, col = size(m)
+    data = similar(m, row, col + 1)
+    data[:, begin:(end - 1)] .= m
+    data[:, end] .= NaN # path separator
+    vec(data&#39;)
+end
+function unconnected(v::AbstractVector, nₜ::Integer)
+    data = similar(v, nₜ + 1, length(v))
+    for (i, vᵢ) in enumerate(v)
+        data[begin:(end - 1), i] .= vᵢ
+    end
+    data[end, :] .= NaN
+    vec(data)
+end
+plt_2 = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
+    ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
+    titlefont = 10, title = &quot;Comparison of full and reduced systems&quot;)
+plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
+    label = &quot;Full$(length(ModelingToolkit.get_eqs(ode_sys)))&quot;)
+plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
+    unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><img src="f3ee6cbc.svg" alt="Example block output"/><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Thursday 13 November 2025 17:19">Thursday 13 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
