@@ -35,14 +35,60 @@ order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = structural_simplify(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Independent variable t should be defined with @independent_variables t.
-└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/utils.jl:121
+ode_prob = ODEProblem(simp_sys, nothing, tspan)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Precompiling packages...
+   1674.5 ms  ✓ OrdinaryDiffEqFunctionMap
+   1861.5 ms  ✓ OrdinaryDiffEqQPRK
+   2210.5 ms  ✓ OrdinaryDiffEqPRK
+   2263.7 ms  ✓ OrdinaryDiffEqSymplecticRK
+   2379.5 ms  ✓ OrdinaryDiffEqLinear
+   2424.7 ms  ✓ OrdinaryDiffEqHighOrderRK
+   2573.6 ms  ✓ OrdinaryDiffEqExplicitRK
+   2522.1 ms  ✓ OrdinaryDiffEqRKN
+   2732.8 ms  ✓ OrdinaryDiffEqFeagin
+   2746.5 ms  ✓ OrdinaryDiffEqStabilizedRK
+   2754.3 ms  ✓ OrdinaryDiffEqSSPRK
+   3332.6 ms  ✓ OrdinaryDiffEqLowStorageRK
+   3414.1 ms  ✓ OrdinaryDiffEqLowOrderRK
+   3869.0 ms  ✓ OrdinaryDiffEqDifferentiation
+   5466.9 ms  ✓ OrdinaryDiffEqTsit5
+   2323.8 ms  ✓ OrdinaryDiffEqAdamsBashforthMoulton
+   2126.6 ms  ✓ OrdinaryDiffEqDifferentiation → OrdinaryDiffEqDifferentiationSparseArraysExt
+   1693.8 ms  ✓ OrdinaryDiffEqNordsieck
+   6103.2 ms  ✓ PDEBase
+   3961.2 ms  ✓ OrdinaryDiffEqExponentialRK
+   3957.3 ms  ✓ OrdinaryDiffEqNonlinearSolve
+   4902.4 ms  ✓ OrdinaryDiffEqExtrapolation
+   3424.7 ms  ✓ OrdinaryDiffEqStabilizedIRK
+   3715.5 ms  ✓ OrdinaryDiffEqIMEXMultistep
+   3870.7 ms  ✓ OrdinaryDiffEqPDIRK
+   4775.1 ms  ✓ OrdinaryDiffEqSDIRK
+  19516.4 ms  ✓ OrdinaryDiffEqVerner
+  14899.4 ms  ✓ OrdinaryDiffEqRosenbrock
+   9330.8 ms  ✓ OrdinaryDiffEqBDF
+  16276.9 ms  ✓ OrdinaryDiffEqFIRK
+  19115.5 ms  ✓ OrdinaryDiffEqDefault
+   4082.1 ms  ✓ OrdinaryDiffEq
+Info Given MethodOfLines was explicitly requested, output will be shown live 
+┌ Warning: The system contains interface boundaries, which are not compatible with system transformation. The system will not be transformed. Please post an issue if you need this feature.
+└ @ MethodOfLines ~/.julia/packages/MethodOfLines/JDu9X/src/system_parsing/pde_system_transformation.jl:43
+  90772.8 ms  ✓ MethodOfLines
+  33 dependencies successfully precompiled in 139 seconds. 322 already precompiled.
+  1 dependency had output during precompilation:
+┌ MethodOfLines
+│  [Output was shown above]
+└
+┌ Warning: Independent variable t should be defined with @independent_variables t.
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/KTR1R/src/utils.jl:121
 ┌ Warning: Initialization system is overdetermined. 2 equations for 0 unknowns. Initialization will default to using least squares. `SCCNonlinearProblem` can only be used for initialization of fully determined systems and hence will not be used here. To suppress this warning pass warn_initialize_determined = false. To make this warning into an error, pass fully_determined = true
-└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/problems/initializationproblem.jl:106</code></pre><p>The snapshot trajectories are obtained by solving the full-order system.</p><pre><code class="language-julia hljs">using DifferentialEquations
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/KTR1R/src/problems/initializationproblem.jl:106</code></pre><p>The snapshot trajectories are obtained by solving the full-order system.</p><pre><code class="language-julia hljs">using DifferentialEquations
 sol = solve(ode_prob, Tsit5())
 sol_x = sol[x]
 nₓ = length(sol_x) # number of discretization points in x
-nₜ = length(sol[t]) # number of discretization points in time</code></pre><p>Let&#39;s see the fast decay of the singular values of the snapshot solutions for <span>$v$</span>, <span>$w$</span>, and the nonlinear snapshots <span>$f(v)$</span>.</p><pre><code class="language-julia hljs">using LinearAlgebra
+nₜ = length(sol[t]) # number of discretization points in time</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Precompiling packages...
+   5116.9 ms  ✓ DelayDiffEq
+   6696.6 ms  ✓ StochasticDiffEq
+   7377.1 ms  ✓ DifferentialEquations
+  3 dependencies successfully precompiled in 16 seconds. 316 already precompiled.</code></pre><p>Let&#39;s see the fast decay of the singular values of the snapshot solutions for <span>$v$</span>, <span>$w$</span>, and the nonlinear snapshots <span>$f(v)$</span>.</p><pre><code class="language-julia hljs">using LinearAlgebra
 snapshot_v = sol[v(x, t)]
 snapshot_w = sol[w(x, t)]
 snapshot_fv = f.(snapshot_v)
@@ -54,14 +100,14 @@ svd_plt = plot(yscale = :log10, xticks = eachindex(svdval_v), titlefont = 11,
     legendfont = 10, title = &quot;Singular values of the snapshots&quot;)
 plot!(svd_plt, svdval_v, markershape = :circle, label = L&quot;Singular Val of $v$&quot;)
 plot!(svd_plt, svdval_w, markershape = :circle, label = L&quot;Singular Val of $w$&quot;)
-plot!(svd_plt, svdval_fv, markershape = :circle, label = L&quot;Singular Val of $f(v)$&quot;)</code></pre><img src="879c609e.svg" alt="Example block output"/><p>The following figure shows the phase-space diagram of <span>$v$</span> and <span>$w$</span> at different spatial points <span>$x$</span> from the full-order system.</p><pre><code class="language-julia hljs">full_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
+plot!(svd_plt, svdval_fv, markershape = :circle, label = L&quot;Singular Val of $f(v)$&quot;)</code></pre><img src="f905174b.svg" alt="Example block output"/><p>The following figure shows the phase-space diagram of <span>$v$</span> and <span>$w$</span> at different spatial points <span>$x$</span> from the full-order system.</p><pre><code class="language-julia hljs">full_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
     ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
     camera = (50, 30), titlefont = 10,
     title = &quot;Phase−Space diagram of full $(nameof(pde_sys)) system&quot;)
 @views for i in 1:nₓ
     plot!(full_plt, snapshot_v[i, :], _ -&gt; sol_x[i], snapshot_w[i, :])
 end
-plot!(full_plt)</code></pre><img src="bf4479b8.svg" alt="Example block output"/><p>Then, we use POD to construct a linear subspace of dimension, say, 5 for the system&#39;s state space and project the model onto the subspace. DEIM is employed to approximate nonlinear terms. This can be done by simply calling <a href="../../functions/#ModelOrderReduction.deim"><code>deim</code></a>.</p><pre><code class="language-julia hljs">using ModelOrderReduction
+plot!(full_plt)</code></pre><img src="ffc5f11d.svg" alt="Example block output"/><p>Then, we use POD to construct a linear subspace of dimension, say, 5 for the system&#39;s state space and project the model onto the subspace. DEIM is employed to approximate nonlinear terms. This can be done by simply calling <a href="../../functions/#ModelOrderReduction.deim"><code>deim</code></a>.</p><pre><code class="language-julia hljs">using ModelOrderReduction
 snapshot_simpsys = Array(sol.original_sol)
 pod_dim = deim_dim = 5
 deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
@@ -71,14 +117,14 @@ nₜ_deim = length(deim_sol[t])
 sol_deim_x = deim_sol[x]
 sol_deim_v = deim_sol[v(x, t)]
 sol_deim_w = deim_sol[w(x, t)]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Initialization system is overdetermined. 32 equations for 0 unknowns. Initialization will default to using least squares. `SCCNonlinearProblem` can only be used for initialization of fully determined systems and hence will not be used here. To suppress this warning pass warn_initialize_determined = false. To make this warning into an error, pass fully_determined = true
-└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/v7S9P/src/problems/initializationproblem.jl:106</code></pre><p>And plot the result from the POD-DEIM reduced system.</p><pre><code class="language-julia hljs">deim_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
+└ @ ModelingToolkit ~/.julia/packages/ModelingToolkit/KTR1R/src/problems/initializationproblem.jl:106</code></pre><p>And plot the result from the POD-DEIM reduced system.</p><pre><code class="language-julia hljs">deim_plt = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&quot;w(x,t)&quot;, xlims = (-0.5, 2.0),
     ylims = (0.0, L), zlims = (0.0, 0.25), legend = false, xflip = true,
     camera = (50, 30), titlefont = 10,
     title = &quot;Phase−Space diagram of reduced $(nameof(pde_sys)) system&quot;)
 @views for i in 1:nₓ
     plot!(deim_plt, sol_deim_v[i, :], _ -&gt; sol_deim_x[i], sol_deim_w[i, :])
 end
-plot!(deim_plt)</code></pre><img src="44161ee0.svg" alt="Example block output"/><p>Finally, we put the two solutions into one figure.</p><pre><code class="language-julia hljs"># create data for plotting unconnected lines
+plot!(deim_plt)</code></pre><img src="82e0f6dd.svg" alt="Example block output"/><p>Finally, we put the two solutions into one figure.</p><pre><code class="language-julia hljs"># create data for plotting unconnected lines
 function unconnected(m::AbstractMatrix)
     row, col = size(m)
     data = similar(m, row, col + 1)
@@ -100,4 +146,4 @@ plt_2 = plot(xlabel = L&quot;v(x,t)&quot;, ylabel = L&quot;x&quot;, zlabel = L&q
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
     label = &quot;Full$(length(ModelingToolkit.get_eqs(ode_sys)))&quot;)
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
-    unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><img src="6713ddea.svg" alt="Example block output"/><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Thursday 13 November 2025 16:50">Thursday 13 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    unconnected(sol_deim_w), label = &quot;POD$(pod_dim)/DEIM$(deim_dim)&quot;)</code></pre><img src="8f579823.svg" alt="Example block output"/><p>As we can see, the reduced-order system captures the limit cycle of the original full-order system very well.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../functions/">« Functions</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 25 November 2025 14:54">Tuesday 25 November 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
