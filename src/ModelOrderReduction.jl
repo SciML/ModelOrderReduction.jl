@@ -19,4 +19,7 @@ export POD, reduce!
 include("deim.jl")
 export deim
 
+include("lift_and_learn.jl")
+export lift_and_learn
+
 end
