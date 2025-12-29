@@ -11,8 +11,8 @@
 
 ModelOrderReduction.jl is a package for automatically reducing the computational complexity
 of mathematical models, while keeping expected fidelity within a controlled error bound.
-These methods function a submodel with a projection
-where solving the smaller model gives approximation information about the full model.
+These methods construct a submodel via a projection
+where solving the smaller model gives approximate information about the full model.
 MOR.jl uses [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/)
 as a system description and automatically transforms equations
 to the subform, defining the observables to automatically lazily reconstruct the full

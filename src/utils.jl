@@ -28,7 +28,7 @@ end
 """
 $(SIGNATURES)
 
-Returns `true` is `expr` contains variables in `dvs` only and does not contain `iv`.
+Returns `true` if `expr` contains variables in `dvs` only and does not contain `iv`.
 
 """
 function only_dvs(expr, dvs, iv)
