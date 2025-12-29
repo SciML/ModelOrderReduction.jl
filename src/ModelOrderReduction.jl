@@ -19,4 +19,6 @@ export POD, reduce!
 include("deim.jl")
 export deim
 
+include("precompilation.jl")
+
 end
