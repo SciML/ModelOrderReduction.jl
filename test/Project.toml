@@ -1,14 +1,14 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 MethodOfLines = "94925ecb-adb7-4558-8ed8-f975c56a0bf4"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Aqua = "0.8"
-OrdinaryDiffEq = "6"
 MethodOfLines = "0.11"
-ModelingToolkit = "10.10"
+ModelingToolkit = "10.10, 11"
+OrdinaryDiffEq = "6"
 SafeTestsets = "0.1"
