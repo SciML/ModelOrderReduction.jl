@@ -1,11 +1,13 @@
 module ModelOrderReduction
 
-using DocStringExtensions
+using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDSIGNATURES
 
-using ModelingToolkit
-using LinearAlgebra
+using ModelingToolkit: ModelingToolkit, @variables, Differential, Equation, Num, ODESystem,
+                       SymbolicUtils, Symbolics, arguments, build_function, complete,
+                       expand, substitute, tearing_substitution
+using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 
-using Setfield
+using Setfield: Setfield, @set!
 
 include("utils.jl")
 

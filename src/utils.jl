@@ -1,4 +1,4 @@
-using SparseArrays
+using SparseArrays: SparseArrays, sparse
 using ModelingToolkit: iscall, operation
 
 """
