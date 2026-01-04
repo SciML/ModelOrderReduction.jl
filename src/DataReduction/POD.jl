@@ -2,7 +2,7 @@ using TSVD: tsvd
 using RandomizedLinAlg: rsvd
 
 function matricize(VoV::Vector{Vector{T}}) where {T}
-    reduce(hcat, VoV)
+    return reduce(hcat, VoV)
 end
 
 function _svd(data::Vector{Vector{T}}; kwargs...) where {T}
@@ -38,17 +38,19 @@ mutable struct POD <: AbstractDRProblem
     renergy::Any
     spectrum::Any
     # constructors
-    function POD(snaps;
+    function POD(
+            snaps;
             min_renergy = 1.0,
             min_nmodes::Int = 1,
-            max_nmodes::Int = length(snaps[1]))
+            max_nmodes::Int = length(snaps[1])
+        )
         nmodes = min_nmodes
         errorhandle(snaps, nmodes, min_renergy, min_nmodes, max_nmodes)
-        new(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0, missing)
+        return new(snaps, min_renergy, min_nmodes, max_nmodes, nmodes, missing, 1.0, missing)
     end
     function POD(snaps, nmodes::Int)
         errorhandle(snaps, nmodes, 0.0, nmodes, nmodes)
-        new(snaps, 0.0, nmodes, nmodes, nmodes, missing, 1.0, missing)
+        return new(snaps, 0.0, nmodes, nmodes, nmodes, missing, 1.0, missing)
     end
 end
 
@@ -66,11 +68,13 @@ end
 function reduce!(pod::POD, alg::SVD)
     u, s, v = _svd(pod.snapshots; alg.kwargs...)
     pod.nmodes,
-    pod.renergy = determine_truncation(s, pod.min_nmodes, pod.max_nmodes,
-        pod.min_renergy)
+        pod.renergy = determine_truncation(
+        s, pod.min_nmodes, pod.max_nmodes,
+        pod.min_renergy
+    )
     pod.rbasis = u[:, 1:(pod.nmodes)]
     pod.spectrum = s
-    nothing
+    return nothing
 end
 
 function reduce!(pod::POD, alg::TSVD)
@@ -79,7 +83,7 @@ function reduce!(pod::POD, alg::TSVD)
     pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
     pod.rbasis = u
     pod.spectrum = s
-    nothing
+    return nothing
 end
 
 function reduce!(pod::POD, alg::RSVD)
@@ -88,13 +92,15 @@ function reduce!(pod::POD, alg::RSVD)
     pod.renergy = sum(s) / (sum(s) + (n_max - pod.nmodes) * s[end])
     pod.rbasis = u
     pod.spectrum = s
-    nothing
+    return nothing
 end
 
 function Base.show(io::IO, pod::POD)
     print(io, "POD \n")
     print(io, "Reduction Order = ", pod.nmodes, "\n")
-    print(io, "Snapshot size = (", size(pod.snapshots, 1), ",", size(pod.snapshots[1], 2),
-        ")\n")
-    print(io, "Relative Energy = ", pod.renergy, "\n")
+    print(
+        io, "Snapshot size = (", size(pod.snapshots, 1), ",", size(pod.snapshots[1], 2),
+        ")\n"
+    )
+    return print(io, "Relative Energy = ", pod.renergy, "\n")
 end

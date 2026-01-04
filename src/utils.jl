@@ -22,7 +22,7 @@ function get_deqs(sys::ODESystem)::Tuple{Vector{Equation}, Vector{Equation}}
             push!(others, eq)
         end
     end
-    deqs, others
+    return deqs, others
 end
 
 """
@@ -78,7 +78,7 @@ function separate_terms(exprs::AbstractVector, vars, iv)
         push!(linear_I, row_index)
         push!(linear_J, idxmap[term])
         push!(linear_V, value)
-        nothing
+        return nothing
     end
 
     other_terms = similar(exprs, Num) # create a vector of the same size
@@ -95,7 +95,7 @@ function separate_terms(exprs::AbstractVector, vars, iv)
         else
             other_terms[i] += expr
         end
-        nothing
+        return nothing
     end
 
     for (i, expr) in enumerate(exprs)
