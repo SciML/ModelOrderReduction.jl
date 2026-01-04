@@ -7,20 +7,20 @@ abstract type AbstractSVD end
 struct SVD <: AbstractSVD
     kwargs::Any
     function SVD(; kwargs...)
-        new(kwargs)
+        return new(kwargs)
     end
 end
 
 struct TSVD <: AbstractSVD
     kwargs::Any
     function TSVD(; kwargs...)
-        new(kwargs)
+        return new(kwargs)
     end
 end
 
 struct RSVD <: AbstractSVD
     p::Int
     function RSVD(p::Int = 0)
-        new(p)
+        return new(p)
     end
 end

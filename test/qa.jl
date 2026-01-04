@@ -3,8 +3,10 @@ using ModelOrderReduction, Aqua
     #Aqua.find_persistent_tasks_deps(ModelOrderReduction)
     Aqua.test_ambiguities(ModelOrderReduction, recursive = false)
     Aqua.test_deps_compat(ModelOrderReduction)
-    Aqua.test_piracies(ModelOrderReduction,
-        treat_as_own = [])
+    Aqua.test_piracies(
+        ModelOrderReduction,
+        treat_as_own = []
+    )
     Aqua.test_project_extras(ModelOrderReduction)
     Aqua.test_stale_deps(ModelOrderReduction)
     Aqua.test_unbound_args(ModelOrderReduction)

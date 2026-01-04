@@ -13,14 +13,20 @@ const γ = 2.0
 const c = 0.05
 f(v) = v * (v - 0.1) * (1.0 - v)
 i₀(t) = 50000.0t^3 * exp(-15.0t)
-eqs = [ε * Dt(v(x, t)) ~ ε^2 * Dxx(v(x, t)) + f(v(x, t)) - w(x, t) + c,
-    Dt(w(x, t)) ~ b * v(x, t) - γ * w(x, t) + c]
-bcs = [v(x, 0.0) ~ 0.0,
+eqs = [
+    ε * Dt(v(x, t)) ~ ε^2 * Dxx(v(x, t)) + f(v(x, t)) - w(x, t) + c,
+    Dt(w(x, t)) ~ b * v(x, t) - γ * w(x, t) + c,
+]
+bcs = [
+    v(x, 0.0) ~ 0.0,
     w(x, 0) ~ 0.0,
     Dx(v(0, t)) ~ -i₀(t),
-    Dx(v(L, t)) ~ 0.0]
-domains = [x ∈ (0.0, L),
-    t ∈ (0.0, 14.0)]
+    Dx(v(L, t)) ~ 0.0,
+]
+domains = [
+    x ∈ (0.0, L),
+    t ∈ (0.0, 14.0),
+]
 ivs = [x, t]
 dvs = [v(x, t), w(x, t)]
 pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = :FN)
