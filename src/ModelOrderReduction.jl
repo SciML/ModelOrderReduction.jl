@@ -3,8 +3,8 @@ module ModelOrderReduction
 using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDSIGNATURES
 
 using ModelingToolkit: ModelingToolkit, @variables, Differential, Equation, Num, ODESystem,
-                       SymbolicUtils, Symbolics, arguments, build_function, complete,
-                       expand, substitute, tearing_substitution
+    SymbolicUtils, Symbolics, arguments, build_function, complete,
+    expand, substitute, tearing_substitution
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 
 using Setfield: Setfield, @set!

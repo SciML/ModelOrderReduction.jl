@@ -64,10 +64,12 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 - `reduced_rhss`: the right-hand side of ROM.
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
 """
-function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
+function deim(
+        full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
         constant_part::AbstractVector, nonlinear_part::AbstractVector,
         reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
-        nonlinear_projection_matrix::AbstractMatrix; kwargs...)
+        nonlinear_projection_matrix::AbstractMatrix; kwargs...
+    )
     # rename variables for convenience
     y = full_vars
     A = linear_coeffs
@@ -91,7 +93,7 @@ function deim(full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
     Â = V' * A * V
     ĝ = V' * g
     reduced_rhss = Â * ŷ + ĝ + F̂
-    reduced_rhss, linear_projection_eqs
+    return reduced_rhss, linear_projection_eqs
 end
 """
     $(FUNCTIONNAME)(
@@ -118,9 +120,11 @@ The POD basis used for DEIM interpolation is obtained from the snapshot matrix o
 nonlinear terms, which is computed by executing the runtime-generated function for
 nonlinear expressions.
 """
-function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
+function deim(
+        sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
         deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
-        kwargs...)::ODESystem
+        kwargs...
+    )::ODESystem
     sys = deepcopy(sys)
     @set! sys.name = name
 
@@ -166,15 +170,17 @@ function deim(sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
     old_observed = ModelingToolkit.get_observed(sys)
     fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_unknowns(sys)]
     new_observed = [old_observed; linear_projection_eqs]
-    new_sorted_observed = ModelingToolkit.topsort_equations(new_observed, fullstates;
-        kwargs...)
+    new_sorted_observed = ModelingToolkit.topsort_equations(
+        new_observed, fullstates;
+        kwargs...
+    )
     @set! sys.observed = new_sorted_observed
 
     inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
     @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
 
     # CRITICAL: Call complete() on the system before returning to ensure all subsystems,
-    # variables, and parameters are properly registered and namespaced. Without this, 
+    # variables, and parameters are properly registered and namespaced. Without this,
     # attempting to create an ODEProblem from the DEIM system will fail with errors about
     # missing initial conditions for variables that should exist in the system.
     # This is required due to changes in ModelingToolkit.jl's internal structure handling.
