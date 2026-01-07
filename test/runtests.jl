@@ -6,6 +6,9 @@ end
 @safetestset "Explicit Imports" begin
     include("explicit_imports.jl")
 end
+@safetestset "JET Static Analysis" begin
+    include("jet.jl")
+end
 @safetestset "POD" begin
     include("DataReduction.jl")
 end
