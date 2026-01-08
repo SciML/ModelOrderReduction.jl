@@ -9,6 +9,9 @@ end
 @safetestset "POD" begin
     include("DataReduction.jl")
 end
+@safetestset "SOD" begin
+    include("SOD.jl")
+end
 @safetestset "utils" begin
     include("utils.jl")
 end
