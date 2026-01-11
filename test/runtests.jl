@@ -20,8 +20,8 @@ if GROUP == "All" || GROUP == "Core"
     end
 end
 
-if GROUP == "All" || GROUP == "nopre"
+if GROUP == "nopre"
     @safetestset "JET Static Analysis" begin
-        include("jet.jl")
+        include("nopre/jet_tests.jl")
     end
 end
