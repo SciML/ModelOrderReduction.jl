@@ -17,6 +17,7 @@ end
 if GROUP == "nopre"
     using Pkg
     Pkg.activate(@__DIR__() * "/nopre")
+    Pkg.develop(path = dirname(@__DIR__))
     Pkg.instantiate()
 
     @safetestset "Quality Assurance" begin
