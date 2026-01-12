@@ -4,17 +4,19 @@ abstract type AbstractDRProblem <: AbstractReductionProblem end
 
 abstract type AbstractSVD end
 
-struct SVD <: AbstractSVD
-    kwargs::Any
+struct SVD{K <: NamedTuple} <: AbstractSVD
+    kwargs::K
     function SVD(; kwargs...)
-        return new(kwargs)
+        kw = NamedTuple(kwargs)
+        return new{typeof(kw)}(kw)
     end
 end
 
-struct TSVD <: AbstractSVD
-    kwargs::Any
+struct TSVD{K <: NamedTuple} <: AbstractSVD
+    kwargs::K
     function TSVD(; kwargs...)
-        return new(kwargs)
+        kw = NamedTuple(kwargs)
+        return new{typeof(kw)}(kw)
     end
 end
 

@@ -31,7 +31,7 @@ $(SIGNATURES)
 Returns `true` if `expr` contains variables in `dvs` only and does not contain `iv`.
 
 """
-function only_dvs(expr, dvs, iv)
+function only_dvs(expr, dvs, iv)::Bool
     if isequal(expr, iv)
         return false
     elseif expr in dvs
