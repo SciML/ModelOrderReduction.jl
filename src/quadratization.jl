@@ -42,3 +42,8 @@ end
 function quadratize(sys::System, alg::QBee, name; kwargs...)::System
     return quadratize_qbee(sys, name; kwargs...)
 end
+
+function quadratize_qbee(sys::System, name; kwargs...)
+    # TODO
+    return sys
+end
