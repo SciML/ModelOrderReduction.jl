@@ -126,3 +126,26 @@ function separate_terms(exprs::AbstractVector, vars, iv)
     linear = sparse(linear_I, linear_J, linear_V, length(exprs), length(vars))
     return linear, other_terms, nonlinear_terms
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+Convert a symbolic expression to an expanded polynomial representation of
+`DynamicPolynomials.Polynomial` monomials.
+
+This function transforms symbolic polynomial expressions into a monomial form that can be 
+more easily processed in certain applications.
+"""
+function to_expanded_polynomial(expr::Num)
+    val = Symbolics.unwrap(expr)
+    return to_expanded_polynomial(val)
+end
+function to_expanded_polynomial(expr::SymbolicUtils.BasicSymbolic{T})::
+    Union{SymbolicUtils.PolyVarT, SymbolicUtils.PolynomialT} where {T}
+    if !SymbolicUtils.iscall(expr)
+        return expr
+    end
+    poly_to_bs = Dict{SymbolicUtils.PolyVarT, SymbolicUtils.BasicSymbolic{T}}()
+    bs_to_poly = Dict{SymbolicUtils.BasicSymbolic{T}, SymbolicUtils.PolyVarT}()
+    return SymbolicUtils.to_poly!(poly_to_bs, bs_to_poly, expr)
+end
