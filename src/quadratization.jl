@@ -17,3 +17,28 @@ Bychkov, A., & Pogudin, G. (2021). Optimal monomial quadratization for ODE syste
 https://arxiv.org/abs/2103.08013
 """
 struct QBee <: QuadratizationAlgorithm end
+
+"""
+    quadratize(sys::System, alg::QuadratizationAlgorithm = QBee(); 
+               name = Symbol(nameof(sys), :_quadratized), kwargs...)
+
+Transform a polynomial ODE system into quadratic form using the specified algorithm.
+
+# Arguments
+- `sys::System`: Input polynomial ODE system with first-order derivatives on LHS
+- `alg::QuadratizationAlgorithm`: Algorithm to use for quadratization (default: `QBee()`)
+- `name`: Name for the output system (default: name of input system)
+- `kwargs...`: Algorithm-specific keyword arguments
+
+# Returns
+- `System`: Quadratic ODE system with introduced auxiliary variables
+"""
+function quadratize(
+        sys::System, alg::QuadratizationAlgorithm = QBee();
+        name = Symbol(nameof(sys), :_quadratized), kwargs...
+    )::System
+    return quadratize(sys, alg, name; kwargs...)
+end
+function quadratize(sys::System, alg::QBee, name; kwargs...)::System
+    return quadratize_qbee(sys, name; kwargs...)
+end
