@@ -78,8 +78,9 @@ dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = structural_simplify(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan)
+simp_sys = mtkcompile(ode_sys)
+ode_prob = ODEProblem(simp_sys, nothing, tspan;
+    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0))
 nothing # hide
 ```
 
