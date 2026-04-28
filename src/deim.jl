@@ -176,13 +176,11 @@ function deim(
     )
     @set! sys.observed = new_sorted_observed
 
-    inv_dict = Dict(Symbolics.scalarize(ŷ .=> V' * dvs)) # reduced vars to original vars
-    @set! sys.defaults = merge(ModelingToolkit.defaults(sys), inv_dict)
+    # Numeric initial conditions for the reduced unknowns from the snapshot's first column.
+    # The snapshot is assumed to start at t = tspan[1], matching the FOM initial state.
+    new_ics = copy(ModelingToolkit.get_initial_conditions(sys))
+    new_ics[Symbolics.unwrap(ŷ)] = V' * snapshot[:, 1]
+    @set! sys.initial_conditions = new_ics
 
-    # CRITICAL: Call complete() on the system before returning to ensure all subsystems,
-    # variables, and parameters are properly registered and namespaced. Without this,
-    # attempting to create an ODEProblem from the DEIM system will fail with errors about
-    # missing initial conditions for variables that should exist in the system.
-    # This is required due to changes in ModelingToolkit.jl's internal structure handling.
     return complete(sys)
 end
