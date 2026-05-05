@@ -2,7 +2,6 @@ using ModelingToolkit
 using OrdinaryDiffEq
 using Symbolics
 using LinearAlgebra
-using ModelOrderReduction
 
 unwrap(x) = Symbolics.value(x)
 
