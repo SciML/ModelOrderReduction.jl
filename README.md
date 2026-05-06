@@ -78,6 +78,10 @@ sol_deim_v = deim_sol[v(x, t)]
 sol_deim_w = deim_sol[w(x, t)]
 ```
 
+The following figure shows the comparison of the solutions of the 32-dimension full-order model and the POD5-DEIM5 reduced-order model.
+
+![comparison](https://user-images.githubusercontent.com/45696147/195765614-df9092a2-4fca-4602-bb15-81e65b2b572e.svg)
+
 #### Polynomialization, Quadratization, and Galerkin Reduction on an ODE system
 ```julia
 using ModelOrderReduction
@@ -120,8 +124,3 @@ result = polynomialize_quadratize_reduce(
 #xbar: center used for the affine Galerkin reduction
 @show size(result.xbar)
 ```
-
-
-The following figure shows the comparison of the solutions of the 32-dimension full-order model and the POD5-DEIM5 reduced-order model.
-
-![comparison](https://user-images.githubusercontent.com/45696147/195765614-df9092a2-4fca-4602-bb15-81e65b2b572e.svg)
