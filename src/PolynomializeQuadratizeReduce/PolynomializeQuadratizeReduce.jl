@@ -1,16 +1,3 @@
-using ModelingToolkit
-using Symbolics
-using OrdinaryDiffEq
-using Statistics
-using LinearAlgebra
-
-
-include("Polynomialization.jl")
-include("Quadratization.jl")
-include("GalerkinReduction.jl")
-
-unwrap(x) = Symbolics.value(x)
-
 function substitute_fixedpoint(expr, vals; maxiters = 20)
     expr = unwrap(expr)
 
@@ -83,9 +70,6 @@ function reduced_coordinate_formulas(sys, V, a_vars)
     xs = unknowns(sys)
     n, r = size(V)
 
-    n == length(xs)
-    r == length(a_vars)
-
     formulas = Equation[]
 
     for i in 1:r
@@ -133,7 +117,7 @@ function pod_basis_from_simulation(
 
     snapshots = reduce(hcat, sol.u)
 
-    xbar = vec(mean(snapshots; dims = 2))
+    xbar = [sum(snapshots[i, :]) / size(snapshots, 2) for i in axes(snapshots, 1)]
     centered_snapshots = snapshots .- xbar
 
     F = svd(Matrix(centered_snapshots))

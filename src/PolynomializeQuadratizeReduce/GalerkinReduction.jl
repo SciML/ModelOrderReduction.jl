@@ -1,10 +1,3 @@
-using ModelingToolkit
-using OrdinaryDiffEq
-using Symbolics
-using LinearAlgebra
-
-unwrap(x) = Symbolics.value(x)
-
 function differentiated_variable(eq)
     lhs = unwrap(eq.lhs)
     args = arguments(lhs)

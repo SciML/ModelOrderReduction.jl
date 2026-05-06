@@ -1,12 +1,13 @@
 name = "ModelOrderReduction"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-authors = ["Bowen S. Zhu <bowenzhu@mit.edu> and contributors"]
 version = "0.1.5"
+authors = ["Bowen S. Zhu <bowenzhu@mit.edu> and contributors"]
 
 [deps]
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 RandomizedLinAlg = "0448d7d9-159c-5637-8537-fd72090fea46"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
@@ -17,6 +18,7 @@ TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 DocStringExtensions = "0.8, 0.9"
 LinearAlgebra = "1"
 ModelingToolkit = "11"
+OrdinaryDiffEq = "6, 7"
 PrecompileTools = "1"
 RandomizedLinAlg = "0.1"
 Setfield = "0.8, 1"

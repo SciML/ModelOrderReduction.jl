@@ -1,9 +1,4 @@
 using Base.Iterators: product
-using Markdown
-using ModelingToolkit
-using SymbolicUtils
-using Symbolics
-
 
 # Basic utilities
 
@@ -26,14 +21,6 @@ tuple_halffloor(a::ExpTuple) =
 
 is_zero_tuple(a::ExpTuple) =
     all(iszero, a)
-
-unwrap(x) = Symbolics.value(x)
-
-isnearinteger(x; tol = 1.0e-6) = x isa Number && abs(x - round(x)) <= tol
-
-function lhs_to_rhs_dict(eqns)
-    return Dict([eq.lhs => eq.rhs for eq in eqns])
-end
 
 function expression_in_list(expr, list)
     return any(isequal(expr, elem) for elem in list)
@@ -96,14 +83,6 @@ end
 
 laurent_degree(a::Tuple) = sum(abs, a)
 
-same_orthant_between_zero_and(a::Tuple, b::Tuple) =
-    all(
-    (ai == 0 && bi == 0) ||
-        (ai > 0 && 0 <= bi <= ai) ||
-        (ai < 0 && ai <= bi <= 0)
-        for (ai, bi) in zip(a, b)
-)
-
 function canonical_pair(u::Tuple, v::Tuple)
     return u <= v ? (u, v) : (v, u)
 end
@@ -118,151 +97,7 @@ function tuple_allowed(a, exponent_signs)
     )
 end
 
-# Equation cleanup
-
-isleaf_expr(expr, vars::Vector{Num}) = !iscall(expr) || any(isequal(expr, var) for var in vars)
-
-"""
-    normalize_symbolic_function(expr, vars)
-
-Normalize a symbolic expression by recursively rewriting quotients, powers,
-products, sums, and differences into a canonical quotient form.
-
-The return value is equivalent to `expr`, but signs and denominators are pushed
-toward the top level of the expression tree.
-
-This normalization is used before Laurent expansion so that expressions with
-nested divisions or negative signs can be converted more reliably into monomial
-terms.
-"""
-function normalize_symbolic_function(expr, vars)
-    function helper(unwrap_expr)
-        if unwrap_expr isa Number && isless(unwrap_expr, 0)
-            return (-unwrap_expr, 1, -1)
-        elseif isleaf_expr(unwrap_expr, vars)
-            return (unwrap_expr, 1, 1)
-        elseif operation(unwrap_expr) == sqrt
-            base = arguments(unwrap_expr)[1]
-            num_of_base, denom_of_base, sign_of_base = helper(base)
-            return ((num_of_base * sign_of_base)^(1 // 2), isequal(1, denom_of_base) ? 1 : denom_of_base^(1 // 2), 1)
-        elseif operation(unwrap_expr) == /
-            num, denom = unwrap.(arguments(unwrap_expr))
-            num_of_num, denom_of_num, sign_of_num = helper(num)
-            num_of_denom, denom_of_denom, sign_of_denom = helper(denom)
-            return (num_of_num * denom_of_denom, denom_of_num * num_of_denom, sign_of_num * sign_of_denom)
-        elseif operation(unwrap_expr) == ^
-            base, exponent = unwrap.(arguments(unwrap_expr))
-            num_of_base, denom_of_base, sign_of_base = helper(base)
-            norm_exp = unwrap(normalize_symbolic_function(exponent, vars))
-            if norm_exp isa Number && isnearinteger(norm_exp)
-                norm_exp = Integer(round(norm_exp))
-                return (num_of_base^norm_exp, isequal(1, denom_of_base) ? 1 : denom_of_base^norm_exp, (round(norm_exp) % 2 == 0) ? 1 : sign_of_base)
-            else
-                return ((sign_of_base * num_of_base)^norm_exp, isequal(1, denom_of_base) ? 1 : denom_of_base^norm_exp, 1)
-            end
-        elseif operation(unwrap_expr) == *
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            return (prod(tup[1] for tup in numdenom_args), prod(tup[2] for tup in numdenom_args), prod(tup[3] for tup in numdenom_args))
-        elseif operation(unwrap_expr) == -
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            sign = (numdenom_args[1][3] == -1) ? -1 : 1
-            return (numdenom_args[1][1] / numdenom_args[1][2] * numdenom_args[1][3] * sign - numdenom_args[2][1] / numdenom_args[2][2] * numdenom_args[2][3] * sign, 1, sign)
-        elseif operation(unwrap_expr) == +
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            sign = numdenom_args[1][3] == 1 ? 1 : -1
-            return (sum(tup[1] / tup[2] * tup[3] * sign for tup in numdenom_args), 1, sign)
-        else
-            norm_args = []
-            for arg in arguments(unwrap_expr)
-                push!(norm_args, normalize_symbolic_function(arg, vars))
-            end
-            return (operation(unwrap_expr)(norm_args...), 1, 1)
-        end
-    end
-    tup = Num.(helper(unwrap(expr)))
-    return tup[3] * tup[1] / tup[2]
-end
-
-function remove_negative_powers(expr)
-    expr = unwrap(expr)
-
-    if !iscall(expr)
-        return Num(expr)
-    end
-
-    op = operation(expr)
-    args = arguments(expr)
-
-    if op == ^
-        base, exponent = args
-        exponent = unwrap(exponent)
-
-        new_base = remove_negative_powers(Num(base))
-
-        if exponent isa Number && exponent < 0
-            return Num(1 / unwrap(new_base)^(-exponent))
-        else
-            return Num(unwrap(new_base)^exponent)
-        end
-    end
-
-    new_args = [remove_negative_powers(Num(arg)) for arg in args]
-    return Num(op(unwrap.(new_args)...))
-end
-
-function laurent_expand(expr, vars)
-    function helper(expr, denom, vars)
-        expr = unwrap(normalize_symbolic_function(expr, vars))
-        expr = unwrap(expand(expr))
-        if iscall(expr) && !(operation(expr) in (+, -))
-            expr = unwrap(expand(expr))
-        end
-        if !iscall(expr) || operation(expr) == *
-            return expr / denom
-        end
-        terms = [expr]
-        if iscall(expr) && operation(expr) == +
-            terms = arguments(expr)
-        elseif iscall(expr) && operation(expr) == -
-            terms = [arguments(expr)[1], -arguments(expr)[2]]
-        end
-        tot = 0
-        for term in terms
-            if iscall(term) && operation(term) == /
-                unwrap_num, unwrap_denom = unwrap.(arguments(term))
-                tot += Num(helper(unwrap_num, denom * unwrap_denom, vars))
-            else
-                tot += term / denom
-            end
-        end
-        return tot
-    end
-    return helper(expr, 1, vars)
-end
-
 # State / bookkeeping objects
-
-struct VariablesHolder
-    state_variables::Vector{Num}
-    num_vars_orig::Int
-    base_name::String
-    start_with::Int
-    function VariablesHolder(vars, new_var_base_name = "z_", start_with = 0)
-        return new(vars, length(vars), new_var_base_name, start_with)
-    end
-end
-
-function create_variable!(vars::VariablesHolder, iv::Num)
-    new_index = length(vars.state_variables) + vars.start_with - vars.num_vars_orig
-    new_variable = Symbolics.scalarize(@variables $(Symbol(vars.base_name, new_index))(iv))[1]
-    push!(vars.state_variables, new_variable)
-    return new_variable
-end
-
-function delete_variable!(vars::VariablesHolder, var::Num)
-    pop!(vars.state_variables)
-    return nothing
-end
 
 struct PolynomialSystem
     orig_variables::Vector{Num}
@@ -306,10 +141,12 @@ known substitution terms are stored in `nonsquares`.
 - `exponent_signs`: sign restrictions observed for each original variable exponent.
 """
 function PolynomialSystem(sys::System; new_var_base_name = "z_", start_with = 0)
+    iv = Num(ModelingToolkit.get_iv(sys))
     orig_eqns = deepcopy(equations(sys))
     variables = [Num(arguments(eqn.lhs)[1]) for eqn in orig_eqns]
+    normalize_func(expr) = normalize_util(expr, iv)
     for i in 1:length(orig_eqns)
-        orig_eqns[i] = orig_eqns[i].lhs ~ laurent_expand(orig_eqns[i].rhs, variables)
+        orig_eqns[i] = orig_eqns[i].lhs ~ laurent_expand(orig_eqns[i].rhs, normalize_func)
     end
     holder = VariablesHolder(variables, new_var_base_name, start_with)
     nonsquares = Set{ExpTuple}()
@@ -346,7 +183,18 @@ function PolynomialSystem(sys::System; new_var_base_name = "z_", start_with = 0)
         substitution_terms[Tuple(i == j ? 1 : 0 for j in 1:length(variables))] = variables[i]
     end
     rhs_terms = rhs_terms_from_system(orig_eqns)
-    return PolynomialSystem(deepcopy(variables), deepcopy(orig_eqns), rhs_terms, substitution_terms, square_substitutions, nonsquares, equations_including, holder, ModelingToolkit.get_iv(sys), exponent_signs)
+    return PolynomialSystem(
+        deepcopy(variables),
+        deepcopy(orig_eqns),
+        rhs_terms,
+        substitution_terms,
+        square_substitutions,
+        nonsquares,
+        equations_including,
+        holder,
+        iv,
+        exponent_signs
+    )
 end
 
 function add_to_equations_including!(equations_including, tuple, var)
@@ -446,7 +294,7 @@ end
 # Equation-system mutations
 
 function lie_derivative(expr::Num, polysys::PolynomialSystem)
-    return expand_derivatives(Differential(polysys.iv)(expr))
+    return Symbolics.expand_derivatives(Differential(polysys.iv)(expr))
 end
 
 function is_square!(polysys::PolynomialSystem, tuple::ExpTuple)
@@ -757,6 +605,7 @@ function new_system(polysys::PolynomialSystem)
 
     # Then add equations for substitution variables.
     rhs_dict = lhs_to_rhs_dict(polysys.orig_eqns)
+    normalize_func(expr) = normalize_util(expr, polysys.iv)
     for (tuple, var) in polysys.substitution_terms
         if is_original_or_constant_tuple(tuple)
             continue
@@ -767,7 +616,7 @@ function new_system(polysys::PolynomialSystem)
             substitute(
                 lie_derivative(expr, polysys),
                 rhs_dict
-            ), polysys.orig_variables
+            ), normalize_func
         )
 
         unwrap_righthandside = unwrap(derv)
@@ -835,41 +684,6 @@ function choose_branch_monomial(polysys::PolynomialSystem)
     end
 
     return best, best_factors
-end
-
-function qbee_style_score(polysys::PolynomialSystem)
-    return sum([laurent_degree(m) for m in polysys.nonsquares]) +
-        length(polysys.orig_variables) * length(polysys.substitution_terms)
-end
-
-function add_factorization!(polysys::PolynomialSystem, factorization)
-    added = ExpTuple[]
-
-    for factor in factorization
-        if !haskey(polysys.substitution_terms, factor)
-            add_variable!(polysys, factor)
-            push!(added, factor)
-        end
-    end
-
-    return added
-end
-
-function remove_factorization!(polysys::PolynomialSystem, added)
-    for factor in reverse(added)
-        remove_variable!(polysys, factor)
-    end
-
-    return nothing
-end
-
-function branch_score_after_adding(polysys::PolynomialSystem, factorization)
-    added = ExpTuple[]
-
-    added = add_factorization!(polysys, factorization)
-    score = qbee_style_score(polysys)
-    remove_factorization!(polysys, added)
-    return score
 end
 
 function substitution_snapshot(polysys::PolynomialSystem)

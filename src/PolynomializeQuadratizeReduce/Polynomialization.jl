@@ -1,30 +1,4 @@
-using SymbolicUtils
-using Symbolics
-using ModelingToolkit
-
 # State / bookkeeping objects
-
-struct VariablesHolder
-    state_variables::Vector{Num}
-    num_vars_orig::Int
-    base_name::String
-    start_with::Int
-    function VariablesHolder(vars, new_var_base_name = "w_", start_new_vars_with = 0)
-        return new(vars, length(vars), new_var_base_name, start_new_vars_with)
-    end
-end
-
-function create_variable!(vars::VariablesHolder, iv::Num)
-    new_index = length(vars.state_variables) - vars.num_vars_orig + vars.start_with
-    new_variable = Symbolics.scalarize(@variables $(Symbol(vars.base_name, new_index))(iv))[1]
-    push!(vars.state_variables, new_variable)
-    return new_variable
-end
-
-function delete_variable!(vars::VariablesHolder, var::Num)
-    pop!(vars.state_variables)
-    return nothing
-end
 
 mutable struct PolynomializationCache
     version::Int
@@ -235,12 +209,6 @@ end
 
 # Basic utilities
 
-unwrap(x) = Symbolics.value(x)
-
-isnearinteger(x; tol = 1.0e-6) = x isa Number && abs(x - round(x)) <= tol
-
-isleaf_expr(expr, eqsys::EquationSystem) = !iscall(expr) || isequal(eqsys.iv, arguments(expr)[1])
-
 function repeated_substitute(expr, dict; maxiters = 10)
     for _ in 1:maxiters
         newexpr = Symbolics.substitute(expr, dict)
@@ -305,9 +273,6 @@ function rhs_to_lhs_dict(eqns)
     return Dict([eq.rhs => eq.lhs for eq in eqns])
 end
 
-function lhs_to_rhs_dict(eqns)
-    return Dict([eq.lhs => eq.rhs for eq in eqns])
-end
 
 function lhs_to_rhs_dict_cached(eqsys::EquationSystem)
     v = eqsys.cache.version
@@ -335,75 +300,17 @@ end
 
 # Normalization of expressions
 
-function _normalize_uncached(expr, eqsys::EquationSystem; absolute = false)
-    function helper(unwrap_expr)
-        if unwrap_expr isa Number && isless(unwrap_expr, 0)
-            return (-unwrap_expr, 1, -1)
-        elseif isleaf_expr(unwrap_expr, eqsys)
-            return (unwrap_expr, 1, 1)
-        elseif operation(unwrap_expr) == sqrt
-            base = arguments(unwrap_expr)[1]
-            num_of_base, denom_of_base, sign_of_base = helper(base)
-            return ((num_of_base * sign_of_base)^(1 // 2), isequal(1, denom_of_base) ? 1 : denom_of_base^(1 // 2), 1)
-        elseif operation(unwrap_expr) == /
-            num, denom = unwrap.(arguments(unwrap_expr))
-            num_of_num, denom_of_num, sign_of_num = helper(num)
-            num_of_denom, denom_of_denom, sign_of_denom = helper(denom)
-            return (num_of_num * denom_of_denom, denom_of_num * num_of_denom, sign_of_num * sign_of_denom)
-        elseif operation(unwrap_expr) == ^
-            base, exponent = unwrap.(arguments(unwrap_expr))
-            num_of_base, denom_of_base, sign_of_base = helper(base)
-            norm_exp = unwrap(normalize_symbolic_function(exponent, eqsys))
-            if norm_exp isa Number && isnearinteger(norm_exp)
-                norm_exp = Integer(round(norm_exp))
-                return (num_of_base^norm_exp, isequal(1, denom_of_base) ? 1 : denom_of_base^norm_exp, (round(norm_exp) % 2 == 0) ? 1 : sign_of_base)
-            else
-                return ((sign_of_base * num_of_base)^norm_exp, isequal(1, denom_of_base) ? 1 : denom_of_base^norm_exp, 1)
-            end
-        elseif operation(unwrap_expr) == *
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            return (prod(tup[1] for tup in numdenom_args), prod(tup[2] for tup in numdenom_args), prod(tup[3] for tup in numdenom_args))
-        elseif operation(unwrap_expr) == -
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            sign = (numdenom_args[1][3] == -1) ? -1 : 1
-            return (numdenom_args[1][1] / numdenom_args[1][2] * numdenom_args[1][3] * sign - numdenom_args[2][1] / numdenom_args[2][2] * numdenom_args[2][3] * sign, 1, sign)
-        elseif operation(unwrap_expr) == +
-            numdenom_args = [helper(unwrap(arg)) for arg in arguments(unwrap_expr)]
-            sign = numdenom_args[1][3] == 1 ? 1 : -1
-            return (sum(tup[1] / tup[2] * tup[3] * sign for tup in numdenom_args), 1, sign)
-        else
-            norm_args = []
-            for arg in arguments(unwrap_expr)
-                push!(norm_args, normalize_symbolic_function(arg, eqsys))
-            end
-            return (operation(unwrap_expr)(norm_args...), 1, 1)
-        end
-    end
-    tup = Num.(helper(unwrap(expr)))
-    sign = absolute ? 1 : tup[3]
-    return sign * tup[1] / tup[2]
-end
-
-"""
-Normalizes a symbolic expression by recursively rewriting quotients, powers,
-products, and sums into a more canonical form. Roughly speaking, divide and minus 
-operations are moved pushed to the start of the expression tree.
-
-The normalization procedure separates numerator, denominator, and sign data, then
-rebuilds the expression. If `absolute=true`, the final sign is discarded. For example,
-`normalize_symbolic_function(-y / x, eqsys, true)` returns `y / x`.
-"""
+#normalize_symbolic_function implements caching
 function normalize_symbolic_function(expr, eqsys::EquationSystem; absolute = false)
     key = (unwrap(expr), absolute)
 
     val = get(eqsys.cache.normalize_cache, key, nothing)
     ! isnothing(val) && return val
 
-    val = _normalize_uncached(expr, eqsys; absolute = absolute)
+    val = normalize_util(expr, eqsys.iv; new_normalize = normalize_symbolic_function, absolute = absolute, eqsys = eqsys)
     eqsys.cache.normalize_cache[key] = val
     return val
 end
-
 
 # Laurent / polynomial classification
 
@@ -415,7 +322,7 @@ end
 
 function _is_laurent_denom_uncached(expr::Num, eqsys::EquationSystem)
     unwrap_expr = unwrap(expr)
-    if isleaf_expr(unwrap_expr, eqsys)
+    if isleaf_expr(unwrap_expr, eqsys.iv)
         return true
     end
 
@@ -454,7 +361,7 @@ end
 
 function _is_laurent_uncached(expr::Num, eqsys::EquationSystem)
     unwrap_expr = unwrap(expr)
-    if isleaf_expr(unwrap_expr, eqsys)
+    if isleaf_expr(unwrap_expr, eqsys.iv)
         return true
     end
 
@@ -496,7 +403,7 @@ end
 
 function is_atomic_nonpolynomial(expr::Num, eqsys::EquationSystem)
     unwrap_expr = unwrap(expr)
-    if isleaf_expr(unwrap_expr, eqsys)
+    if isleaf_expr(unwrap_expr, eqsys.iv)
         return false
     end
 
@@ -566,7 +473,7 @@ function find_nonpolynomial_terms_uncached(expr::Num, eqsys::EquationSystem)
     unwrap_expr = unwrap(norm_expr)
     terms = Set{Num}()
 
-    if !isleaf_expr(unwrap_expr, eqsys)
+    if !isleaf_expr(unwrap_expr, eqsys.iv)
         add_special_children!(terms, norm_expr, eqsys)
 
         for arg in arguments(unwrap_expr)
@@ -735,7 +642,7 @@ end
 function rewrite_denominator_power_factor(eqsys::EquationSystem, arg)
     arg = unwrap(arg)
 
-    if isleaf_expr(arg, eqsys) || operation(arg) != ^
+    if isleaf_expr(arg, eqsys.iv) || operation(arg) != ^
         return arg
     end
 
@@ -782,7 +689,7 @@ function rewrite_denominator_power_factor(eqsys::EquationSystem, arg)
 end
 
 function rewrite_factored_denominator_case(eqsys::EquationSystem, unwrap_num, unwrap_denom)
-    if isleaf_expr(unwrap_denom, eqsys)
+    if isleaf_expr(unwrap_denom, eqsys.iv)
         return nothing
     end
 
@@ -820,13 +727,13 @@ This is necessary because Symbolics.jl substitute cannot find these substitution
 function exponent_substitutions(eqsys::EquationSystem, unwrap_expr)
     unwrap_expr = unwrap(normalize_symbolic_function(unwrap_expr, eqsys))
 
-    if isleaf_expr(unwrap_expr, eqsys)
+    if isleaf_expr(unwrap_expr, eqsys.iv)
         return unwrap_expr
     end
 
     rebuilt_expr = unwrap(rebuild_with_exponent_substitutions(eqsys, unwrap_expr))
 
-    if isleaf_expr(rebuilt_expr, eqsys)
+    if isleaf_expr(rebuilt_expr, eqsys.iv)
         return rebuilt_expr
     end
 
@@ -881,7 +788,7 @@ end
 # Equation-system mutations
 
 function lie_derivative(eqsys::EquationSystem, expr::Num)
-    return expand_derivatives(Differential(eqsys.iv)(expr))
+    return Symbolics.expand_derivatives(Differential(eqsys.iv)(expr))
 end
 
 function add_variable!(eqsys::EquationSystem, expr::Num)
@@ -967,7 +874,7 @@ end
 function laurent_system(eqsys::EquationSystem, simplified_eqns)
     poly_subs = Dict{Any, Any}()
     for eqn in eqsys.substitution_equations
-        if ! isleaf_expr(unwrap(eqn.lhs), eqsys) && is_polynomial(Num(eqn.rhs), eqsys.holder.state_variables)
+        if ! isleaf_expr(unwrap(eqn.lhs), eqsys.iv) && is_polynomial(Num(eqn.rhs), eqsys.holder.state_variables)
             poly_subs[eqn.rhs] = eqn.lhs
         end
     end
@@ -983,7 +890,7 @@ end
 function laurent_system_is_polynomial(eqsys::EquationSystem, simplified_eqns)
     poly_subs = Dict{Any, Any}()
     for eqn in eqsys.substitution_equations
-        if ! isleaf_expr(unwrap(eqn.lhs), eqsys) && is_polynomial(Num(eqn.rhs), eqsys.holder.state_variables)
+        if ! isleaf_expr(unwrap(eqn.lhs), eqsys.iv) && is_polynomial(Num(eqn.rhs), eqsys.holder.state_variables)
             poly_subs[eqn.rhs] = eqn.lhs
         end
     end
@@ -999,65 +906,8 @@ function laurent_system_is_polynomial(eqsys::EquationSystem, simplified_eqns)
     return sys
 end
 
-function remove_negative_powers(expr)
-    expr = unwrap(expr)
-
-    if !iscall(expr)
-        return Num(expr)
-    end
-
-    op = operation(expr)
-    args = arguments(expr)
-
-    if op == ^
-        base, exponent = args
-        exponent = unwrap(exponent)
-
-        new_base = remove_negative_powers(Num(base))
-
-        if exponent isa Number && exponent < 0
-            return Num(1 / unwrap(new_base)^(-exponent))
-        else
-            return Num(unwrap(new_base)^exponent)
-        end
-    end
-
-    new_args = [remove_negative_powers(Num(arg)) for arg in args]
-    return Num(op(unwrap.(new_args)...))
-end
-
-function laurent_expand(expr, eqsys::EquationSystem)
-    function helper(expr, denom, eqsys)
-        expr = unwrap(normalize_symbolic_function(expr, eqsys))
-        expr = unwrap(expand(expr))
-        if iscall(expr) && !(operation(expr) in (+, -))
-            expr = unwrap(expand(expr))
-        end
-        if !iscall(expr) || operation(expr) == *
-            return expr / denom
-        end
-        terms = [expr]
-        if iscall(expr) && operation(expr) == +
-            terms = arguments(expr)
-        elseif iscall(expr) && operation(expr) == -
-            terms = [arguments(expr)[1], -arguments(expr)[2]]
-        end
-        tot = 0
-        for term in terms
-            if iscall(term) && operation(term) == /
-                unwrap_num, unwrap_denom = unwrap.(arguments(term))
-                tot += Num(helper(unwrap_num, denom * unwrap_denom, eqsys))
-            else
-                tot += term / denom
-            end
-        end
-        return tot
-    end
-    return helper(expr, 1, eqsys)
-end
-
 function leaf_lhs_equations(eqns, eqsys)
-    return [eq for eq in eqns if isleaf_expr(eq.lhs, eqsys)]
+    return [eq for eq in eqns if isleaf_expr(eq.lhs, eqsys.iv)]
 end
 
 function laurent_system_to_polynomial_system(eqsys::EquationSystem, simplified_eqns)
@@ -1065,8 +915,9 @@ function laurent_system_to_polynomial_system(eqsys::EquationSystem, simplified_e
     new_var = add_variable!(eqsys, 1 / prod(var for var in vars))
     eqns = Equation[]
     dervs = Dict{Any, Num}()
+    normalize_func(expr) = normalize_symbolic_function(expr, eqsys)
     for eqn in simplified_eqns
-        unwrap_righthandside = unwrap(laurent_expand(remove_negative_powers(eqn.rhs), eqsys))
+        unwrap_righthandside = unwrap(laurent_expand(remove_negative_powers(eqn.rhs), normalize_func))
         terms = [unwrap_righthandside]
         if iscall(unwrap_righthandside) && operation(unwrap_righthandside) == +
             terms = unwrap.(arguments(unwrap_righthandside))
