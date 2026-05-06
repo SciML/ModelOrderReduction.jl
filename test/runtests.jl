@@ -12,6 +12,9 @@ if GROUP == "All" || GROUP == "Core"
     @safetestset "DEIM" begin
         include("deim.jl")
     end
+    @safetestset "POLYQUADRED" begin
+        include("PolynomializeQuadratizeReduce.jl")
+    end
 end
 
 if GROUP == "nopre"

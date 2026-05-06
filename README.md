@@ -81,3 +81,46 @@ sol_deim_w = deim_sol[w(x, t)]
 The following figure shows the comparison of the solutions of the 32-dimension full-order model and the POD5-DEIM5 reduced-order model.
 
 ![comparison](https://user-images.githubusercontent.com/45696147/195765614-df9092a2-4fca-4602-bb15-81e65b2b572e.svg)
+
+#### Polynomialization, Quadratization, and Galerkin Reduction on an ODE system
+```julia
+using ModelOrderReduction
+using ModelingToolkit
+using ModelingToolkit: t_nounits as t, D_nounits as D
+using OrdinaryDiffEq
+
+#Create the ModelingToolkit System
+@variables x(t) y(t)
+
+eqs = [
+    D(x) ~ -x + y + 0.1 * sqrt(x),
+    D(y) ~ -2.0 * y + 0.2 * x^2,
+]
+
+@mtkcompile sys = System(eqs, t)
+
+#Provide initial conditions and time span for ODE
+u0 = [1.0, 0.5]
+tspan = (0.0, 1.0)
+
+#Provide number of variables in reduced ODE
+nmodes = 1
+
+result = polynomialize_quadratize_reduce(
+    sys,
+    u0,
+    tspan,
+    nmodes;
+    saveat = 0.1,
+)
+
+#result has a number of components, in particular:
+#rom: a ModelingToolkit System for the reduced order model
+@show result.rom
+#a0: initial conditions for the reduced model
+@show result.a0
+#V: basis used for the affine Galerkin reduction
+@show size(result.V)
+#xbar: center used for the affine Galerkin reduction
+@show size(result.xbar)
+```
