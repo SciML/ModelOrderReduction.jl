@@ -1025,6 +1025,10 @@ limits are reached. If `laurent` is `false` and the system has only been reduced
 to Laurent-polynomial form, the algorithm may introduce one additional
 reciprocal-product variable to clear negative powers.
 
+The algorithm is based off of the polynomialization algorithm in the QBee
+repository of Andrey Bychkov and Gleb Pogudin:
+https://github.com/AndreyBychkov/QBee/blob/master/qbee/polynomialization.py
+
 # Arguments
 
 - `sys::System`: the ModelingToolkit system to polynomialize.
