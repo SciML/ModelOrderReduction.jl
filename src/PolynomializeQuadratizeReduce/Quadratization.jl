@@ -880,6 +880,10 @@ The algorithm then searches for monomial substitutions of the form
 such that every right-hand side in the lifted system has degree at most two in
 the original and introduced variables.
 
+The algorithm is based off of the quadratization algorithm in "Optimal monomial 
+quadratization for ODE systems" by Andrey Bychkov and Gleb Pogudin in 2021:
+https://arxiv.org/abs/2103.08013
+
 # Arguments
 
 - `sys::System`: the ModelingToolkit ODE system to quadratize.
