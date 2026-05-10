@@ -13,29 +13,50 @@ using LinearAlgebra: qr
     Q, _ = qr(snapshot_matrix)
     deim_basis = Matrix(Q[:, 1:5])
 
+    # Restrict JET reports to issues originating in ModelOrderReduction itself.
+    # Without this, transitive symbolic-stack type piracy (e.g. SymbolicUtils
+    # overloading `ifelse`/`max` on `Integer`) bleeds into reports for purely
+    # numeric code that never touches symbolic types at runtime.
+    target = (ModelOrderReduction,)
+
     @testset "deim_interpolation_indices type stability" begin
-        rep = JET.report_call(ModelOrderReduction.deim_interpolation_indices, (Matrix{Float64},))
+        rep = JET.report_call(
+            ModelOrderReduction.deim_interpolation_indices,
+            (Matrix{Float64},); target_modules = target
+        )
         @test length(JET.get_reports(rep)) == 0
     end
 
     @testset "matricize type stability" begin
-        rep = JET.report_call(ModelOrderReduction.matricize, (Vector{Vector{Float64}},))
+        rep = JET.report_call(
+            ModelOrderReduction.matricize,
+            (Vector{Vector{Float64}},); target_modules = target
+        )
         @test length(JET.get_reports(rep)) == 0
     end
 
     @testset "POD constructor type stability" begin
         # Matrix constructor
-        rep1 = JET.report_call(ModelOrderReduction.POD, (Matrix{Float64}, Int))
+        rep1 = JET.report_call(
+            ModelOrderReduction.POD,
+            (Matrix{Float64}, Int); target_modules = target
+        )
         @test length(JET.get_reports(rep1)) == 0
 
         # Vector{Vector} constructor
-        rep2 = JET.report_call(ModelOrderReduction.POD, (Vector{Vector{Float64}}, Int))
+        rep2 = JET.report_call(
+            ModelOrderReduction.POD,
+            (Vector{Vector{Float64}}, Int); target_modules = target
+        )
         @test length(JET.get_reports(rep2)) == 0
     end
 
     @testset "reduce! with SVD type stability" begin
         pod = POD(snapshot_matrix, 3)
-        rep = JET.report_call(ModelOrderReduction.reduce!, (typeof(pod), typeof(SVD())))
+        rep = JET.report_call(
+            ModelOrderReduction.reduce!,
+            (typeof(pod), typeof(SVD())); target_modules = target
+        )
         @test length(JET.get_reports(rep)) == 0
     end
 end
