@@ -37,11 +37,12 @@ steps:
  3. Project the model onto the identified subspace using DEIM to approximate nonlinear terms.
 
 For step 1, we first construct a
-[`ModelingToolkit.PDESystem`](https://mtk.sciml.ai/stable/systems/PDESystem/)
+[`ModelingToolkit.PDESystem`](https://docs.sciml.ai/ModelingToolkit/stable/API/PDESystem/)
 describing the original FitzHugh-Nagumo model.
 
 ```@example deim_FitzHugh_Nagumo
 using ModelingToolkit
+using LaTeXStrings
 @variables x t v(..) w(..)
 Dx = Differential(x)
 Dxx = Dx^2
