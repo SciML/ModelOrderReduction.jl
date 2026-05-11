@@ -28,10 +28,10 @@ jobs:
           - "pre"
         group:
           - Core
-          - nopre
+          - QA
         exclude:
           - version: "pre"
-            group: nopre
+            group: QA
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
       julia-version: "${{ matrix.version }}"
