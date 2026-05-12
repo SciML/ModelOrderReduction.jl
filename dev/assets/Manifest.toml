@@ -1298,7 +1298,7 @@ version = "1.11.0"
 deps = ["DocStringExtensions", "LinearAlgebra", "ModelingToolkit", "PrecompileTools", "RandomizedLinAlg", "Setfield", "SparseArrays", "TSVD"]
 path = "/home/runner/work/ModelOrderReduction.jl/ModelOrderReduction.jl"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
-version = "0.1.6"
+version = "0.1.5"
 
 [[deps.ModelingToolkit]]
 deps = ["ADTypes", "BipartiteGraphs", "BlockArrays", "Combinatorics", "CommonSolve", "ConstructionBase", "DataStructures", "DiffEqBase", "DifferentiationInterface", "DocStringExtensions", "FillArrays", "ForwardDiff", "Graphs", "InteractiveUtils", "Libdl", "LinearAlgebra", "ModelingToolkitBase", "ModelingToolkitTearing", "Moshi", "OffsetArrays", "OrderedCollections", "PreallocationTools", "PrecompileTools", "REPL", "Reexport", "RuntimeGeneratedFunctions", "SCCNonlinearSolve", "SciMLBase", "SciMLPublic", "Serialization", "Setfield", "SimpleNonlinearSolve", "SparseArrays", "StateSelection", "StaticArrays", "SymbolicIndexingInterface", "SymbolicUtils", "Symbolics", "UnPack"]
