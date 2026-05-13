@@ -4,7 +4,7 @@ using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDS
 
 using ModelingToolkit: ModelingToolkit, @variables, @named, Differential, Equation, Num,
     ODESystem, System, SymbolicUtils, Symbolics, arguments, build_function, complete,
-    expand, substitute, equations, unknowns, tearing_substitution
+    equations, expand, iscall, operation, substitute, tearing_substitution, unknowns
 using OrdinaryDiffEq: ODEProblem, Tsit5, solve
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 
