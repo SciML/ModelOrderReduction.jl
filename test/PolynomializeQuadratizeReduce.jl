@@ -28,24 +28,26 @@ nmodes = 2
 
 result = nothing
 
-result = @test_nowarn(polynomialize_quadratize_reduce(
-    sys,
-    u0,
-    tspan,
-    nmodes;
-    saveat = saveat,
-    polynomialize_kwargs = (
-        maxdepth = 6,
-        maxnum = 10_000,
-        new_var_base_name = "w_",
-        start_new_vars_with = 0,
-    ),
-    quadratize_kwargs = (
-        new_var_base_name = "z_",
-        start_with = 0,
-        max_depth = Inf,
-    ),
-))
+result = @test_nowarn(
+    polynomialize_quadratize_reduce(
+        sys,
+        u0,
+        tspan,
+        nmodes;
+        saveat = saveat,
+        polynomialize_kwargs = (
+            maxdepth = 6,
+            maxnum = 10_000,
+            new_var_base_name = "w_",
+            start_new_vars_with = 0,
+        ),
+        quadratize_kwargs = (
+            new_var_base_name = "z_",
+            start_with = 0,
+            max_depth = Inf,
+        ),
+    )
+)
 
 @test result !== nothing
 
