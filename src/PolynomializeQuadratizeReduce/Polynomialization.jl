@@ -218,11 +218,11 @@ function repeated_substitute(expr, dict; maxiters = 10)
     error("Substitution did not reach a fixed point after $maxiters iterations.")
 end
 
-expr_depth(x) = SymbolicUtils.istree(x) ? 1 + maximum(expr_depth, Symbolics.arguments(x)) : 0
+expr_depth(x) = iscall(x) ? 1 + maximum(expr_depth, Symbolics.arguments(x)) : 0
 
 function expr_size(x)
     x = unwrap(x)
-    if !SymbolicUtils.istree(x)
+    if !iscall(x)
         return 1
     end
     args = Symbolics.arguments(x)
@@ -236,7 +236,7 @@ function expr_depth_cached(eqsys::EquationSystem, x)
         return eqsys.cache.expr_depth_cache[x]
     end
 
-    val = SymbolicUtils.istree(x) ?
+    val = iscall(x) ?
         1 + maximum(arg -> expr_depth_cached(eqsys, arg), Symbolics.arguments(x)) :
         0
 
@@ -251,7 +251,7 @@ function expr_size_cached(eqsys::EquationSystem, x)
         return eqsys.cache.expr_size_cache[x]
     end
 
-    val = if !SymbolicUtils.istree(x)
+    val = if !iscall(x)
         1
     else
         1 + sum(arg -> expr_size_cached(eqsys, arg), Symbolics.arguments(x))
