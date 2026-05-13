@@ -38,8 +38,10 @@ order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = mtkcompile(ode_sys) # field substitutions is non-empty
-ode_prob = ODEProblem(simp_sys, nothing, tspan;
-    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0))
+ode_prob = ODEProblem(
+    simp_sys, nothing, tspan;
+    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0)
+)
 sol = solve(ode_prob, Tsit5(), saveat = 1.0)
 
 snapshot_simpsys = Array(sol.original_sol)
