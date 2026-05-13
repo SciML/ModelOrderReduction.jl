@@ -744,7 +744,7 @@ function exponent_substitutions(eqsys::EquationSystem, unwrap_expr)
         unwrap_base, unwrap_exp = unwrap.(args)
 
         result = rewrite_power_case(eqsys, unwrap_base, unwrap_exp)
-        if result != nothing
+        if !isnothing(result)
             return result
         end
 
@@ -752,12 +752,12 @@ function exponent_substitutions(eqsys::EquationSystem, unwrap_expr)
         unwrap_num, unwrap_denom = unwrap.(args)
 
         result = rewrite_simple_quotient_case(eqsys, unwrap_num, unwrap_denom)
-        if result != nothing
+        if !isnothing(result)
             return result
         end
 
         result = rewrite_factored_denominator_case(eqsys, unwrap_num, unwrap_denom)
-        if result != nothing
+        if !isnothing(result)
             return result
         end
     end
@@ -987,7 +987,7 @@ function polynomialize_helper(eqsys::EquationSystem, maxdepth, maxnum, ct, laure
         result, num_subs, ct, solution_subs = polynomialize_helper(eqsys, maxdepth, maxnum, ct + 1, laurent)
         final_result[3] = ct
         remove_variable!(eqsys, new_var)
-        if result != nothing
+        if !isnothing(result)
             final_result = [result, num_subs, ct, solution_subs]
             maxdepth = num_subs
         end
