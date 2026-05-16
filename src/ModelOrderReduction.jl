@@ -5,7 +5,6 @@ using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDS
 using ModelingToolkit: ModelingToolkit, @variables, @named, Differential, Equation, Num,
     ODESystem, System, SymbolicUtils, Symbolics, arguments, build_function, complete,
     equations, expand, iscall, operation, substitute, tearing_substitution, unknowns
-using OrdinaryDiffEq: ODEProblem, Tsit5, solve
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 
 using Setfield: Setfield, @set!
@@ -26,13 +25,13 @@ include("PolynomializeQuadratizeReduce/PolynomializeQuadratizeReduceUtils.jl")
 include("PolynomializeQuadratizeReduce/Polynomialization.jl")
 include("PolynomializeQuadratizeReduce/Quadratization.jl")
 include("PolynomializeQuadratizeReduce/GalerkinReduction.jl")
-include("PolynomializeQuadratizeReduce/PolynomializeQuadratizeReduce.jl")
 
 export polynomialize
 export quadratize
+export polynomialize_and_quadratize
 export galerkin_project_system
 export galerkin_project_system_affine
-export polynomialize_quadratize_reduce
+export compute_augmented_initial_pairs
 
 include("precompile.jl")
 

@@ -3,6 +3,7 @@ using ModelOrderReduction
 using ModelingToolkit
 using OrdinaryDiffEq
 using LinearAlgebra
+using Symbolics
 
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
@@ -14,8 +15,7 @@ eqs = [
 ]
 
 @mtkcompile sys = System(eqs, t)
-
-u0 = [1.0, 0.5]
+sys = ModelingToolkit.complete(sys)
 
 u0_pairs = [
     x => 0.5,
@@ -26,70 +26,91 @@ tspan = (0.0, 1.0)
 saveat = 0.1
 nmodes = 2
 
-result = nothing
+# Polynomialization + quadratization
+quadsys_raw, quad_subs = @test_nowarn polynomialize_and_quadratize(sys)
 
-result = @test_nowarn(
-    polynomialize_quadratize_reduce(
-        sys,
-        u0,
-        tspan,
-        nmodes;
-        saveat = saveat,
-        polynomialize_kwargs = (
-            maxdepth = 6,
-            maxnum = 10_000,
-            new_var_base_name = "w_",
-            start_new_vars_with = 0,
-        ),
-        quadratize_kwargs = (
-            new_var_base_name = "z_",
-            start_with = 0,
-            max_depth = Inf,
-        ),
-    )
+@test quadsys_raw !== nothing
+@test quad_subs !== nothing
+@test quadsys_raw isa ModelingToolkit.System
+
+quadsys = ModelingToolkit.complete(quadsys_raw)
+
+# Compute augmented initial conditions
+u0_quad_pairs = compute_augmented_initial_pairs(
+    sys,
+    quadsys,
+    u0_pairs,
+    quad_subs,
 )
 
-@test result !== nothing
+@test length(u0_quad_pairs) == length(ModelingToolkit.unknowns(quadsys))
 
-@test result.rom isa ModelingToolkit.System
-@test result.polysys isa ModelingToolkit.System
-@test result.quadsys isa ModelingToolkit.System
+# Solve quadratized system
+prob_quad = ODEProblem(quadsys, u0_quad_pairs, tspan)
+sol_quad = solve(prob_quad, Tsit5(); saveat = saveat)
 
-quad_unknowns = ModelingToolkit.unknowns(result.quadsys)
-rom_unknowns = ModelingToolkit.unknowns(result.rom)
+@test string(sol_quad.retcode) == "Success"
 
-nquad = length(quad_unknowns)
+snapshots = reduce(hcat, sol_quad.u)
 
-@test length(result.a_vars) == nmodes
+@test size(snapshots, 2) == length(sol_quad.t)
+
+xbar = [sum(snapshots[i, :]) / size(snapshots, 2) for i in axes(snapshots, 1)]
+centered_snapshots = snapshots .- reshape(xbar, :, 1)  # Explicit column vector
+
+# POD basis
+F = svd(Matrix(centered_snapshots))
+V = F.U[:, 1:nmodes]
+
+nquad = length(ModelingToolkit.unknowns(quadsys))
+
+@test size(V) == (nquad, nmodes)
+@test V' * V ≈ Matrix{Float64}(I, nmodes, nmodes)
+
+# Initial reduced coordinates
+u0_quad_solver_order = sol_quad.u[1]
+a0 = V' * (u0_quad_solver_order .- xbar)
+
+iv = ModelingToolkit.get_iv(quadsys)
+
+a_vars = [
+    Symbolics.scalarize(@variables $(Symbol("a_", i))(iv))[1]
+    for i in 1:nmodes
+]
+
+@test length(a_vars) == nmodes
+@test length(a0) == nmodes
+
+# Galerkin projection
+rom_raw = galerkin_project_system_affine(
+    quadsys,
+    V,
+    xbar,
+    a_vars,
+)
+
+@test rom_raw isa ModelingToolkit.System
+
+rom = ModelingToolkit.complete(rom_raw)
+
+rom_unknowns = ModelingToolkit.unknowns(rom)
+
 @test length(rom_unknowns) == nmodes
-@test length(result.a0) == nmodes
-@test length(result.a0_pairs) == nmodes
 
-@test size(result.V) == (nquad, nmodes)
-@test length(result.xbar) == nquad
-@test result.V' * result.V ≈ Matrix{Float64}(I, nmodes, nmodes)
+a0_pairs = [a_vars[i] => a0[i] for i in eachindex(a_vars)]
 
-@test length(result.u0_poly) == length(ModelingToolkit.unknowns(result.polysys))
-@test length(result.u0_poly_pairs) == length(ModelingToolkit.unknowns(result.polysys))
+# Solve ROM
+prob_rom = ODEProblem(rom, a0_pairs, tspan)
+sol_rom = solve(prob_rom, Tsit5(); saveat = saveat)
 
-@test length(result.u0_quad) == nquad
-@test length(result.u0_quad_pairs) == nquad
-@test length(result.u0_quad_solver_order) == nquad
+@test string(sol_rom.retcode) == "Success"
 
-@test result.u0_quad_solver_order ≈ result.sol_quad.u[1]
-@test result.a0 ≈ result.V' * (result.u0_quad_solver_order .- result.xbar)
+@test sol_rom.t ≈ sol_quad.t
+@test length(sol_rom.u[1]) == nmodes
+@test sol_rom.u[1] ≈ a0
 
-@test result.poly_subs !== nothing
-@test result.quad_subs !== nothing
+quad_unknowns = ModelingToolkit.unknowns(quadsys)
+first_reconstruction = sol_rom[quad_unknowns[1]]
 
-@test string(result.sol_quad.retcode) == "Success"
-@test string(result.sol_rom.retcode) == "Success"
-
-@test length(result.sol_rom.u[1]) == nmodes
-@test result.sol_rom.u[1] ≈ result.a0
-@test result.sol_rom.t ≈ result.sol_quad.t
-
-first_reconstruction = result.sol_rom[quad_unknowns[1]]
-
-@test length(first_reconstruction) == length(result.sol_rom.t)
+@test length(first_reconstruction) == length(sol_rom.t)
 @test all(isfinite, first_reconstruction)

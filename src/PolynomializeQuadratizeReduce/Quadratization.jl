@@ -656,16 +656,6 @@ function finalize_from_substitutions(
 
     result = new_system(polysys)
 
-    empty!(polysys.substitution_terms)
-    for (k, v) in old_substitutions
-        polysys.substitution_terms[k] = v
-    end
-
-    empty!(polysys.square_substitutions)
-    for (k, v) in old_square_substitutions
-        polysys.square_substitutions[k] = v
-    end
-
     return result
 end
 
@@ -869,8 +859,8 @@ end
     quadratize(sys::System; new_var_base_name = "z_", start_with = 0,
         max_depth = Inf)
 
-Transform an autonomous ODE system into a quadratic lifted system by introducing
-monomial substitution variables.
+Transform an autonomous Laurent ODE system into a quadratic lifted system 
+by introducing monomial substitution variables.
 
 The input system is converted to an internal Laurent-monomial representation.
 The algorithm then searches for monomial substitutions of the form
@@ -918,8 +908,8 @@ eqs = [
 quadsys, substitution_eqs = quadratize(sys)
 ```
 """
-function quadratize(sys::System; new_var_base_name = "z_", start_with = 0, max_depth = Inf)
-    polysys = PolynomialSystem(sys; new_var_base_name, start_with)
+function quadratize(sys::System; max_depth = Inf, new_var_base_name = "z_", start_new_vars_with = 0)
+    polysys = PolynomialSystem(sys; new_var_base_name = new_var_base_name, start_with = start_new_vars_with)
 
     greedy_substitutions = greedy_initial_substitutions(polysys, max_depth)
     N0 = length(greedy_substitutions)
@@ -931,4 +921,84 @@ function quadratize(sys::System; new_var_base_name = "z_", start_with = 0, max_d
     )
 
     return finalize_from_substitutions(polysys, best_substitutions)
+end
+
+
+"""
+    polynomialize_and_quadratize(
+        sys::System;
+        polynomialize_kwargs = (
+            max_depth = 6,
+            max_num = 10_000,
+            new_var_base_name = "w_",
+            start_new_vars_with = 0,
+        ),
+        quadratize_kwargs = (
+            max_depth = Inf,
+            new_var_base_name = "z_",
+            start_new_vars_with = 0,
+        )
+    )
+
+Transform an autonomous ODE system into a quadratic lifted system by first
+polynomializing and then quadratizing.
+
+# Arguments
+
+- `sys::System`: the ModelingToolkit ODE system to quadratize.
+
+# Keywords
+
+- `polynomialize_kwargs`: Named tuple of keyword arguments forwarded to `polynomialize`.
+The current implementation calls `polynomialize` with `laurent = true`.
+- `quadratize_kwargs`: Named tuple of keyword arguments forwarded to `quadratize`.
+
+# Returns
+
+- `quadsys`: a ModelingToolkit system with quadratic right-hand sides.
+- `substitution_eqs`: equations defining the introduced monomial variables.
+
+# Example
+
+```julia
+using ModelingToolkit
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@variables x(t) y(t)
+
+eqs = [
+    D(x) ~ sqrt(x) + 1 / y + log(x + y),
+    D(y) ~ exp(x) / (1 + y^2),
+]
+
+@mtkcompile sys = System(eqs, t)
+
+quadsys, substitution_eqs = polynomialize_and_quadratize(sys)
+```
+"""
+function polynomialize_and_quadratize(
+        sys::System;
+        polynomialize_kwargs = (
+            max_depth = 10,
+            max_num = 10_000,
+            new_var_base_name = "w_",
+            start_new_vars_with = 0,
+        ),
+        quadratize_kwargs = (
+            max_depth = Inf,
+            new_var_base_name = "z_",
+            start_new_vars_with = 0,
+        )
+    )
+    sys = ModelingToolkit.complete(sys)
+
+    polysys_raw, poly_subs = polynomialize(sys; laurent = true, polynomialize_kwargs...)
+    polysys = ModelingToolkit.complete(polysys_raw)
+
+    quadsys_raw, quad_subs = quadratize(polysys; quadratize_kwargs...)
+    quadsys = ModelingToolkit.complete(quadsys_raw)
+
+    substitution_eqs = vcat(poly_subs, quad_subs)
+
+    return quadsys, substitution_eqs
 end

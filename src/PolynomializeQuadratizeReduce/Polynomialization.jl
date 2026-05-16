@@ -209,15 +209,6 @@ end
 
 # Basic utilities
 
-function repeated_substitute(expr, dict; maxiters = 10)
-    for _ in 1:maxiters
-        newexpr = Symbolics.substitute(expr, dict)
-        isequal(expr, newexpr) && return expr
-        expr = newexpr
-    end
-    error("Substitution did not reach a fixed point after $maxiters iterations.")
-end
-
 expr_depth(x) = iscall(x) ? 1 + maximum(expr_depth, Symbolics.arguments(x)) : 0
 
 function expr_size(x)
@@ -907,7 +898,14 @@ function laurent_system_is_polynomial(eqsys::EquationSystem, simplified_eqns)
 end
 
 function leaf_lhs_equations(eqns, eqsys)
-    return [eq for eq in eqns if isleaf_expr(eq.lhs, eqsys.iv)]
+    result = Equation[]
+    subs = Dict([eq.lhs => eq.rhs for eq in eqsys.substitution_equations])
+    for eq in eqns
+        if isleaf_expr(eq.lhs,eqsys.iv)
+            push!(result,eq.lhs~repeated_substitute(eq.rhs,subs; maxiters = length(subs)+1))
+        end
+    end
+    return result
 end
 
 function laurent_system_to_polynomial_system(eqsys::EquationSystem, simplified_eqns)
@@ -1067,9 +1065,9 @@ polysys, substitutions = polynomialize(sys)
 equations(polysys)
 ```
 """
-function polynomialize(sys::System; maxdepth = 10, maxnum = 10000, laurent = false, new_var_base_name = "w_", start_new_vars_with = 0)
+function polynomialize(sys::System; max_depth = 10, max_num = 10000, laurent = false, new_var_base_name = "w_", start_new_vars_with = 0)
     eqsys = EquationSystem(sys, new_var_base_name, start_new_vars_with)
     normalize_equations!(eqsys)
-    res = polynomialize_helper(eqsys, maxdepth, maxnum, 0, laurent)
+    res = polynomialize_helper(eqsys, max_depth, max_num, 0, laurent)
     return res[1], res[4]
 end

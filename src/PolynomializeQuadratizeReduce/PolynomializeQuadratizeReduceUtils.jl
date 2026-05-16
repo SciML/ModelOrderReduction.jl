@@ -156,3 +156,94 @@ function laurent_expand(expr, normalize_func::Function)
     end
     return helper(expr, 1)
 end
+
+function repeated_substitute(expr, dict; maxiters = 10)
+    for _ in 1:maxiters
+        newexpr = Symbolics.substitute(expr, dict)
+        isequal(expr, newexpr) && return expr
+        expr = newexpr
+    end
+    error("Substitution did not reach a fixed point after $maxiters iterations.")
+end
+
+function substitute_fixedpoint(expr, vals::Vector{Pair{Num, Float64}}; maxiters = 10)
+    expr = unwrap(expr)
+
+    dict = Dict{Any, Any}()
+    for (k, v) in vals
+        dict[k] = v
+    end
+
+    return repeated_substitute(expr,dict; maxiters=maxiters)
+end
+
+function numeric_value(expr, vals::Vector{Pair{Num, Float64}})
+    expr_sub = substitute_fixedpoint(expr, vals)
+    return Float64(Symbolics.value(expr_sub))
+end
+
+function extend_initial_dict!(vals::Vector{Pair{Num, Float64}}, substitution_equations::Vector{Equation})
+    for eq in substitution_equations
+        lhs_var = Num(eq.lhs)
+
+        rhs_val = numeric_value(eq.rhs, vals)
+
+        push!(vals, lhs_var => rhs_val)
+    end
+
+    return vals
+end
+
+
+"""
+    compute_augmented_initial_pairs(old_sys, new_sys, old_u0, substitutions)
+
+Compute initial condition pairs for an augmented ODE system by 
+mapping original values and evaluating substitution expressions.
+
+The final output is a vector of pairs where the first is the variable and
+the second is its initial condition
+
+# Arguments
+
+- `old_sys`: The original `ModelingToolkit.System` before augmentation.
+- `new_sys`: The augmented `ModelingToolkit.System`
+- `old_u0_pairs`: A vector of variable initial condition pairs for 
+`old_sys`
+- `substitutions`: A vector of `Equation` objects (typically 
+`new_var ~ expression`) defining how augmented variables relate to the 
+original state.
+
+# Returns
+
+- `u0_augmented_pairs`: A `Vector{Pair{Num,Float64}}` containing the new variables 
+of the augmented system mapped to their respective initial values.
+
+# Example
+
+```julia
+using ModelingToolkit
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@variables x(t) y(t)
+eqs = [
+    D(x) ~ sqrt(x) + y,
+    D(y) ~ -x
+]
+@mtkcompile old_sys = System(eqs, t)
+
+new_sys_raw, substitutions = polynomialize(old_sys)
+new_sys = ModelingToolkit.complete(new_sys_raw)
+
+old_u0 = [x => 1.0, y => 2.0]
+
+u0_augmented_pairs = compute_augmented_initial_pairs(old_sys, 
+                    new_sys, old_u0, substitutions)
+```
+"""
+function compute_augmented_initial_pairs(old_sys::System, new_sys::System, old_u0_pairs::Vector{Pair{Num,Float64}}, substitutions::Vector{Equation})
+    vals = copy(old_u0_pairs)
+    extend_initial_dict!(vals, substitutions)
+
+    return vals
+end
