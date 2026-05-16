@@ -56,7 +56,7 @@ snapshots = reduce(hcat, sol_quad.u)
 @test size(snapshots, 2) == length(sol_quad.t)
 
 xbar = [sum(snapshots[i, :]) / size(snapshots, 2) for i in axes(snapshots, 1)]
-centered_snapshots = snapshots .- reshape(xbar, :, 1)  # Explicit column vector
+centered_snapshots = snapshots .- reshape(xbar, :, 1)
 
 # POD basis
 F = svd(Matrix(centered_snapshots))
@@ -75,7 +75,7 @@ iv = ModelingToolkit.get_iv(quadsys)
 
 a_vars = [
     Symbolics.scalarize(@variables $(Symbol("a_", i))(iv))[1]
-    for i in 1:nmodes
+        for i in 1:nmodes
 ]
 
 @test length(a_vars) == nmodes

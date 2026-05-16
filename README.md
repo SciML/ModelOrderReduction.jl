@@ -86,10 +86,12 @@ The following figure shows the comparison of the solutions of the 32-dimension f
 ```julia
 using ModelOrderReduction
 using ModelingToolkit
-using ModelingToolkit: t_nounits as t, D_nounits as D
 using OrdinaryDiffEq
+using LinearAlgebra
+using Symbolics
 
-#Create the ModelingToolkit System
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
 @variables x(t) y(t)
 
 eqs = [
@@ -98,29 +100,72 @@ eqs = [
 ]
 
 @mtkcompile sys = System(eqs, t)
+sys = ModelingToolkit.complete(sys)
 
-#Provide initial conditions and time span for ODE
-u0 = [1.0, 0.5]
+u0_pairs = [
+    x => 0.5,
+    y => 1.0,
+]
+
 tspan = (0.0, 1.0)
+saveat = 0.1
+nmodes = 2
 
-#Provide number of variables in reduced ODE
-nmodes = 1
+# Polynomialization + quadratization
+quadsys_raw, quad_subs = polynomialize_and_quadratize(sys)
 
-result = polynomialize_quadratize_reduce(
+quadsys = ModelingToolkit.complete(quadsys_raw)
+
+# Compute augmented initial conditions
+u0_quad_pairs = compute_augmented_initial_pairs(
     sys,
-    u0,
-    tspan,
-    nmodes;
-    saveat = 0.1,
+    quadsys,
+    u0_pairs,
+    quad_subs,
 )
 
-#result has a number of components, in particular:
-#rom: a ModelingToolkit System for the reduced order model
-@show result.rom
-#a0: initial conditions for the reduced model
-@show result.a0
-#V: basis used for the affine Galerkin reduction
-@show size(result.V)
-#xbar: center used for the affine Galerkin reduction
-@show size(result.xbar)
+# Solve quadratized system
+prob_quad = ODEProblem(quadsys, u0_quad_pairs, tspan)
+sol_quad = solve(prob_quad, Tsit5(); saveat = saveat)
+
+snapshots = reduce(hcat, sol_quad.u)
+
+xbar = [sum(snapshots[i, :]) / size(snapshots, 2) for i in axes(snapshots, 1)]
+centered_snapshots = snapshots .- reshape(xbar, :, 1)
+
+# POD basis
+F = svd(Matrix(centered_snapshots))
+V = F.U[:, 1:nmodes]
+
+nquad = length(ModelingToolkit.unknowns(quadsys))
+
+# Initial reduced coordinates
+u0_quad_solver_order = sol_quad.u[1]
+a0 = V' * (u0_quad_solver_order .- xbar)
+
+iv = ModelingToolkit.get_iv(quadsys)
+
+a_vars = [
+    Symbolics.scalarize(@variables $(Symbol("a_", i))(iv))[1]
+    for i in 1:nmodes
+]
+
+# Galerkin projection
+rom_raw = galerkin_project_system_affine(
+    quadsys,
+    V,
+    xbar,
+    a_vars,
+)
+
+rom = ModelingToolkit.complete(rom_raw)
+
+rom_unknowns = ModelingToolkit.unknowns(rom)
+
+a0_pairs = [a_vars[i] => a0[i] for i in eachindex(a_vars)]
+
+# Solve ROM
+prob_rom = ODEProblem(rom, a0_pairs, tspan)
+sol_rom = solve(prob_rom, Tsit5(); saveat = saveat)
+
 ```

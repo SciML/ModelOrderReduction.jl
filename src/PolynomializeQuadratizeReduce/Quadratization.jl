@@ -956,7 +956,8 @@ The current implementation calls `polynomialize` with `laurent = true`.
 # Returns
 
 - `quadsys`: a ModelingToolkit system with quadratic right-hand sides.
-- `substitution_eqs`: equations defining the introduced monomial variables.
+- `substitution_eqs`: equations defining the introduced substitutions with polynomial
+substitutions first and quadratic substitutions second.
 
 # Example
 

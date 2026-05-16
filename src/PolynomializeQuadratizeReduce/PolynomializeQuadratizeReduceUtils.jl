@@ -174,7 +174,7 @@ function substitute_fixedpoint(expr, vals::Vector{Pair{Num, Float64}}; maxiters 
         dict[k] = v
     end
 
-    return repeated_substitute(expr,dict; maxiters=maxiters)
+    return repeated_substitute(expr, dict; maxiters = maxiters)
 end
 
 function numeric_value(expr, vals::Vector{Pair{Num, Float64}})
@@ -212,7 +212,8 @@ the second is its initial condition
 `old_sys`
 - `substitutions`: A vector of `Equation` objects (typically 
 `new_var ~ expression`) defining how augmented variables relate to the 
-original state.
+original state. IMPORTANT: Requires polynomialization substitutions to be 
+before quadratization substitutions.
 
 # Returns
 
@@ -241,7 +242,7 @@ u0_augmented_pairs = compute_augmented_initial_pairs(old_sys,
                     new_sys, old_u0, substitutions)
 ```
 """
-function compute_augmented_initial_pairs(old_sys::System, new_sys::System, old_u0_pairs::Vector{Pair{Num,Float64}}, substitutions::Vector{Equation})
+function compute_augmented_initial_pairs(old_sys::System, new_sys::System, old_u0_pairs::Vector{Pair{Num, Float64}}, substitutions::Vector{Equation})
     vals = copy(old_u0_pairs)
     extend_initial_dict!(vals, substitutions)
 

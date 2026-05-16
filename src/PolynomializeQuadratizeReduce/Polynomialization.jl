@@ -901,8 +901,8 @@ function leaf_lhs_equations(eqns, eqsys)
     result = Equation[]
     subs = Dict([eq.lhs => eq.rhs for eq in eqsys.substitution_equations])
     for eq in eqns
-        if isleaf_expr(eq.lhs,eqsys.iv)
-            push!(result,eq.lhs~repeated_substitute(eq.rhs,subs; maxiters = length(subs)+1))
+        if isleaf_expr(eq.lhs, eqsys.iv)
+            push!(result, eq.lhs ~ repeated_substitute(eq.rhs, subs; maxiters = length(subs) + 1))
         end
     end
     return result
