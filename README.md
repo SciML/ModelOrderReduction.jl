@@ -81,3 +81,91 @@ sol_deim_w = deim_sol[w(x, t)]
 The following figure shows the comparison of the solutions of the 32-dimension full-order model and the POD5-DEIM5 reduced-order model.
 
 ![comparison](https://user-images.githubusercontent.com/45696147/195765614-df9092a2-4fca-4602-bb15-81e65b2b572e.svg)
+
+#### Polynomialization, Quadratization, and Galerkin Reduction on an ODE system
+```julia
+using ModelOrderReduction
+using ModelingToolkit
+using OrdinaryDiffEq
+using LinearAlgebra
+using Symbolics
+
+using ModelingToolkit: t_nounits as t, D_nounits as D
+
+@variables x(t) y(t)
+
+eqs = [
+    D(x) ~ -x + y + 0.1 * sqrt(x),
+    D(y) ~ -2.0 * y + 0.2 * x^2,
+]
+
+@mtkcompile sys = System(eqs, t)
+sys = ModelingToolkit.complete(sys)
+
+u0_pairs = [
+    x => 0.5,
+    y => 1.0,
+]
+
+tspan = (0.0, 1.0)
+saveat = 0.1
+nmodes = 2
+
+# Polynomialization + quadratization
+quadsys_raw, quad_subs = polynomialize_and_quadratize(sys)
+
+quadsys = ModelingToolkit.complete(quadsys_raw)
+
+# Compute augmented initial conditions
+u0_quad_pairs = compute_augmented_initial_pairs(
+    sys,
+    quadsys,
+    u0_pairs,
+    quad_subs,
+)
+
+# Solve quadratized system
+prob_quad = ODEProblem(quadsys, u0_quad_pairs, tspan)
+sol_quad = solve(prob_quad, Tsit5(); saveat = saveat)
+
+snapshots = reduce(hcat, sol_quad.u)
+
+xbar = [sum(snapshots[i, :]) / size(snapshots, 2) for i in axes(snapshots, 1)]
+centered_snapshots = snapshots .- reshape(xbar, :, 1)
+
+# POD basis
+F = svd(Matrix(centered_snapshots))
+V = F.U[:, 1:nmodes]
+
+nquad = length(ModelingToolkit.unknowns(quadsys))
+
+# Initial reduced coordinates
+u0_quad_solver_order = sol_quad.u[1]
+a0 = V' * (u0_quad_solver_order .- xbar)
+
+iv = ModelingToolkit.get_iv(quadsys)
+
+a_vars = [
+    Symbolics.scalarize(@variables $(Symbol("a_", i))(iv))[1]
+    for i in 1:nmodes
+]
+
+# Galerkin projection
+rom_raw = galerkin_project_system_affine(
+    quadsys,
+    V,
+    xbar,
+    a_vars,
+)
+
+rom = ModelingToolkit.complete(rom_raw)
+
+rom_unknowns = ModelingToolkit.unknowns(rom)
+
+a0_pairs = [a_vars[i] => a0[i] for i in eachindex(a_vars)]
+
+# Solve ROM
+prob_rom = ODEProblem(rom, a0_pairs, tspan)
+sol_rom = solve(prob_rom, Tsit5(); saveat = saveat)
+
+```
