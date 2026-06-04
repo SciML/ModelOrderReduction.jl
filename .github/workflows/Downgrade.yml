@@ -12,7 +12,6 @@ on:
       - 'docs/**'
 jobs:
   test:
-    if: false  # Disabled pending dependency updates - see issue #142
     uses: "SciML/.github/.github/workflows/downgrade.yml@v1"
     with:
       julia-version: "1.10"
