@@ -701,9 +701,9 @@ version = "1.3.7"
 
 [[deps.ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
-git-tree-sha1 = "cddeab6487248a39dae1a960fff0ac17b2a28888"
+git-tree-sha1 = "52856013604f3442ab8ef776ae576b533a6de301"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "1.3.3"
+version = "1.4.0"
 weakdeps = ["StaticArrays"]
 
     [deps.ForwardDiff.extensions]
@@ -766,9 +766,9 @@ version = "0.2.0"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
-git-tree-sha1 = "b66084e7246be1a381363a2b75c03fc5d815f599"
+git-tree-sha1 = "f954322d5de03ec630d177cda203dcd92b6be399"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.73.25"
+version = "0.73.26"
 
     [deps.GR.extensions]
     IJuliaExt = "IJulia"
@@ -778,9 +778,9 @@ version = "0.73.25"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "FreeType2_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt6Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "c45a7c5b40346c21e66343dded33312e1bab98b6"
+git-tree-sha1 = "6fada551286ab6ea4ca1628cb2de9f166a2ec966"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.73.25+0"
+version = "0.73.26+0"
 
 [[deps.GettextRuntime_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll"]
@@ -1131,9 +1131,9 @@ version = "1.12.0"
 
 [[deps.LinearSolve]]
 deps = ["AMD", "ArrayInterface", "ConcreteStructs", "DocStringExtensions", "EnumX", "GPUArraysCore", "InteractiveUtils", "Krylov", "Libdl", "LinearAlgebra", "MKL_jll", "Markdown", "OpenBLAS_jll", "PrecompileTools", "Preferences", "PureKLU", "RecursiveArrayTools", "Reexport", "SciMLBase", "SciMLLogging", "SciMLOperators", "Setfield", "SparseColumnPivotedQR", "StaticArraysCore"]
-git-tree-sha1 = "0234b41d43ff591010816b30896d42a7950b193f"
+git-tree-sha1 = "70de717540ffc613424866635b99d0c187cf7b59"
 uuid = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
-version = "3.84.0"
+version = "3.85.1"
 
     [deps.LinearSolve.extensions]
     LinearSolveAMDGPUExt = "AMDGPU"
@@ -1207,9 +1207,9 @@ version = "3.84.0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "13ca9e2586b89836fd20cccf56e57e2b9ae7f38f"
+git-tree-sha1 = "bba2d9aa057d8f126415de240573e86a8f39d2a1"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.29"
+version = "1.0.1"
 
     [deps.LogExpFunctions.extensions]
     LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
@@ -1298,7 +1298,7 @@ version = "1.11.0"
 
 [[deps.ModelOrderReduction]]
 deps = ["DocStringExtensions", "LinearAlgebra", "ModelingToolkit", "PrecompileTools", "RandomizedLinAlg", "Setfield", "SparseArrays", "TSVD"]
-path = "/home/runner/work/ModelOrderReduction.jl/ModelOrderReduction.jl"
+path = "/home/runner/_work/ModelOrderReduction.jl/ModelOrderReduction.jl"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
 version = "0.1.6"
 
