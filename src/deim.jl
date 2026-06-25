@@ -146,7 +146,7 @@ function deim(
     ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
-    rhs = Symbolics.rhss(deqs)
+    rhs = [eq.rhs for eq in deqs]
     # a sparse matrix of coefficients for the linear part,
     # a vector of constant terms and a vector of nonlinear terms about dvs
     A, g, F = separate_terms(rhs, dvs, iv)

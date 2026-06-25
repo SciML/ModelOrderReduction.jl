@@ -30,7 +30,7 @@ run_qa(
                 :get_eqs, :get_initial_conditions, :get_iv, :get_observed,
                 :get_unknowns, :get_var_to_name, :topsort_equations,
                 # not public in Symbolics
-                :getname, :scalarize, :unwrap, :rhss, :value,
+                :getname, :scalarize, :unwrap, :value,
                 # not public in SymbolicUtils
                 :isadd, :ismul,
             ),
