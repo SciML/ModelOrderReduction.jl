@@ -27,12 +27,9 @@ run_qa(
         all_qualified_accesses_are_public = (;
             ignore = (
                 # not public in ModelingToolkit
-                :get_eqs, :get_initial_conditions, :get_iv, :get_observed,
-                :get_unknowns, :get_var_to_name, :topsort_equations,
-                # not public in Symbolics
-                :getname, :scalarize, :unwrap, :value,
-                # not public in SymbolicUtils
-                :isadd, :ismul,
+                :topsort_equations,
+                # not public in Symbolics (re-exported from SymbolicIndexingInterface)
+                :getname,
             ),
         ),
     )
