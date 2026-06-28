@@ -28,8 +28,6 @@ run_qa(
             ignore = (
                 # not public in ModelingToolkit
                 :topsort_equations,
-                # not public in Symbolics (re-exported from SymbolicIndexingInterface)
-                :getname,
             ),
         ),
     )
