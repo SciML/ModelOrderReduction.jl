@@ -10,23 +10,16 @@ run_qa(
     # `report_call` checks in jet_tests.jl, which sidestep the toplevel re-eval.
     jet = false,
     ei_kwargs = (;
-        # Internal symbolic-stack names that ModelingToolkit/Symbolics re-export but
-        # neither own nor mark public. `via_owners` flags the re-export; `are_public`
-        # flags the non-public status. ModelOrderReduction uses them as internal API.
+        # `topsort_equations` is owned by ModelingToolkitBase, re-exported but not
+        # marked public by ModelingToolkit, and there is no make-public plan for it.
+        # `via_owners` flags the re-export; `are_public` flags the non-public status.
         all_qualified_accesses_via_owners = (;
             ignore = (
-                # owner ModelingToolkitBase, accessed via ModelingToolkit
-                :get_eqs, :get_initial_conditions, :get_iv, :get_observed,
-                :get_unknowns, :get_var_to_name, :topsort_equations,
-                # owner SymbolicUtils, accessed via Symbolics
-                :scalarize, :unwrap,
-                # owner SymbolicIndexingInterface, accessed via Symbolics
-                :getname,
+                :topsort_equations,
             ),
         ),
         all_qualified_accesses_are_public = (;
             ignore = (
-                # not public in ModelingToolkit
                 :topsort_equations,
             ),
         ),
