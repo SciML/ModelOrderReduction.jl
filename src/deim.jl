@@ -143,10 +143,10 @@ function deim(
     var_name = gensym(:ŷ)
     ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
     @set! sys.unknowns = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
-    ModelingToolkit.get_var_to_name(sys)[Symbolics.getname(ŷ)] = Symbolics.unwrap(ŷ)
+    ModelingToolkit.get_var_to_name(sys)[SymbolicIndexingInterface.getname(ŷ)] = Symbolics.unwrap(ŷ)
 
     deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
-    rhs = Symbolics.rhss(deqs)
+    rhs = [eq.rhs for eq in deqs]
     # a sparse matrix of coefficients for the linear part,
     # a vector of constant terms and a vector of nonlinear terms about dvs
     A, g, F = separate_terms(rhs, dvs, iv)
