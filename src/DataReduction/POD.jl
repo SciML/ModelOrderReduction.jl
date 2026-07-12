@@ -26,6 +26,12 @@ end
 
 _rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
 
+"""
+    POD(snapshots; min_renergy = 1.0, min_nmodes = 1, max_nmodes = length(snapshots[1]))
+    POD(snapshots, nmodes)
+
+Proper orthogonal decomposition reduction problem built from state snapshots.
+"""
 mutable struct POD{S, T <: AbstractFloat} <: AbstractDRProblem
     # specified
     snapshots::S
@@ -81,6 +87,11 @@ function determine_truncation(
     return nmodes, energy
 end
 
+"""
+    reduce!(pod, alg)
+
+Compute the reduced basis and spectrum for `pod` using the SVD backend `alg`.
+"""
 function reduce!(pod::POD{S, T}, alg::SVD)::Nothing where {S, T}
     u, s, v = _svd(pod.snapshots; alg.kwargs...)
     pod.nmodes,

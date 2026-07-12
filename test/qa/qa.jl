@@ -3,6 +3,7 @@ using SciMLTesting, ModelOrderReduction, Test
 run_qa(
     ModelOrderReduction;
     explicit_imports = true,
+    api_docs_kwargs = (; rendered = true),
     # Whole-package JET (`report_package`/`test_package`) hits a toplevel
     # `invalid redefinition of constant ModelOrderReduction.TSVD` error: the package
     # exports a `TSVD` struct whose name collides with the `TSVD` dependency package
