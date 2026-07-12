@@ -38,11 +38,12 @@ order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
 simp_sys = mtkcompile(ode_sys) # field substitutions is non-empty
-ode_prob = ODEProblem(
-    simp_sys, nothing, tspan;
-    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0)
-)
-sol = solve(ode_prob, Tsit5(), saveat = 1.0)
+# The BCs fix every state to 0 at t=0, so provide those initial values directly.
+# Leaving them as missing guesses makes MethodOfLines' initialization system
+# structurally singular under MTK v11, and the least-squares solve diverges.
+u0 = [u => 0.0 for u in ModelingToolkit.get_unknowns(simp_sys)]
+ode_prob = ODEProblem(simp_sys, u0, tspan)
+sol = solve(ode_prob, Rodas5P(), saveat = 1.0)
 
 snapshot_simpsys = Array(sol.original_sol)
 pod_dim = 3
@@ -53,7 +54,7 @@ deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
 deim_prob = ODEProblem(complete(deim_sys), nothing, tspan)
 
-deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
+deim_sol = solve(deim_prob, Rodas5P(), saveat = 1.0)
 
 nₓ = length(sol[x])
 nₜ = length(sol[t])
