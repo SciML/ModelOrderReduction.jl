@@ -42,7 +42,7 @@ ode_prob = ODEProblem(
     simp_sys, nothing, tspan;
     missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0)
 )
-sol = solve(ode_prob, Tsit5(), saveat = 1.0)
+sol = solve(ode_prob, Rodas5P(), saveat = 1.0)
 
 snapshot_simpsys = Array(sol.original_sol)
 pod_dim = 3
@@ -53,7 +53,7 @@ deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
 
 deim_prob = ODEProblem(complete(deim_sys), nothing, tspan)
 
-deim_sol = solve(deim_prob, Tsit5(), saveat = 1.0)
+deim_sol = solve(deim_prob, Rodas5P(), saveat = 1.0)
 
 nₓ = length(sol[x])
 nₜ = length(sol[t])
