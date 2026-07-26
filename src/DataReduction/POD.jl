@@ -1,4 +1,4 @@
-using TSVD: tsvd
+import TSVD as TruncatedSVD
 using RandomizedLinAlg: rsvd
 
 function matricize(VoV::Vector{Vector{T}})::Matrix{T} where {T}
@@ -17,7 +17,7 @@ function _tsvd(data::Vector{Vector{T}}, n::Int = 1; kwargs...) where {T}
     return _tsvd(mat_data, n; kwargs...)
 end
 
-_tsvd(data, n::Int = 1; kwargs...) = tsvd(data, n; kwargs...)
+_tsvd(data, n::Int = 1; kwargs...) = TruncatedSVD.tsvd(data, n; kwargs...)
 
 function _rsvd(data::Vector{Vector{T}}, n::Int, p::Int) where {T}
     mat_data = matricize(data)
@@ -30,7 +30,37 @@ _rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
     POD(snapshots; min_renergy = 1.0, min_nmodes = 1, max_nmodes = length(snapshots[1]))
     POD(snapshots, nmodes)
 
-Proper orthogonal decomposition reduction problem built from state snapshots.
+Proper orthogonal decomposition reduction problem built from state snapshots. Call
+[`reduce!`](@ref) with an SVD backend to compute its basis and spectrum.
+
+# Arguments
+- `snapshots`: a state-by-snapshot matrix or a vector of state vectors.
+- `nmodes::Int`: the fixed number of retained modes. This positional form disables
+  energy-based truncation.
+
+# Keyword Arguments
+- `min_renergy = 1.0`: minimum captured relative spectral energy when selecting modes.
+- `min_nmodes::Int = 1`: lower bound on the number of retained modes.
+- `max_nmodes::Int = length(snapshots[1])`: upper bound on the number of retained modes.
+
+# Fields
+- `snapshots`: the input snapshot data.
+- `min_renergy`, `min_nmodes`, `max_nmodes`: the truncation policy.
+- `nmodes`: the selected number of retained modes.
+- `rbasis`: the reduced basis after [`reduce!`](@ref), or `missing` before reduction.
+- `renergy`: the captured relative spectral energy.
+- `spectrum`: the singular-value spectrum after [`reduce!`](@ref), or `missing` before
+  reduction.
+
+# Examples
+```jldoctest
+julia> using ModelOrderReduction
+
+julia> pod = POD([3.0 0.0; 0.0 1.0], 1);
+
+julia> pod.nmodes
+1
+```
 """
 mutable struct POD{S, T <: AbstractFloat} <: AbstractDRProblem
     # specified
@@ -88,9 +118,23 @@ function determine_truncation(
 end
 
 """
-    reduce!(pod, alg)
+    reduce!(pod::POD, alg::SVD) -> nothing
 
-Compute the reduced basis and spectrum for `pod` using the SVD backend `alg`.
+Compute the reduced basis and full singular-value spectrum for `pod` using dense SVD.
+
+# Arguments
+- `pod::POD`: reduction problem to update in place.
+- `alg::SVD`: dense singular value decomposition backend.
+
+# Examples
+```jldoctest
+julia> using ModelOrderReduction
+
+julia> pod = POD([3.0 0.0; 0.0 1.0], 1);
+
+julia> reduce!(pod, SVD()); size(pod.rbasis)
+(2, 1)
+```
 """
 function reduce!(pod::POD{S, T}, alg::SVD)::Nothing where {S, T}
     u, s, v = _svd(pod.snapshots; alg.kwargs...)
@@ -104,6 +148,16 @@ function reduce!(pod::POD{S, T}, alg::SVD)::Nothing where {S, T}
     return nothing
 end
 
+"""
+    reduce!(pod::POD, alg::TSVD) -> nothing
+
+Compute the reduced basis and truncated singular-value spectrum for `pod` using a
+truncated SVD.
+
+# Arguments
+- `pod::POD`: reduction problem to update in place.
+- `alg::TSVD`: truncated singular value decomposition backend.
+"""
 function reduce!(pod::POD{S, T}, alg::TSVD)::Nothing where {S, T}
     u, s, v = _tsvd(pod.snapshots, pod.nmodes; alg.kwargs...)
     n_max = min(size(u, 1), size(v, 1))
@@ -113,6 +167,16 @@ function reduce!(pod::POD{S, T}, alg::TSVD)::Nothing where {S, T}
     return nothing
 end
 
+"""
+    reduce!(pod::POD, alg::RSVD) -> nothing
+
+Compute the reduced basis and approximate singular-value spectrum for `pod` using a
+randomized SVD.
+
+# Arguments
+- `pod::POD`: reduction problem to update in place.
+- `alg::RSVD`: randomized singular value decomposition backend.
+"""
 function reduce!(pod::POD{S, T}, alg::RSVD)::Nothing where {S, T}
     u, s, v = _rsvd(pod.snapshots, pod.nmodes, alg.p)
     n_max = min(size(u, 1), size(v, 1))
