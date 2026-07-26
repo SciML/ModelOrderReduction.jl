@@ -26,6 +26,42 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
+function _sort_observed_equations(equations::Vector{Equation})::Vector{Equation}
+    assignments = Dict{Any, Int}()
+    for (index, equation) in enumerate(equations)
+        assignments[Symbolics.unwrap(equation.lhs)] = index
+    end
+
+    dependents = [Int[] for _ in equations]
+    degrees = zeros(Int, length(equations))
+    for (index, equation) in enumerate(equations)
+        dependencies = Set(Symbolics.unwrap.(Symbolics.get_variables(Symbolics.unwrap(equation.rhs))))
+        for variable in dependencies
+            dependency = get(assignments, variable, nothing)
+            if !isnothing(dependency) && dependency != index
+                push!(dependents[dependency], index)
+                degrees[index] += 1
+            end
+        end
+    end
+
+    available = findall(iszero, degrees)
+    ordered = Equation[]
+    sizehint!(ordered, length(equations))
+    while !isempty(available)
+        index = popfirst!(available)
+        push!(ordered, equations[index])
+        for dependent in dependents[index]
+            degrees[dependent] -= 1
+            degrees[dependent] == 0 && push!(available, dependent)
+        end
+    end
+
+    length(ordered) == length(equations) ||
+        throw(ArgumentError("observed equations contain a dependency cycle"))
+    return ordered
+end
+
 """
 $(SIGNATURES)
 
@@ -60,9 +96,21 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
 - `linear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times k}V`` for the dependent variables ``\\mathbf y``.
 - `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
 
+# Keyword Arguments
+- `kwargs...`: keyword arguments forwarded to `Symbolics.substitute` when constructing
+  the nonlinear reduced model.
+
 # Return
 - `reduced_rhss`: the right-hand side of ROM.
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
+
+# Examples
+```julia
+reduced_rhs, projection_equations = deim(
+    full_variables, linear_coefficients, constant_terms, nonlinear_terms,
+    reduced_variables, state_basis, nonlinear_basis,
+)
+```
 """
 function deim(
         full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
@@ -119,6 +167,23 @@ The LHS of equations in `sys` are all assumed to be 1st order derivatives. Use
 The POD basis used for DEIM interpolation is obtained from the snapshot matrix of the
 nonlinear terms, which is computed by executing the runtime-generated function for
 nonlinear expressions.
+
+# Arguments
+- `sys::ModelingToolkit.ODESystem`: compiled first-order ODE system without internal
+  subsystems.
+- `snapshot::AbstractMatrix`: state-by-time snapshot matrix for `sys`.
+- `pod_dim::Integer`: number of POD state modes to retain.
+
+# Keyword Arguments
+- `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
+- `name::Symbol = Symbol(nameof(sys), :_deim)`: name assigned to the reduced system.
+- `kwargs...`: keyword arguments forwarded to ModelingToolkit transformations and
+  generated nonlinear functions.
+
+# Examples
+```julia
+reduced_system = deim(compiled_system, snapshots, 4; deim_dim = 6)
+```
 """
 function deim(
         sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
@@ -168,13 +233,8 @@ function deim(
     @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
 
     old_observed = ModelingToolkit.get_observed(sys)
-    fullstates = [map(eq -> eq.lhs, old_observed); dvs; ModelingToolkit.get_unknowns(sys)]
     new_observed = [old_observed; linear_projection_eqs]
-    new_sorted_observed = ModelingToolkit.topsort_equations(
-        new_observed, fullstates;
-        kwargs...
-    )
-    @set! sys.observed = new_sorted_observed
+    @set! sys.observed = _sort_observed_equations(new_observed)
 
     # Numeric initial conditions for the reduced unknowns from the snapshot's first column.
     # The snapshot is assumed to start at t = tspan[1], matching the FOM initial state.

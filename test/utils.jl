@@ -41,3 +41,11 @@ using ModelingToolkit
         @test_throws ArgumentError ModelOrderReduction.separate_terms(exprs, vars, t)
     end
 end
+
+@testset "observed equation ordering" begin
+    @variables a b c
+    equations = [c ~ b + 1, b ~ a + 1]
+    ordered = ModelOrderReduction._sort_observed_equations(equations)
+
+    @test ordered == reverse(equations)
+end
