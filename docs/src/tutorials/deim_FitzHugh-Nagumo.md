@@ -73,6 +73,7 @@ Next, we apply finite difference discretization using
 
 ```@example deim_FitzHugh_Nagumo
 using MethodOfLines
+using SciMLBase: symbolic_discretize
 N = 15 # equidistant discretization intervals
 dx = (L - 0.0) / N
 dxs = [x => dx]

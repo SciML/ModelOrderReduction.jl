@@ -31,6 +31,7 @@ the documentation, which contains the unreleased features.
 
 ```julia
 using ModelingToolkit, MethodOfLines, DifferentialEquations, ModelOrderReduction
+using SciMLBase: symbolic_discretize
 
 # firstly construct a ModelingToolkit.PDESystem for the FitzHugh-Nagumo model
 @variables x t v(..) w(..)

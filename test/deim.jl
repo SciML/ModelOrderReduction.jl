@@ -1,5 +1,6 @@
 using Test, ModelOrderReduction
 using ModelingToolkit, MethodOfLines, OrdinaryDiffEq
+using SciMLBase: symbolic_discretize
 
 # construct an ModelingToolkit.ODESystem with non-empty field substitutions
 @variables x t v(..) w(..)
