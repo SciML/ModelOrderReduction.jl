@@ -27,30 +27,44 @@ end
 _rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
 
 """
-    POD(snapshots; min_renergy = 1.0, min_nmodes = 1, max_nmodes = length(snapshots[1]))
-    POD(snapshots, nmodes)
+    POD(snapshots; min_renergy = 1.0, min_nmodes = 1,
+        max_nmodes = length(snapshots[1])) -> POD
+    POD(snapshots, nmodes::Int) -> POD
 
 Proper orthogonal decomposition reduction problem built from state snapshots. Call
 [`reduce!`](@ref) with an SVD backend to compute its basis and spectrum.
 
 # Arguments
-- `snapshots`: a state-by-snapshot matrix or a vector of state vectors.
+- `snapshots::AbstractMatrix{T}`: a state-by-snapshot matrix, where each column is a
+  state snapshot.
+- `snapshots::AbstractVector{<:AbstractVector{T}}`: a vector of state snapshots.
 - `nmodes::Int`: the fixed number of retained modes. This positional form disables
   energy-based truncation.
 
-# Keyword Arguments
-- `min_renergy = 1.0`: minimum captured relative spectral energy when selecting modes.
+# Keywords
+- `min_renergy::T = 1.0`: minimum captured relative spectral energy when selecting modes.
 - `min_nmodes::Int = 1`: lower bound on the number of retained modes.
 - `max_nmodes::Int = length(snapshots[1])`: upper bound on the number of retained modes.
 
 # Fields
-- `snapshots`: the input snapshot data.
-- `min_renergy`, `min_nmodes`, `max_nmodes`: the truncation policy.
-- `nmodes`: the selected number of retained modes.
-- `rbasis`: the reduced basis after [`reduce!`](@ref), or `missing` before reduction.
-- `renergy`: the captured relative spectral energy.
-- `spectrum`: the singular-value spectrum after [`reduce!`](@ref), or `missing` before
-  reduction.
+- `snapshots::S`: the input snapshot data.
+- `min_renergy::T`: the minimum relative spectral energy used for truncation.
+- `min_nmodes::Int`: the lower bound on the number of retained modes.
+- `max_nmodes::Int`: the upper bound on the number of retained modes.
+- `nmodes::Int`: the selected number of retained modes.
+- `rbasis::Union{Missing, Matrix{T}}`: the reduced basis after [`reduce!`](@ref), or
+  `missing` before reduction.
+- `renergy::T`: the captured relative spectral energy.
+- `spectrum::Union{Missing, Vector{T}}`: the singular-value spectrum after
+  [`reduce!`](@ref), or `missing` before reduction.
+
+# Throws
+- `AssertionError`: if the snapshots are not vector-valued or the truncation bounds are
+  invalid.
+
+# Returns
+- `POD`: an initialized reduction problem. The basis and spectrum are populated by
+  [`reduce!`](@ref).
 
 # Examples
 ```jldoctest
@@ -126,6 +140,9 @@ Compute the reduced basis and full singular-value spectrum for `pod` using dense
 - `pod::POD`: reduction problem to update in place.
 - `alg::SVD`: dense singular value decomposition backend.
 
+# Returns
+- `nothing`: `pod` is updated in place.
+
 # Examples
 ```jldoctest
 julia> using ModelOrderReduction
@@ -157,6 +174,23 @@ truncated SVD.
 # Arguments
 - `pod::POD`: reduction problem to update in place.
 - `alg::TSVD`: truncated singular value decomposition backend.
+
+# Returns
+- `nothing`: `pod` is updated in place.
+
+# Throws
+- An exception propagated by `TSVD.tsvd` if the snapshot matrix is not accepted by the
+  truncated SVD backend.
+
+# Examples
+```jldoctest
+julia> using ModelOrderReduction
+
+julia> pod = POD([3.0 0.0; 0.0 1.0], 1);
+
+julia> reduce!(pod, TSVD()); pod.nmodes
+1
+```
 """
 function reduce!(pod::POD{S, T}, alg::TSVD)::Nothing where {S, T}
     u, s, v = _tsvd(pod.snapshots, pod.nmodes; alg.kwargs...)
@@ -176,6 +210,23 @@ randomized SVD.
 # Arguments
 - `pod::POD`: reduction problem to update in place.
 - `alg::RSVD`: randomized singular value decomposition backend.
+
+# Returns
+- `nothing`: `pod` is updated in place.
+
+# Throws
+- An exception propagated by `RandomizedLinAlg.rsvd` if the snapshot matrix is not
+  accepted by the randomized SVD backend.
+
+# Examples
+```jldoctest
+julia> using ModelOrderReduction
+
+julia> pod = POD([3.0 0.0; 0.0 1.0], 1);
+
+julia> reduce!(pod, RSVD()); pod.nmodes
+1
+```
 """
 function reduce!(pod::POD{S, T}, alg::RSVD)::Nothing where {S, T}
     u, s, v = _rsvd(pod.snapshots, pod.nmodes, alg.p)

@@ -1,15 +1,50 @@
+"""
+    AbstractReductionProblem
+
+Internal common supertype for model-reduction problem types.
+
+This type is not exported and is not a supported extension point. User code should
+construct one of the documented concrete problem types instead.
+"""
 abstract type AbstractReductionProblem end
+
+"""
+    AbstractMORProblem <: AbstractReductionProblem
+
+Internal marker type for model-order-reduction problems.
+
+This type is not exported and is not a supported extension point. Its hierarchy may
+change without a public API guarantee.
+"""
 abstract type AbstractMORProblem <: AbstractReductionProblem end
+
+"""
+    AbstractDRProblem <: AbstractReductionProblem
+
+Internal marker type for data-reduction problems such as [`POD`](@ref).
+
+This type is not exported and is not a supported extension point. Use the documented
+[`POD`](@ref) constructors and [`reduce!`](@ref) methods instead.
+"""
 abstract type AbstractDRProblem <: AbstractReductionProblem end
 
+"""
+    AbstractSVD
+
+Internal supertype for the built-in singular-value-decomposition backends.
+
+This type is not exported and is not a supported extension point. The supported
+backends are [`SVD`](@ref), [`TSVD`](@ref), and [`RSVD`](@ref); custom subtypes and
+additional `reduce!` dispatches are not part of the public API.
+"""
 abstract type AbstractSVD end
 
 """
-    SVD(; kwargs...)
+    SVD(; kwargs...) -> SVD
 
 Dense singular value decomposition backend for [`reduce!`](@ref).
 
-# Keyword Arguments
+# Keywords
 - `kwargs...`: keyword arguments forwarded to `LinearAlgebra.svd`.
 
 # Fields
@@ -32,12 +67,12 @@ struct SVD{K <: NamedTuple} <: AbstractSVD
 end
 
 """
-    TSVD(; kwargs...)
+    TSVD(; kwargs...) -> TSVD
 
 Truncated singular value decomposition backend for [`reduce!`](@ref). Use this backend
 when only the requested reduced modes should be computed.
 
-# Keyword Arguments
+# Keywords
 - `kwargs...`: keyword arguments forwarded to `TSVD.tsvd`.
 
 # Fields
@@ -60,7 +95,7 @@ struct TSVD{K <: NamedTuple} <: AbstractSVD
 end
 
 """
-    RSVD([p = 0])
+    RSVD([p::Int = 0]) -> RSVD
 
 Randomized singular value decomposition backend for [`reduce!`](@ref).
 
@@ -69,6 +104,9 @@ Randomized singular value decomposition backend for [`reduce!`](@ref).
 
 # Fields
 - `p::Int`: the oversampling parameter.
+
+# Throws
+- `MethodError`: if `p` is not an `Int`.
 
 # Examples
 ```jldoctest

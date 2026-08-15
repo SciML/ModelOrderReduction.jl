@@ -3,7 +3,8 @@ $(TYPEDSIGNATURES)
 
 Compute the DEIM interpolation indices for the given projection basis.
 
-The orthonormal `basis` should not be a sparse matrix.
+The orthonormal `basis` should not be a sparse matrix. This helper is internal and is
+not part of the exported API.
 """
 function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     dim = size(basis, 2)
@@ -88,21 +89,32 @@ algorithm, and ``\\mathbf e_{\\rho_i}=[0,\\ldots,0,1,0,\\ldots,0]^T\\in\\mathbb 
 the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n}``.
 
 # Arguments
-- `full_vars::AbstractVector`: the dependent variables ``\\underset{n\\times 1}{\\mathbf y}`` in FOM.
-- `linear_coeffs::AbstractMatrix`: the coefficient matrix ``\\underset{n\\times n}A`` of linear terms in FOM.
-- `constant_part::AbstractVector`: the constant terms ``\\underset{n\\times 1}{\\mathbf g}`` in FOM.
-- `nonlinear_part::AbstractVector`: the nonlinear functions ``\\underset{n\\times 1}{\\mathbf F}`` in FOM.
-- `reduced_vars::AbstractVector`: the dependent variables ``\\underset{k\\times 1}{\\hat{\\mathbf y}}`` in the reduced-order model.
-- `linear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times k}V`` for the dependent variables ``\\mathbf y``.
-- `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
+- `full_vars::AbstractVector`: the dependent variables
+  ``\\underset{n\\times 1}{\\mathbf y}`` in FOM.
+- `linear_coeffs::AbstractMatrix`: the coefficient matrix
+  ``\\underset{n\\times n}A`` of linear terms in FOM.
+- `constant_part::AbstractVector`: the constant terms
+  ``\\underset{n\\times 1}{\\mathbf g}`` in FOM.
+- `nonlinear_part::AbstractVector`: the nonlinear functions
+  ``\\underset{n\\times 1}{\\mathbf F}`` in FOM.
+- `reduced_vars::AbstractVector`: the dependent variables
+  ``\\underset{k\\times 1}{\\hat{\\mathbf y}}`` in the reduced-order model.
+- `linear_projection_matrix::AbstractMatrix`: the projection matrix
+  ``\\underset{n\\times k}V`` for the dependent variables ``\\mathbf y``.
+- `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix
+  ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
 
-# Keyword Arguments
+# Keywords
 - `kwargs...`: keyword arguments forwarded to `Symbolics.substitute` when constructing
   the nonlinear reduced model.
 
-# Return
+# Returns
 - `reduced_rhss`: the right-hand side of ROM.
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
+
+# Throws
+- An exception from the matrix operations if the projection matrices have incompatible
+  dimensions.
 
 # Examples
 ```julia
@@ -174,7 +186,7 @@ nonlinear expressions.
 - `snapshot::AbstractMatrix`: state-by-time snapshot matrix for `sys`.
 - `pod_dim::Integer`: number of POD state modes to retain.
 
-# Keyword Arguments
+# Keywords
 - `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
 - `name::Symbol = Symbol(nameof(sys), :_deim)`: name assigned to the reduced system.
 - `kwargs...`: keyword arguments forwarded to ModelingToolkit transformations and
@@ -184,6 +196,12 @@ nonlinear expressions.
 ```julia
 reduced_system = deim(compiled_system, snapshots, 4; deim_dim = 6)
 ```
+
+# Returns
+- `ModelingToolkit.ODESystem`: the reduced and completed system.
+
+# Throws
+- `ArgumentError`: if the observed equations contain a dependency cycle.
 """
 function deim(
         sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
