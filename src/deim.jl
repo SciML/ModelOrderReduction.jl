@@ -109,7 +109,8 @@ the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n
   the nonlinear reduced model.
 
 # Returns
-- `reduced_rhss`: the right-hand side of ROM.
+- `Tuple{AbstractVector, Vector{Equation}}`: the reduced right-hand side and
+  linear projection equations.
 - `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
 
 # Throws
