@@ -1,5 +1,6 @@
 pages = [
     "Home" => "index.md",
-    "Functions" => "functions.md",
     "Tutorials" => Any["tutorials/deim_FitzHugh-Nagumo.md"],
+    "Functions" => "functions.md",
+    "Developer Interface" => "interfaces.md",
 ]
