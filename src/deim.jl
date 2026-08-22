@@ -249,7 +249,7 @@ function deim(
     reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U; kwargs...)
 
     reduced_deqs = D.(ŷ) ~ reduced_rhss
-    @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
+    @set! sys.eqs = [reduced_deqs; eqs]
 
     old_observed = ModelingToolkit.get_observed(sys)
     new_observed = [old_observed; linear_projection_eqs]
