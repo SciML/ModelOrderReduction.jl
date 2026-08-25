@@ -80,9 +80,7 @@ dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = mtkcompile(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan;
-    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0))
+full_prob = discretize(pde_sys, discretization; fallback = false)
 nothing # hide
 ```
 
@@ -90,7 +88,8 @@ The snapshot trajectories are obtained by solving the full-order system.
 
 ```@example deim_FitzHugh_Nagumo
 using DifferentialEquations
-sol = solve(ode_prob, Tsit5())
+using DiffEqBase: BrownFullBasicInit
+sol = solve(full_prob)
 sol_x = sol[x]
 nₓ = length(sol_x) # number of discretization points in x
 nₜ = length(sol[t]) # number of discretization points in time
@@ -134,13 +133,22 @@ Then, we use POD to construct a linear subspace of dimension, say, 5 for the sys
 space and project the model onto the subspace. DEIM is employed to approximate nonlinear
 terms. This can be done by simply calling [`deim`](@ref).
 
+Passing the uncompiled MethodOfLines array system keeps the reduced dynamics and the
+full-field reconstruction equations in symbolic array form. For fixed POD and DEIM
+dimensions, the generated reduced solve graph is independent of the spatial grid size.
+The offline snapshot processing and basis storage still scale with the full-order model.
+
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction
 snapshot_simpsys = Array(sol.original_sol)
 pod_dim = deim_dim = 5
-deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
-deim_prob = ODEProblem(deim_sys, nothing, tspan)
-deim_sol = solve(deim_prob, Tsit5())
+deim_sys = deim(ode_sys, snapshot_simpsys, pod_dim)
+deim_prob = DAEProblem(
+    deim_sys, nothing, tspan;
+    initializealg = BrownFullBasicInit(),
+    build_initializeprob = false,
+)
+deim_sol = solve(deim_prob)
 nₜ_deim = length(deim_sol[t])
 sol_deim_x = deim_sol[x]
 sol_deim_v = deim_sol[v(x, t)]

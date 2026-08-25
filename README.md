@@ -31,6 +31,7 @@ the documentation, which contains the unreleased features.
 
 ```julia
 using ModelingToolkit, MethodOfLines, DifferentialEquations, ModelOrderReduction
+using DiffEqBase: BrownFullBasicInit
 using SciMLBase: symbolic_discretize
 
 # firstly construct a ModelingToolkit.PDESystem for the FitzHugh-Nagumo model
@@ -53,25 +54,28 @@ ivs = [x, t]
 dvs = [v(x, t), w(x, t)]
 pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = Symbol("FitzHugh-Nagumo"))
 
-# transfer to a ModelingToolkit.ODESystem by automated discretization via MethodOfLines
+# build MethodOfLines' symbolic array system and O(1)-compiling DAE problem
 N = 15 # equidistant discretization intervals
 dx = (L - 0.0) / N
 dxs = [x => dx]
 discretization = MOLFiniteDifference(dxs, t)
 ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = structural_simplify(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan)
+full_prob = discretize(pde_sys, discretization; fallback = false)
 
 # solve the full-order model to get snapshots
-sol = solve(ode_prob, Tsit5())
+sol = solve(full_prob)
 snapshot_simpsys = Array(sol.original_sol)
 
 # set POD and DEIM dimensions
 # apply POD-DEIM to obtain the reduced-order model
 pod_dim = deim_dim = 5
-deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim; deim_dim = deim_dim)
-deim_prob = ODEProblem(deim_sys, nothing, tspan)
-deim_sol = solve(deim_prob, Tsit5())
+deim_sys = deim(ode_sys, snapshot_simpsys, pod_dim; deim_dim = deim_dim)
+deim_prob = DAEProblem(
+    deim_sys, nothing, tspan;
+    initializealg = BrownFullBasicInit(),
+    build_initializeprob = false,
+)
+deim_sol = solve(deim_prob)
 
 # retrieve the approximate solution of the original full-order model
 sol_deim_x = deim_sol[x]
