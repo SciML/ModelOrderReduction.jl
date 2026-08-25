@@ -209,6 +209,15 @@ function deim(
         deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
         kwargs...
     )::ODESystem
+    return _deim_impl(
+        sys, snapshot, pod_dim; deim_dim, name, snapshot_times = nothing, kwargs...
+    )
+end
+
+function _deim_impl(
+        sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
+        deim_dim::Integer, name::Symbol, snapshot_times, kwargs...
+    )::ODESystem
     sys = deepcopy(sys)
     @set! sys.name = name
 
@@ -235,11 +244,18 @@ function deim(
     # a vector of constant terms and a vector of nonlinear terms about dvs
     A, g, F = separate_terms(rhs, dvs, iv)
 
-    # generate an in-place function from the symbolic expression of the nonlinear functions
-    F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
-    nonlinear_snapshot = similar(snapshot) # snapshot matrix of nonlinear terms
-    for i in 1:size(snapshot, 2) # iterate through time instances
-        F_func!(view(nonlinear_snapshot, :, i), view(snapshot, :, i))
+    nonlinear_snapshot = if isnothing(snapshot_times)
+        # Generate an in-place function from the symbolic nonlinear expressions for the
+        # existing explicit-system API.
+        F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
+        values = similar(snapshot)
+        for i in axes(snapshot, 2)
+            F_func!(view(values, :, i), view(snapshot, :, i))
+        end
+        values
+    else
+        # The DAE entry point deliberately avoids generating a full-order scalar function.
+        _evaluate_symbolic_snapshot(F, dvs, snapshot, iv, snapshot_times)
     end
 
     deim_reducer = POD(nonlinear_snapshot, deim_dim)
@@ -255,11 +271,113 @@ function deim(
     new_observed = [old_observed; linear_projection_eqs]
     @set! sys.observed = _sort_observed_equations(new_observed)
 
-    # Numeric initial conditions for the reduced unknowns from the snapshot's first column.
-    # The snapshot is assumed to start at t = tspan[1], matching the FOM initial state.
-    new_ics = copy(ModelingToolkit.get_initial_conditions(sys))
-    new_ics[Symbolics.unwrap(ŷ)] = V' * snapshot[:, 1]
-    @set! sys.initial_conditions = new_ics
+    # Replace full-order initialization data with the projected initial state. Array-form
+    # systems can retain parent-array guesses that are not keyed by the scalarized `dvs`.
+    @set! sys.guesses = Dict{Any, Any}()
+    @set! sys.initialization_eqs = Equation[]
+    reduced_initial = V' * view(snapshot, :, 1)
+    @set! sys.initial_conditions = Dict(Symbolics.unwrap(ŷ) => reduced_initial)
 
     return complete(sys)
+end
+
+"""
+    $(FUNCTIONNAME)(
+        prob::SciMLBase.DAEProblem,
+        sol,
+        pod_dim::Integer;
+        deim_dim::Integer = pod_dim,
+        name::Union{Nothing, Symbol} = nothing,
+        kwargs...
+    ) -> ModelingToolkit.ODESystem
+
+Reduce a first-order symbolic `DAEProblem` and one of its saved solutions using POD-DEIM.
+
+This method is intended for array-form problems such as those produced by MethodOfLines v1.
+The full-order solve retains its array-form DAE compilation path. For the symbolic reduction,
+ModelingToolkit tearing eliminates algebraic unknowns and isolates the differential equations
+without constructing or compiling a full-order `ODEProblem`. Only the reduced ODE is compiled
+when the returned system is used to construct a problem.
+
+`sol` may be the `SciMLBase.PDETimeSeriesSolution` returned by MethodOfLines or its underlying
+`SciMLBase.AbstractODESolution`.
+
+# Arguments
+- `prob::SciMLBase.DAEProblem`: symbolic first-order DAE problem whose function stores its
+  ModelingToolkit system in `prob.f.sys`.
+- `sol`: saved solution obtained from `prob`.
+- `pod_dim::Integer`: number of POD state modes to retain.
+
+# Keywords
+- `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
+- `name::Union{Nothing, Symbol} = nothing`: name assigned to the reduced system. The default
+  appends `_deim` to the full system's name.
+- `kwargs...`: keyword arguments forwarded to ModelingToolkit transformations and symbolic
+  substitutions.
+
+# Examples
+```julia
+full_problem = discretize(pde_system, discretization; fallback = false)
+full_solution = solve(full_problem)
+reduced_system = deim(full_problem, full_solution, 4)
+```
+
+# Returns
+- `ModelingToolkit.ODESystem`: the reduced and completed explicit ODE system.
+
+# Throws
+- `ArgumentError`: if `sol` is not from `prob`, does not start at the beginning of the problem,
+  or the DAE cannot be torn into an explicit ODE whose unknowns match the saved states.
+- `DimensionMismatch`: if the saved solution does not match the DAE system.
+"""
+function deim(
+        prob::SciMLBase.DAEProblem, sol::SciMLBase.AbstractODESolution,
+        pod_dim::Integer; deim_dim::Integer = pod_dim,
+        name::Union{Nothing, Symbol} = nothing, kwargs...
+    )::ODESystem
+    hasproperty(prob.f, :sys) && prob.f.sys isa ODESystem ||
+        throw(ArgumentError("the DAE problem must contain a symbolic ModelingToolkit system"))
+    raw_sys = prob.f.sys
+    hasproperty(sol, :prob) && hasproperty(sol.prob.f, :sys) && sol.prob.f.sys === raw_sys ||
+        throw(ArgumentError("the solution must have been obtained from the supplied DAE problem"))
+    first(sol.t) == first(prob.tspan) ||
+        throw(ArgumentError("the solution must save the state at the start of the DAE problem"))
+    raw_variables = ModelingToolkit.get_unknowns(raw_sys)
+    full_snapshot = Array(sol)
+    size(full_snapshot, 1) == length(raw_variables) ||
+        throw(DimensionMismatch("solution states must match the DAE system unknowns"))
+
+    sys = complete(tearing(raw_sys))
+    deqs, residual_equations = get_deqs(sys)
+    isempty(residual_equations) ||
+        throw(ArgumentError("tearing the DAE must produce an explicit ODE system"))
+    length(deqs) == length(ModelingToolkit.get_unknowns(sys)) ||
+        throw(ArgumentError("the torn DAE system must have one differential equation per unknown"))
+    raw_indices = Dict(
+        Symbolics.unwrap(variable) => index
+            for (index, variable) in enumerate(raw_variables)
+    )
+    snapshot_rows = map(ModelingToolkit.get_unknowns(sys)) do variable
+        index = get(raw_indices, Symbolics.unwrap(variable), nothing)
+        isnothing(index) &&
+            throw(
+            ArgumentError(
+                "a differential unknown produced by tearing is absent from the DAE state vector"
+            )
+        )
+        index
+    end
+    snapshot = full_snapshot[snapshot_rows, :]
+    reduced_name = isnothing(name) ? Symbol(nameof(raw_sys), :_deim) : name
+    return _deim_impl(
+        sys, snapshot, pod_dim;
+        deim_dim, name = reduced_name, snapshot_times = sol.t, kwargs...
+    )
+end
+
+function deim(
+        prob::SciMLBase.DAEProblem, sol::SciMLBase.PDETimeSeriesSolution,
+        pod_dim::Integer; kwargs...
+    )::ODESystem
+    return deim(prob, sol.original_sol, pod_dim; kwargs...)
 end

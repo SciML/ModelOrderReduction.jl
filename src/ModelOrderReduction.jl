@@ -4,7 +4,8 @@ using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDS
 
 using ModelingToolkit: ModelingToolkit, @variables, Differential, Equation, Num, ODESystem,
     SymbolicUtils, Symbolics, arguments, build_function, complete,
-    expand, substitute, tearing_substitution
+    expand, substitute, tearing, tearing_substitution
+using SciMLBase: SciMLBase
 using SymbolicIndexingInterface: SymbolicIndexingInterface
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 

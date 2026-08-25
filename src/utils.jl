@@ -25,6 +25,38 @@ function get_deqs(sys::ODESystem)::Tuple{Vector{Equation}, Vector{Equation}}
     return deqs, others
 end
 
+function _evaluate_symbolic_snapshot(
+        expressions::AbstractVector, variables::AbstractVector,
+        snapshot::AbstractMatrix, iv, times::AbstractVector
+    )
+    size(snapshot, 1) == length(variables) ||
+        throw(DimensionMismatch("snapshot rows must match the differential unknowns"))
+    size(snapshot, 2) == length(times) ||
+        throw(DimensionMismatch("snapshot columns must match the saved times"))
+
+    values = similar(snapshot, length(expressions), size(snapshot, 2))
+    substitutions = Dict{Any, Any}()
+    for column in axes(snapshot, 2)
+        empty!(substitutions)
+        for (variable, value) in zip(variables, view(snapshot, :, column))
+            substitutions[variable] = value
+        end
+        substitutions[iv] = times[column]
+        for row in eachindex(expressions)
+            value = Symbolics.value(substitute(expressions[row], substitutions))
+            value isa Number ||
+                throw(
+                ArgumentError(
+                    "nonlinear snapshot expression $(expressions[row]) evaluated to $(value) " *
+                        "after substituting states and time"
+                )
+            )
+            values[row, column] = value
+        end
+    end
+    return values
+end
+
 """
 $(SIGNATURES)
 

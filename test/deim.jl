@@ -1,9 +1,10 @@
 using Test, ModelOrderReduction
 using ModelingToolkit, MethodOfLines, OrdinaryDiffEq
-using SciMLBase: symbolic_discretize
+using SciMLBase: DAEProblem, discretize, successful_retcode
 
-# construct an ModelingToolkit.ODESystem with non-empty field substitutions
-@variables x t v(..) w(..)
+# Construct a MethodOfLines v1 array-form DAE with algebraic boundary conditions.
+@independent_variables x t
+@variables v(..) w(..)
 Dx = Differential(x)
 Dxx = Dx^2
 Dt = Differential(t)
@@ -37,29 +38,41 @@ dx = (L - 0.0) / N
 dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
-ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = mtkcompile(ode_sys) # field substitutions is non-empty
-# The BCs fix every state to 0 at t=0, so provide those initial values directly.
-# Leaving them as missing guesses makes MethodOfLines' initialization system
-# structurally singular under MTK v11, and the least-squares solve diverges.
-u0 = [u => 0.0 for u in ModelingToolkit.get_unknowns(simp_sys)]
-ode_prob = ODEProblem(simp_sys, u0, tspan)
-sol = solve(ode_prob, Rodas5P(), saveat = 1.0)
+dae_prob = discretize(pde_sys, discretization; fallback = false)
+@test dae_prob isa DAEProblem
+@test length(ModelingToolkit.get_eqs(dae_prob.f.sys)) == 4
+@test length(ModelingToolkit.get_unknowns(dae_prob.f.sys)) == 12
+sol = solve(dae_prob; saveat = 1.0)
+@test successful_retcode(sol)
 
-snapshot_simpsys = Array(sol.original_sol)
 pod_dim = 3
-deim_sys = @test_nowarn deim(simp_sys, snapshot_simpsys, pod_dim)
+deim_sys = @test_nowarn deim(dae_prob, sol, pod_dim)
 
 # check the number of dependent variables in the new system
 @test length(ModelingToolkit.get_unknowns(deim_sys)) == pod_dim
+@test isempty(ModelingToolkit.initialization_equations(deim_sys))
 
-deim_prob = ODEProblem(complete(deim_sys), nothing, tspan)
+deim_prob = ODEProblem(complete(deim_sys), nothing, dae_prob.tspan)
 
 deim_sol = solve(deim_prob, Rodas5P(), saveat = 1.0)
+@test successful_retcode(deim_sol)
 
 nₓ = length(sol[x])
 nₜ = length(sol[t])
 
-# test solution retrieva
+# Test solution retrieval through the MethodOfLines metadata.
 @test size(deim_sol[v(x, t)]) == (nₓ, nₜ)
 @test size(deim_sol[w(x, t)]) == (nₓ, nₜ)
+
+# Keep the explicit ODESystem entry point covered without scalarizing the PDE example.
+@variables z₁(t) z₂(t)
+D = Differential(t)
+@mtkcompile explicit_sys = System(
+    [D(z₁) ~ z₁ - z₁^3, D(z₂) ~ -z₂], t; name = :explicit_deim_test
+)
+explicit_snapshot = [1.0 0.8 0.6; 0.5 0.4 0.3]
+explicit_deim_sys = @test_nowarn deim(explicit_sys, explicit_snapshot, 1)
+@test length(ModelingToolkit.get_unknowns(explicit_deim_sys)) == 1
+@test isempty(ModelingToolkit.get_guesses(explicit_deim_sys))
+@test isempty(ModelingToolkit.initialization_equations(explicit_deim_sys))
+@test length(ModelingToolkit.get_initial_conditions(explicit_deim_sys)) == 1
