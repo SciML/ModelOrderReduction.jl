@@ -43,7 +43,8 @@ describing the original FitzHugh-Nagumo model.
 ```@example deim_FitzHugh_Nagumo
 using ModelingToolkit
 using LaTeXStrings
-@variables x t v(..) w(..)
+@independent_variables x t
+@variables v(..) w(..)
 Dx = Differential(x)
 Dxx = Dx^2
 Dt = Differential(t)
@@ -69,28 +70,27 @@ nothing # hide
 ```
 
 Next, we apply finite difference discretization using
-[MethodOfLines.jl](https://docs.sciml.ai/MethodOfLines/stable/).
+[MethodOfLines.jl](https://docs.sciml.ai/MethodOfLines/stable/). MethodOfLines v1 constructs
+an array-form `DAEProblem` directly. Setting `fallback = false` keeps this path explicit and
+avoids compiling a scalarized full-order ODE system.
 
 ```@example deim_FitzHugh_Nagumo
 using MethodOfLines
-using SciMLBase: symbolic_discretize
+using SciMLBase: discretize
 N = 15 # equidistant discretization intervals
 dx = (L - 0.0) / N
 dxs = [x => dx]
 order = 2
 discretization = MOLFiniteDifference(dxs, t; approx_order = order)
-ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = mtkcompile(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan;
-    missing_guess_value = ModelingToolkit.MissingGuessValue.Constant(0.0))
+full_prob = discretize(pde_sys, discretization; fallback = false)
 nothing # hide
 ```
 
-The snapshot trajectories are obtained by solving the full-order system.
+The snapshot trajectories are obtained by solving the full-order DAE with its default solver.
 
 ```@example deim_FitzHugh_Nagumo
 using DifferentialEquations
-sol = solve(ode_prob, Tsit5())
+sol = solve(full_prob)
 sol_x = sol[x]
 nₓ = length(sol_x) # number of discretization points in x
 nₜ = length(sol[t]) # number of discretization points in time
@@ -136,10 +136,9 @@ terms. This can be done by simply calling [`deim`](@ref).
 
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction
-snapshot_simpsys = Array(sol.original_sol)
 pod_dim = deim_dim = 5
-deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim)
-deim_prob = ODEProblem(deim_sys, nothing, tspan)
+deim_sys = deim(full_prob, sol, pod_dim; deim_dim = deim_dim)
+deim_prob = ODEProblem(deim_sys, nothing, full_prob.tspan)
 deim_sol = solve(deim_prob, Tsit5())
 nₜ_deim = length(deim_sol[t])
 sol_deim_x = deim_sol[x]
@@ -184,7 +183,7 @@ plt_2 = plot(xlabel = L"v(x,t)", ylabel = L"x", zlabel = L"w(x,t)", xlims = (-0.
     ylims = (0.0, L), zlims = (0.0, 0.25), xflip = true, camera = (50, 30),
     titlefont = 10, title = "Comparison of full and reduced systems")
 plot!(plt_2, unconnected(snapshot_v), unconnected(sol_x, nₜ), unconnected(snapshot_w),
-    label = "Full$(length(ModelingToolkit.get_eqs(ode_sys)))")
+    label = "Full$(length(full_prob.u0))")
 plot!(plt_2, unconnected(sol_deim_v), unconnected(sol_deim_x, nₜ_deim),
     unconnected(sol_deim_w), label = "POD$(pod_dim)/DEIM$(deim_dim)")
 ```
