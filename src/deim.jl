@@ -157,36 +157,33 @@ function deim(
     return reduced_rhss, linear_projection_eqs
 end
 
-function _is_symbolic_array(expression)
-    value = Symbolics.unwrap(expression)
-    return value isa AbstractArray || SymbolicUtils.symtype(value) <: AbstractArray
-end
-
 function _array_state_groups(unknowns)
     order = Any[]
     rows_by_variable = Dict{Any, Vector{Int}}()
+    indices_by_variable = Dict{Any, Vector{Tuple}}()
     array_variables = Set{Any}()
     for (row, unknown) in enumerate(unknowns)
         value = Symbolics.unwrap(unknown)
         if SymbolicUtils.iscall(value) && SymbolicUtils.operation(value) === getindex
-            variable = first(SymbolicUtils.arguments(value))
+            index_arguments = SymbolicUtils.arguments(value)
+            variable = first(index_arguments)
+            indices = Tuple(SymbolicUtils.unwrap_const.(index_arguments[2:end]))
             push!(array_variables, variable)
         else
             variable = value
+            indices = ()
         end
         if !haskey(rows_by_variable, variable)
             rows_by_variable[variable] = Int[]
+            indices_by_variable[variable] = Tuple[]
             push!(order, variable)
         end
         push!(rows_by_variable[variable], row)
+        push!(indices_by_variable[variable], indices)
     end
 
     return map(order) do variable
         rows = rows_by_variable[variable]
-        expected_rows = collect(first(rows):last(rows))
-        rows == expected_rows || throw(
-            ArgumentError("the elements of array variable $variable are not contiguous")
-        )
         is_array = variable in array_variables
         shape = is_array ? size(Symbolics.wrap(variable)) : ()
         is_array && prod(shape) != length(rows) && throw(
@@ -194,6 +191,26 @@ function _array_state_groups(unknowns)
                 "array variable $variable has shape $shape but $(length(rows)) scalar elements"
             )
         )
+        if is_array
+            ordered_rows = Vector{Int}(undef, prod(shape))
+            assigned = falses(prod(shape))
+            linear_indices = LinearIndices(shape)
+            for (row, indices) in zip(rows, indices_by_variable[variable])
+                all(index -> index isa Integer, indices) || throw(
+                    ArgumentError("array variable $variable has non-integer indices $indices")
+                )
+                linear_index = linear_indices[indices...]
+                assigned[linear_index] && throw(
+                    ArgumentError("array variable $variable repeats index $indices")
+                )
+                ordered_rows[linear_index] = row
+                assigned[linear_index] = true
+            end
+            all(assigned) || throw(
+                ArgumentError("array variable $variable does not contain every array element")
+            )
+            rows = ordered_rows
+        end
         return (; variable, rows, shape, is_array)
     end
 end
@@ -234,13 +251,18 @@ function _array_deim(
     number_of_source_unknowns = length(source_unknowns)
     size(source_snapshot, 1) == number_of_source_unknowns || throw(
         DimensionMismatch(
-            "the snapshot has $(size(source_snapshot, 1)) rows, but the array-form system has $number_of_source_unknowns unknowns"
+            "the snapshot has $(size(source_snapshot, 1)) rows, but the source system has $number_of_source_unknowns unknowns"
         )
     )
     state_groups = _array_state_groups(source_unknowns)
     source_observed = ModelingToolkit.get_observed(source_system)
 
-    sys = mtkcompile(source_system)
+    if ModelingToolkit.isscheduled(source_system)
+        sys = source_system
+    else
+        ModelingToolkit.iscomplete(source_system) && @set! source_system.complete = false
+        sys = mtkcompile(source_system)
+    end
     @set! sys.name = name
     iv = ModelingToolkit.get_iv(sys)
     D = Differential(iv)
@@ -263,7 +285,7 @@ function _array_deim(
     differential_equations, algebraic_equations = get_deqs(sys)
     isempty(algebraic_equations) || throw(
         ArgumentError(
-            "the array-form system must structurally compile to an explicit first-order ODE"
+            "the source system must structurally compile to an explicit first-order ODE"
         )
     )
     equations_by_unknown = Dict{Any, Equation}()
@@ -286,7 +308,7 @@ function _array_deim(
         row = get(source_rows, Symbolics.unwrap(unknown), 0)
         iszero(row) && throw(
             ArgumentError(
-                "compiled unknown $unknown is not present in the array-form system"
+                "compiled unknown $unknown is not present in the source system"
             )
         )
         return row
@@ -334,6 +356,8 @@ function _array_deim(
     reduced_snapshot = state_basis' * dynamic_snapshot
     reconstruction_basis = Matrix{Float64}(source_snapshot) / reduced_snapshot
     reconstruction_basis[dynamic_rows, :] = state_basis
+    reconstruction_rows = reduce(vcat, (collect(group.rows) for group in state_groups))
+    reconstruction_basis = reconstruction_basis[reconstruction_rows, :]
     basis_name = gensym(:reconstruction_basis)
     basis_parameter = (
         @parameters $basis_name[1:number_of_source_unknowns, 1:pod_dim]
@@ -341,11 +365,12 @@ function _array_deim(
     basis_parameter = ModelingToolkit.setdefault(
         basis_parameter, reconstruction_basis
     )
-    reduced_scalars = collect(Symbolics.scalarize(reduced_state))
     state_replacements = Dict{Any, Any}()
+    next_reconstruction_row = 1
     reconstruction_equations = map(state_groups) do group
-        rows = first(group.rows):last(group.rows)
-        reconstruction = Symbolics.wrap(basis_parameter[rows, :] * reduced_scalars)
+        rows = next_reconstruction_row:(next_reconstruction_row + length(group.rows) - 1)
+        next_reconstruction_row = last(rows) + 1
+        reconstruction = Symbolics.wrap(basis_parameter[rows, :] * reduced_state)
         value = group.is_array ? reshape(reconstruction, group.shape) :
             only(Symbolics.scalarize(reconstruction))
         state_replacements[group.variable] = value
@@ -399,33 +424,31 @@ the Discrete Empirical Interpolation Method (DEIM).
 The LHS of equations in `sys` are all assumed to be 1st order derivatives. Use
 `ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
 
-`sys` is assumed to have no internal systems. Scalar systems may be passed after
-`ModelingToolkit.mtkcompile`. Array-form systems, including the output of MethodOfLines v1
-`symbolic_discretize`, should be passed directly. For an array-form system, `snapshot` must
-have one row per unknown in that uncompiled system; the returned reduced dynamics remain a
-single symbolic array equation and can be used to construct a `DAEProblem` without
-scalarizing the reduced system.
+`sys` is assumed to have no internal systems. MOR performs structural compilation as needed.
+Compilation may scalarize the input during offline analysis, but the returned reduced
+dynamics are always represented by one symbolic array equation. MethodOfLines v1
+`symbolic_discretize` systems should be passed before structural compilation so their full
+array reconstruction metadata remains available. The rows of `snapshot` must follow
+`ModelingToolkit.get_unknowns(sys)`.
 
 The POD basis used for DEIM interpolation is obtained from the snapshot matrix of the
-nonlinear terms. For scalar systems this is computed with a runtime-generated function.
-For array-form systems it is evaluated symbolically so the offline reduction does not
-compile a full-grid output function.
+nonlinear terms. It is evaluated symbolically so the offline reduction never generates a
+full-order scalar function.
 
 # Arguments
-- `sys::ModelingToolkit.ODESystem`: first-order system without internal subsystems. Both
-  compiled scalar equations and uncompiled symbolic array equations are supported.
+- `sys::ModelingToolkit.ODESystem`: first-order system without internal subsystems. Pass
+  MethodOfLines `symbolic_discretize` output before structural compilation.
 - `snapshot::AbstractMatrix`: state-by-time snapshot matrix for `sys`.
 - `pod_dim::Integer`: number of POD state modes to retain.
 
 # Keywords
 - `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
 - `name::Symbol = Symbol(nameof(sys), :_deim)`: name assigned to the reduced system.
-- `kwargs...`: keyword arguments forwarded to ModelingToolkit transformations and
-  generated nonlinear functions.
+- `kwargs...`: keyword arguments forwarded to symbolic substitutions.
 
 # Examples
 ```julia
-reduced_system = deim(compiled_system, snapshots, 4; deim_dim = 6)
+reduced_system = deim(source_system, snapshots, 4; deim_dim = 6)
 ```
 
 # Returns
@@ -433,7 +456,7 @@ reduced_system = deim(compiled_system, snapshots, 4; deim_dim = 6)
 
 # Throws
 - `ArgumentError`: if the observed equations contain a dependency cycle.
-- `DimensionMismatch`: if an array-form system and its snapshot have different state
+- `DimensionMismatch`: if a source system and its snapshot have different state
   dimensions.
 """
 function deim(
@@ -441,63 +464,7 @@ function deim(
         deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
         kwargs...
     )::ODESystem
-    sys = deepcopy(sys)
-    uses_array_equations = any(ModelingToolkit.get_eqs(sys)) do eq
-        _is_symbolic_array(eq.lhs) || _is_symbolic_array(eq.rhs)
-    end
-    uses_array_equations && return _array_deim(
+    return _array_deim(
         sys, snapshot, pod_dim, deim_dim, name; kwargs...
     )
-    @set! sys.name = name
-
-    # handle ODESystem.substitutions
-    # https://github.com/SciML/ModelingToolkit.jl/issues/1754
-    sys = tearing_substitution(sys; kwargs...)
-
-    iv = ModelingToolkit.get_iv(sys) # the single independent variable
-    D = Differential(iv)
-    dvs = ModelingToolkit.get_unknowns(sys) # dependent variables
-
-    pod_reducer = POD(snapshot, pod_dim)
-    reduce!(pod_reducer, TSVD())
-    V = pod_reducer.rbasis # POD basis
-
-    var_name = gensym(:ŷ)
-    ŷ = (@variables $var_name(iv)[1:pod_dim])[1]
-    @set! sys.unknowns = Symbolics.value.(Symbolics.scalarize(ŷ)) # new variables from POD
-    ModelingToolkit.get_var_to_name(sys)[SymbolicIndexingInterface.getname(ŷ)] = Symbolics.unwrap(ŷ)
-
-    deqs, eqs = get_deqs(sys) # split eqs into differential and non-differential equations
-    rhs = [eq.rhs for eq in deqs]
-    # a sparse matrix of coefficients for the linear part,
-    # a vector of constant terms and a vector of nonlinear terms about dvs
-    A, g, F = separate_terms(rhs, dvs, iv)
-
-    # generate an in-place function from the symbolic expression of the nonlinear functions
-    F_func! = build_function(F, dvs; expression = Val{false}, kwargs...)[2]
-    nonlinear_snapshot = similar(snapshot) # snapshot matrix of nonlinear terms
-    for i in 1:size(snapshot, 2) # iterate through time instances
-        F_func!(view(nonlinear_snapshot, :, i), view(snapshot, :, i))
-    end
-
-    deim_reducer = POD(nonlinear_snapshot, deim_dim)
-    reduce!(deim_reducer, TSVD())
-    U = deim_reducer.rbasis # DEIM projection basis
-
-    reduced_rhss, linear_projection_eqs = deim(dvs, A, g, F, ŷ, V, U; kwargs...)
-
-    reduced_deqs = D.(ŷ) ~ reduced_rhss
-    @set! sys.eqs = [Symbolics.scalarize(reduced_deqs); eqs]
-
-    old_observed = ModelingToolkit.get_observed(sys)
-    new_observed = [old_observed; linear_projection_eqs]
-    @set! sys.observed = _sort_observed_equations(new_observed)
-
-    # Numeric initial conditions for the reduced unknowns from the snapshot's first column.
-    # The snapshot is assumed to start at t = tspan[1], matching the FOM initial state.
-    new_ics = copy(ModelingToolkit.get_initial_conditions(sys))
-    new_ics[Symbolics.unwrap(ŷ)] = V' * snapshot[:, 1]
-    @set! sys.initial_conditions = new_ics
-
-    return complete(sys)
 end

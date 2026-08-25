@@ -133,10 +133,12 @@ Then, we use POD to construct a linear subspace of dimension, say, 5 for the sys
 space and project the model onto the subspace. DEIM is employed to approximate nonlinear
 terms. This can be done by simply calling [`deim`](@ref).
 
-Passing the uncompiled MethodOfLines array system keeps the reduced dynamics and the
-full-field reconstruction equations in symbolic array form. For fixed POD and DEIM
-dimensions, the generated reduced solve graph is independent of the spatial grid size.
-The offline snapshot processing and basis storage still scale with the full-order model.
+DEIM always emits the reduced dynamics as one symbolic array equation. For this
+MethodOfLines system, the full-field reconstruction equations also remain in symbolic array
+form. DEIM may use `mtkcompile` for offline structural analysis, but scalarization during that
+preprocessing does not change the array-form output. For fixed POD and DEIM dimensions, the
+generated reduced solve graph is independent of the spatial grid size. The offline snapshot
+processing and basis storage still scale with the full-order model.
 
 ```@example deim_FitzHugh_Nagumo
 using ModelOrderReduction

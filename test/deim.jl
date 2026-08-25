@@ -113,6 +113,102 @@ parameterized_prob = DAEProblem(
 parameterized_sol = solve(parameterized_prob; saveat = 0.2)
 @test successful_retcode(parameterized_sol)
 @test length(parameterized_sol[energy]) == 6
+completed_array_reduced = deim(
+    complete(deepcopy(parameterized_array_system)), parameterized_snapshot, 2
+)
+@test length(ModelingToolkit.get_eqs(completed_array_reduced)) == 1
+@test is_symbolic_array(only(ModelingToolkit.get_eqs(completed_array_reduced)).lhs)
+@test is_symbolic_array(only(ModelingToolkit.get_eqs(completed_array_reduced)).rhs)
+
+# `mtkcompile` scalarizes this array equation and reverses its registered element order.
+# DEIM must still emit one correctly ordered array equation.
+@variables compiled_z(t)[1:4]
+@mtkcompile scalarized_array_system = System(
+    [Dt(compiled_z) ~ -compiled_z - compiled_z .^ 3], t;
+    name = :scalarized_array_system,
+)
+@test length(ModelingToolkit.get_eqs(scalarized_array_system)) == 4
+@test all(ModelingToolkit.get_eqs(scalarized_array_system)) do equation
+    !is_symbolic_array(equation.lhs) && !is_symbolic_array(equation.rhs)
+end
+scalarized_snapshot = [
+    (0.2 + 0.1 * i) * exp(-0.1 * j) + (1.0 - 0.05 * i) * sin(0.2 * j)
+        for i in 1:4, j in 1:8
+]
+array_codegen_reduced = deim(scalarized_array_system, scalarized_snapshot, 2)
+array_codegen_equations = ModelingToolkit.get_eqs(array_codegen_reduced)
+@test length(array_codegen_equations) == 1
+@test is_symbolic_array(only(array_codegen_equations).lhs)
+@test is_symbolic_array(only(array_codegen_equations).rhs)
+array_codegen_observed = ModelingToolkit.get_observed(array_codegen_reduced)
+@test length(array_codegen_observed) == 1
+@test is_symbolic_array(only(array_codegen_observed).lhs)
+@test is_symbolic_array(only(array_codegen_observed).rhs)
+array_codegen_prob = DAEProblem(
+    array_codegen_reduced, nothing, (0.0, 1.0);
+    initializealg = BrownFullBasicInit(),
+    build_initializeprob = false,
+)
+array_codegen_sol = solve(array_codegen_prob; saveat = 0.2)
+@test successful_retcode(array_codegen_sol)
+@test size(Array(array_codegen_sol)) == (2, 6)
+array_observed_function = ModelingToolkit.build_explicit_observed_function(
+    array_codegen_reduced, compiled_z; expression = Val(false)
+)
+initial_reconstruction = array_observed_function(
+    array_codegen_prob.u0, array_codegen_prob.p, first(array_codegen_prob.tspan)
+)
+@test initial_reconstruction ≈
+    reverse(scalarized_snapshot[:, 1])
+
+# Multidimensional arrays may be scalarized into a noncontiguous permutation rather than a
+# simple reversal. Reconstruction must restore their canonical Cartesian index order.
+@variables compiled_matrix(t)[1:2, 1:3]
+@mtkcompile scalarized_matrix_system = System(
+    [Dt(compiled_matrix) ~ -compiled_matrix - compiled_matrix .^ 3], t;
+    name = :scalarized_matrix_system,
+)
+matrix_unknowns = ModelingToolkit.get_unknowns(scalarized_matrix_system)
+matrix_rows_by_index = Dict{Tuple, Int}()
+for (row, unknown) in enumerate(matrix_unknowns)
+    index_arguments = ModelingToolkit.SymbolicUtils.arguments(
+        ModelingToolkit.Symbolics.unwrap(unknown)
+    )
+    index = Tuple(
+        ModelingToolkit.SymbolicUtils.unwrap_const.(index_arguments[2:end])
+    )
+    matrix_rows_by_index[index] = row
+end
+matrix_canonical_rows = vec(
+    [
+        matrix_rows_by_index[Tuple(index)] for index in CartesianIndices((2, 3))
+    ]
+)
+@test length(unique(diff(matrix_canonical_rows))) > 1
+matrix_snapshot = [
+    (0.3 + 0.07 * i) * exp(-0.1 * j) + (0.8 - 0.03 * i) * sin(0.2 * j)
+        for i in 1:6, j in 1:8
+]
+matrix_reduced = deim(scalarized_matrix_system, matrix_snapshot, 2)
+matrix_equations = ModelingToolkit.get_eqs(matrix_reduced)
+@test length(matrix_equations) == 1
+@test is_symbolic_array(only(matrix_equations).lhs)
+@test is_symbolic_array(only(matrix_equations).rhs)
+matrix_prob = DAEProblem(
+    matrix_reduced, nothing, (0.0, 1.0);
+    initializealg = BrownFullBasicInit(),
+    build_initializeprob = false,
+)
+matrix_sol = solve(matrix_prob; saveat = 0.2)
+@test successful_retcode(matrix_sol)
+matrix_observed_function = ModelingToolkit.build_explicit_observed_function(
+    matrix_reduced, compiled_matrix; expression = Val(false)
+)
+initial_matrix_reconstruction = matrix_observed_function(
+    matrix_prob.u0, matrix_prob.p, first(matrix_prob.tspan)
+)
+@test initial_matrix_reconstruction ≈
+    reshape(matrix_snapshot[matrix_canonical_rows, 1], 2, 3)
 
 function tree_size(expression)
     value = ModelingToolkit.Symbolics.unwrap(expression)
