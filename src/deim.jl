@@ -257,7 +257,7 @@ function _array_deim(
     state_groups = _array_state_groups(source_unknowns)
     source_observed = ModelingToolkit.get_observed(source_system)
 
-    if ModelingToolkit.isscheduled(source_system)
+    if ModelingToolkit.get_isscheduled(source_system)
         sys = source_system
     else
         ModelingToolkit.iscomplete(source_system) && @set! source_system.complete = false
