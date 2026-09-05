@@ -2,9 +2,10 @@ module ModelOrderReduction
 
 using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, SIGNATURES, TYPEDSIGNATURES
 
-using ModelingToolkit: ModelingToolkit, @variables, Differential, Equation, Num, ODESystem,
-    SymbolicUtils, Symbolics, arguments, build_function, complete,
-    expand, substitute, tearing_substitution
+using ModelingToolkit: ModelingToolkit, @parameters, @variables, Differential, Equation, Num, ODESystem,
+    SymbolicUtils, Symbolics, arguments, complete,
+    expand, substitute, mtkcompile
+using SciMLBase: SciMLBase
 using SymbolicIndexingInterface: SymbolicIndexingInterface
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd
 
