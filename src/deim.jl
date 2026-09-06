@@ -27,512 +27,269 @@ function deim_interpolation_indices(basis::AbstractMatrix)::Vector{Int}
     return indices
 end
 
-function _sort_observed_equations(equations::Vector{Equation})::Vector{Equation}
-    assignments = Dict{Any, Int}()
-    for (index, equation) in enumerate(equations)
-        assignments[Symbolics.unwrap(equation.lhs)] = index
-    end
-
-    dependents = [Int[] for _ in equations]
-    degrees = zeros(Int, length(equations))
-    for (index, equation) in enumerate(equations)
-        dependencies = Set(Symbolics.unwrap.(Symbolics.get_variables(Symbolics.unwrap(equation.rhs))))
-        for variable in dependencies
-            dependency = get(assignments, variable, nothing)
-            if !isnothing(dependency) && dependency != index
-                push!(dependents[dependency], index)
-                degrees[index] += 1
-            end
-        end
-    end
-
-    available = findall(iszero, degrees)
-    ordered = Equation[]
-    sizehint!(ordered, length(equations))
-    while !isempty(available)
-        index = popfirst!(available)
-        push!(ordered, equations[index])
-        for dependent in dependents[index]
-            degrees[dependent] -= 1
-            degrees[dependent] == 0 && push!(available, dependent)
-        end
-    end
-
-    length(ordered) == length(equations) ||
-        throw(ArgumentError("observed equations contain a dependency cycle"))
-    return ordered
+function _pod_basis(snapshot::AbstractMatrix, dim::Integer)
+    reducer = POD(snapshot, dim)
+    reduce!(reducer, TSVD())
+    return reducer.rbasis
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
-Compute the reduced model by applying the Discrete Empirical Interpolation Method (DEIM).
+Galerkin-project the right-hand side of `fom` onto the state basis `V`, approximating the
+nonlinear part by DEIM in the basis `U`.
 
-This method allows users to input the projection matrices of their choice.
-
-Given the projection matrix ``V\\in\\mathbb R^{n\\times k}`` for the dependent variables
-``\\mathbf y\\in\\mathbb R^n`` and the projection matrix
-``U\\in\\mathbb R^{n\\times m}`` for the nonlinear function ``\\mathbf F\\in\\mathbb R^n``,
-the full-order model (FOM)
+With the DEIM interpolation indices ``\\rho_1,\\dots,\\rho_m`` of ``U`` and the
+selection matrix ``P=[\\mathbf e_{\\rho_1},\\dots,\\mathbf e_{\\rho_m}]``, the full-order
+model
 ```math
-\\frac{d}{dt}\\mathbf y(t)=A\\mathbf y(t)+\\mathbf g(t)+\\mathbf F(\\mathbf y(t))
+\\frac{d}{dt}\\mathbf y(t)=A\\mathbf y(t)+\\mathbf g(t)+\\mathbf F(\\mathbf y(t),t)
 ```
-is transformed to the reduced-order model (ROM)
+becomes
 ```math
 \\frac{d}{dt}\\hat{\\mathbf y}(t)=\\underbrace{V^TAV}_{k\\times k}\\hat{\\mathbf y}(t)+V^T
 \\mathbf g(t)+\\underbrace{V^TU(P^TU)^{-1}}_{k\\times m}\\underbrace{P^T\\mathbf F(V
-\\hat{\\mathbf y}(t))}_{m\\times1}
+\\hat{\\mathbf y}(t),t)}_{m\\times1}.
 ```
-where ``P=[\\mathbf e_{\\rho_1},\\dots,\\mathbf e_{\\rho_m}]\\in\\mathbb R^{n\\times m}``,
-``\\rho_1,\\dots,\\rho_m`` are interpolation indices from the DEIM point selection
-algorithm, and ``\\mathbf e_{\\rho_i}=[0,\\ldots,0,1,0,\\ldots,0]^T\\in\\mathbb R^n`` is
-the ``\\rho_i``-th column of the identity matrix ``I_n\\in\\mathbb R^{n\\times n}``.
-
-# Arguments
-- `full_vars::AbstractVector`: the dependent variables
-  ``\\underset{n\\times 1}{\\mathbf y}`` in FOM.
-- `linear_coeffs::AbstractMatrix`: the coefficient matrix
-  ``\\underset{n\\times n}A`` of linear terms in FOM.
-- `constant_part::AbstractVector`: the constant terms
-  ``\\underset{n\\times 1}{\\mathbf g}`` in FOM.
-- `nonlinear_part::AbstractVector`: the nonlinear functions
-  ``\\underset{n\\times 1}{\\mathbf F}`` in FOM.
-- `reduced_vars::AbstractVector`: the dependent variables
-  ``\\underset{k\\times 1}{\\hat{\\mathbf y}}`` in the reduced-order model.
-- `linear_projection_matrix::AbstractMatrix`: the projection matrix
-  ``\\underset{n\\times k}V`` for the dependent variables ``\\mathbf y``.
-- `nonlinear_projection_matrix::AbstractMatrix`: the projection matrix
-  ``\\underset{n\\times m}U`` for the nonlinear functions ``\\mathbf F``.
-
-# Keywords
-- `kwargs...`: keyword arguments forwarded to `Symbolics.substitute` when constructing
-  the nonlinear reduced model.
-
-# Returns
-- `Tuple{AbstractVector, Vector{Equation}}`: the reduced right-hand side and
-  linear projection equations.
-- `linear_projection_eqs`: the linear projection mapping ``\\mathbf y=V\\hat{\\mathbf y}``.
-
-# Throws
-- An exception from the matrix operations if the projection matrices have incompatible
-  dimensions.
-
-# Examples
-```julia
-reduced_rhs, projection_equations = deim(
-    full_variables, linear_coefficients, constant_terms, nonlinear_terms,
-    reduced_variables, state_basis, nonlinear_basis,
-)
-```
+Only the ``m`` sampled entries of ``\\mathbf F`` are lifted to the reduced state
+`reduced_state`, so the returned array expression does not grow with the full-order
+dimension. `kwargs` are forwarded to `Symbolics.substitute`.
 """
-function deim(
-        full_vars::AbstractVector, linear_coeffs::AbstractMatrix,
-        constant_part::AbstractVector, nonlinear_part::AbstractVector,
-        reduced_vars::AbstractVector, linear_projection_matrix::AbstractMatrix,
-        nonlinear_projection_matrix::AbstractMatrix; kwargs...
+function _reduced_rhs(
+        fom::FullOrderModel, reduced_state, V::AbstractMatrix, U::AbstractMatrix; kwargs...
     )
-    # rename variables for convenience
-    y = full_vars
-    A = linear_coeffs
-    g = constant_part
-    F = nonlinear_part
-    ŷ = reduced_vars
-    V = linear_projection_matrix
-    U = nonlinear_projection_matrix
-
-    # original vars to reduced vars
-    linear_projection_eqs = Symbolics.scalarize(y .~ V * ŷ)
-    linear_projection_dict = Dict(eq.lhs => eq.rhs for eq in linear_projection_eqs)
-
-    indices = deim_interpolation_indices(U) # DEIM interpolation indices
-    # the DEIM projector (not DEIM basis) satisfies
-    # F(original_vars) ≈ projector * F(pod_basis * reduced_vars)[indices]
+    indices = deim_interpolation_indices(U)
+    sampled = fom.nonlinear[indices]
+    column = Dict{Any, Int}(unknown => j for (j, unknown) in enumerate(fom.unknowns))
+    lift = Dict{Any, Any}()
+    for expression in sampled, variable in Symbolics.get_variables(expression)
+        variable = Symbolics.unwrap(variable)
+        j = get(column, variable, 0)
+        iszero(j) && continue
+        lift[variable] = sum(V[j, l] * reduced_state[l] for l in axes(V, 2))
+    end
+    sampled = [substitute(expression, lift; kwargs...) for expression in sampled]
     projector = ((@view U[indices, :])' \ (U' * V))'
-    temp = substitute.(F[indices], (linear_projection_dict,); kwargs...)
-    F̂ = projector * temp # DEIM approximation for nonlinear func F
 
-    Â = V' * A * V
-    ĝ = V' * g
-    reduced_rhss = Â * ŷ + ĝ + F̂
-    return reduced_rhss, linear_projection_eqs
+    rhs = (V' * fom.linear * V) * reduced_state
+    forcing = V' * fom.forcing
+    all(iszero, forcing) || (rhs += forcing)
+    return Symbolics.wrap(rhs + projector * sampled)
 end
 
-function _array_state_groups(unknowns)
-    order = Any[]
-    rows_by_variable = Dict{Any, Vector{Int}}()
-    indices_by_variable = Dict{Any, Vector{Tuple}}()
-    array_variables = Set{Any}()
-    for (row, unknown) in enumerate(unknowns)
-        value = Symbolics.unwrap(unknown)
-        if SymbolicUtils.iscall(value) && SymbolicUtils.operation(value) === getindex
-            index_arguments = SymbolicUtils.arguments(value)
-            variable = first(index_arguments)
-            indices = Tuple(SymbolicUtils.unwrap_const.(index_arguments[2:end]))
-            push!(array_variables, variable)
-        else
-            variable = value
-            indices = ()
-        end
-        if !haskey(rows_by_variable, variable)
-            rows_by_variable[variable] = Int[]
-            indices_by_variable[variable] = Tuple[]
-            push!(order, variable)
-        end
-        push!(rows_by_variable[variable], row)
-        push!(indices_by_variable[variable], indices)
-    end
+"""
+$(TYPEDSIGNATURES)
 
-    return map(order) do variable
-        rows = rows_by_variable[variable]
-        is_array = variable in array_variables
-        shape = is_array ? size(Symbolics.wrap(variable)) : ()
-        is_array && prod(shape) != length(rows) && throw(
-            DimensionMismatch(
-                "array variable $variable has shape $shape but $(length(rows)) scalar elements"
-            )
-        )
-        if is_array
-            ordered_rows = Vector{Int}(undef, prod(shape))
-            assigned = falses(prod(shape))
-            linear_indices = LinearIndices(shape)
-            for (row, indices) in zip(rows, indices_by_variable[variable])
-                all(index -> index isa Integer, indices) || throw(
-                    ArgumentError("array variable $variable has non-integer indices $indices")
-                )
-                linear_index = linear_indices[indices...]
-                assigned[linear_index] && throw(
-                    ArgumentError("array variable $variable repeats index $indices")
-                )
-                ordered_rows[linear_index] = row
-                assigned[linear_index] = true
-            end
-            all(assigned) || throw(
-                ArgumentError("array variable $variable does not contain every array element")
-            )
-            rows = ordered_rows
-        end
-        return (; variable, rows, shape, is_array)
-    end
-end
+Assemble the reduced system for `fom` from the state basis `V`, the DEIM basis `U`, and
+the training `snapshot` whose rows follow the source unknowns.
 
-function _evaluate_nonlinear_snapshot!(
-        output::AbstractMatrix, expressions::AbstractVector,
-        variables::AbstractVector, snapshot::AbstractMatrix;
-        parameter_values::AbstractDict = Dict{Any, Any}(),
-        iv = nothing, snapshot_times = nothing, kwargs...
+The system has one array differential equation for the reduced state, one array (or
+scalar) reconstruction observed equation per source field, and the source observed
+equations rewritten in terms of the reduced state. Dynamic source unknowns are
+reconstructed with `V`; unknowns eliminated by structural simplification use a
+least-squares fit to the training snapshot. The initial state and derivative are taken at
+the first snapshot column, whose time is `first(times)` when `times` is given.
+"""
+function _reduced_system(
+        fom::FullOrderModel, snapshot::AbstractMatrix, V::AbstractMatrix, U::AbstractMatrix,
+        name::Symbol; times = nothing, kwargs...
     )
-    replacements = Dict{Any, Any}(parameter_values)
-    for column in axes(snapshot, 2)
-        isnothing(snapshot_times) || (replacements[iv] = snapshot_times[column])
-        for (variable, value) in zip(variables, @view(snapshot[:, column]))
-            replacements[variable] = value
-            replacements[Num(variable)] = value
-        end
-        for row in axes(output, 1)
-            value = substitute(
-                expressions[row], replacements; fold = Val(true), kwargs...
-            )
-            value = SymbolicUtils.unwrap_const(Symbolics.unwrap(value))
-            value isa Number || throw(
-                ArgumentError(
-                    "nonlinear expression $(expressions[row]) did not evaluate to a number; provide numeric parameter defaults and snapshot_times for time-dependent expressions"
-                )
-            )
-            output[row, column] = value
-        end
-    end
-    return output
-end
-
-function _array_deim(
-        source_system::ODESystem, source_snapshot::AbstractMatrix,
-        pod_dim::Integer, deim_dim::Integer, name::Symbol;
-        snapshot_times = nothing, training_parameters = Dict{Any, Any}(), kwargs...
-    )
-    source_system = deepcopy(source_system)
-    source_unknowns = ModelingToolkit.unknowns(source_system)
-    number_of_source_unknowns = length(source_unknowns)
-    size(source_snapshot, 1) == number_of_source_unknowns || throw(
-        DimensionMismatch(
-            "the snapshot has $(size(source_snapshot, 1)) rows, but the source system has $number_of_source_unknowns unknowns"
-        )
-    )
-    isnothing(snapshot_times) || length(snapshot_times) == size(source_snapshot, 2) ||
-        throw(DimensionMismatch("snapshot_times must contain one time per snapshot column"))
-    state_groups = _array_state_groups(source_unknowns)
-    source_observed = ModelingToolkit.observed(source_system)
-
-    source_deqs, source_constraints = get_deqs(source_system)
-    if isempty(source_constraints) && length(source_deqs) == length(source_unknowns)
-        sys = source_system
-    else
-        ModelingToolkit.iscomplete(source_system) && @set! source_system.complete = false
-        sys = mtkcompile(source_system)
-    end
-    iv = ModelingToolkit.independent_variable(sys)
+    iv = fom.iv
     D = Differential(iv)
-    dynamic_unknowns = ModelingToolkit.unknowns(sys)
-    model_parameters = filter(ModelingToolkit.parameters(sys)) do parameter
-        !ModelingToolkit.isinitial(parameter)
-    end
-    model_parameter_keys = Set(
-        Symbolics.unwrap(parameter) for parameter in model_parameters
-    )
-    system_defaults = copy(ModelingToolkit.initial_conditions(sys))
-    merge!(system_defaults, training_parameters)
-    parameter_values = Dict{Any, Any}()
-    for parameter in model_parameters
-        key = Symbolics.unwrap(parameter)
-        haskey(system_defaults, key) || continue
-        value = system_defaults[key]
-        parameter_values[key] = value
-        parameter_values[Symbolics.wrap(key)] = value
-    end
-    differential_equations, algebraic_equations = get_deqs(ModelingToolkit.full_equations(sys))
-    isempty(algebraic_equations) || throw(
-        ArgumentError(
-            "the source system must structurally compile to an explicit first-order ODE"
-        )
-    )
-    equations_by_unknown = Dict{Any, Equation}()
-    for equation in differential_equations
-        unknown = only(SymbolicUtils.arguments(Symbolics.unwrap(equation.lhs)))
-        haskey(equations_by_unknown, unknown) && throw(
-            ArgumentError("the compiled system has duplicate equations for $unknown")
-        )
-        equations_by_unknown[unknown] = equation
-    end
-    length(equations_by_unknown) == length(dynamic_unknowns) || throw(
-        ArgumentError(
-            "the compiled system does not have one differential equation per unknown"
-        )
-    )
-    source_rows = Dict(
-        Symbolics.unwrap(unknown) => row for (row, unknown) in enumerate(source_unknowns)
-    )
-    dynamic_rows = map(dynamic_unknowns) do unknown
-        row = get(source_rows, Symbolics.unwrap(unknown), 0)
-        iszero(row) && throw(
-            ArgumentError(
-                "compiled unknown $unknown is not present in the source system"
-            )
-        )
-        return row
-    end
-    dynamic_snapshot = Matrix{Float64}(source_snapshot[dynamic_rows, :])
+    dim = size(V, 2)
+    state_name = gensym(:ŷ)
+    reduced_state = (@variables $state_name(iv)[1:dim])[1]
+    rhs = _reduced_rhs(fom, reduced_state, V, U; kwargs...)
 
-    state_reducer = POD(dynamic_snapshot, pod_dim)
-    reduce!(state_reducer, TSVD())
-    state_basis = state_reducer.rbasis
+    reduced_snapshot = V' * Matrix{Float64}(snapshot[fom.rows, :])
+    lift = Matrix{Float64}(snapshot) / reduced_snapshot
+    lift[fom.rows, :] = V
+    lift = lift[reduce(vcat, (field.rows for field in fom.fields)), :]
+    lift_name = gensym(:lift)
+    lift_parameter = (@parameters $lift_name[1:length(fom.source_unknowns), 1:dim])[1]
 
-    reduced_name = gensym(:ŷ)
-    reduced_state = (@variables $reduced_name(iv)[1:pod_dim])[1]
-
-    right_hand_sides = map(dynamic_unknowns) do unknown
-        equation = get(equations_by_unknown, Symbolics.unwrap(unknown), nothing)
-        isnothing(equation) && throw(
-            ArgumentError("the compiled system has no differential equation for $unknown")
-        )
-        equation.rhs
+    replacements = Dict{Any, Any}()
+    reconstruction = Equation[]
+    offset = 0
+    for field in fom.fields
+        rows = (offset + 1):(offset + length(field.rows))
+        offset = last(rows)
+        value = Symbolics.wrap(lift_parameter[rows, :] * reduced_state)
+        value = isempty(field.shape) ? only(Symbolics.scalarize(value)) :
+            reshape(value, field.shape)
+        replacements[field.variable] = value
+        push!(reconstruction, Symbolics.wrap(field.variable) ~ value)
     end
-    linear_coefficients, constant_part, nonlinear_part = separate_terms(
-        right_hand_sides, dynamic_unknowns, iv
-    )
-
-    nonlinear_snapshot = similar(dynamic_snapshot)
-    _evaluate_nonlinear_snapshot!(
-        nonlinear_snapshot, nonlinear_part, dynamic_unknowns, dynamic_snapshot;
-        parameter_values, iv, snapshot_times, kwargs...
-    )
-    nonlinear_reducer = POD(nonlinear_snapshot, deim_dim)
-    reduce!(nonlinear_reducer, TSVD())
-    nonlinear_basis = nonlinear_reducer.rbasis
-
-    reduced_rhs, _ = deim(
-        dynamic_unknowns, linear_coefficients, constant_part, nonlinear_part,
-        reduced_state, state_basis, nonlinear_basis; kwargs...
-    )
-    reduced_equation = D(reduced_state) ~ reduced_rhs
-
-    reduced_snapshot = state_basis' * dynamic_snapshot
-    reconstruction_basis = Matrix{Float64}(source_snapshot) / reduced_snapshot
-    reconstruction_basis[dynamic_rows, :] = state_basis
-    reconstruction_rows = reduce(vcat, (collect(group.rows) for group in state_groups))
-    reconstruction_basis = reconstruction_basis[reconstruction_rows, :]
-    basis_name = gensym(:reconstruction_basis)
-    basis_parameter = (
-        @parameters $basis_name[1:number_of_source_unknowns, 1:pod_dim]
-    )[1]
-    basis_parameter = ModelingToolkit.setdefault(
-        basis_parameter, reconstruction_basis
-    )
-    state_replacements = Dict{Any, Any}()
-    next_reconstruction_row = 1
-    reconstruction_equations = map(state_groups) do group
-        rows = next_reconstruction_row:(next_reconstruction_row + length(group.rows) - 1)
-        next_reconstruction_row = last(rows) + 1
-        reconstruction = Symbolics.wrap(basis_parameter[rows, :] * reduced_state)
-        value = group.is_array ? reshape(reconstruction, group.shape) :
-            only(Symbolics.scalarize(reconstruction))
-        state_replacements[group.variable] = value
-        Symbolics.wrap(group.variable) ~ value
+    preserved = map(fom.observed) do equation
+        equation.lhs ~ substitute(equation.rhs, replacements; kwargs...)
     end
-    source_state_variables = Set(Symbolics.unwrap.(source_unknowns))
-    union!(source_state_variables, (group.variable for group in state_groups))
-    preserved_observed = Equation[]
-    for equation in source_observed
-        Symbolics.unwrap(equation.lhs) in source_state_variables && continue
-        push!(
-            preserved_observed,
-            equation.lhs ~ substitute(equation.rhs, state_replacements; kwargs...)
-        )
-    end
-    reduced_observed = _sort_observed_equations(
-        [
-            reconstruction_equations; preserved_observed
-        ]
-    )
-    reduced_parameters = [model_parameters; Symbolics.unwrap(basis_parameter)]
 
-    initial_conditions = system_defaults
-    filter!(pair -> first(pair) in model_parameter_keys, initial_conditions)
-    initial_conditions[Symbolics.unwrap(reduced_state)] = reduced_snapshot[:, 1]
-    initial_derivative = zeros(eltype(reduced_snapshot), pod_dim, 1)
-    _evaluate_nonlinear_snapshot!(
-        initial_derivative, Symbolics.scalarize(Symbolics.wrap(reduced_rhs)),
-        Symbolics.scalarize(reduced_state),
-        reduced_snapshot[:, 1:1]; parameter_values, iv, snapshot_times, kwargs...
+    initial_state = reduced_snapshot[:, 1]
+    initial_derivative = _evaluate(
+        Symbolics.scalarize(rhs), Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
+        reshape(initial_state, :, 1), fom.parameter_values, iv,
+        isnothing(times) ? nothing : times[1:1]; kwargs...
     )
+    initial_conditions = Dict{Any, Any}(fom.parameter_values)
+    initial_conditions[Symbolics.unwrap(reduced_state)] = initial_state
     initial_conditions[Symbolics.unwrap(D(reduced_state))] = vec(initial_derivative)
-    initial_conditions[Symbolics.unwrap(basis_parameter)] = reconstruction_basis
-    reduced_system = ModelingToolkit.System(
-        [reduced_equation], iv, Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
-        reduced_parameters; name, observed = reduced_observed, initial_conditions
+    initial_conditions[Symbolics.unwrap(lift_parameter)] = lift
+
+    reduced = System(
+        [D(reduced_state) ~ rhs], iv, Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
+        [fom.parameters; Symbolics.unwrap(lift_parameter)];
+        name, observed = [reconstruction; preserved], initial_conditions
     )
     for key in (ModelingToolkit.ProblemTypeCtx, ModelingToolkit.MiscSystemData)
-        SymbolicUtils.hasmetadata(source_system, key) || continue
-        reduced_system = SymbolicUtils.setmetadata(
-            reduced_system, key, SymbolicUtils.getmetadata(source_system, key, nothing)
+        SymbolicUtils.hasmetadata(fom.system, key) || continue
+        reduced = SymbolicUtils.setmetadata(
+            reduced, key, SymbolicUtils.getmetadata(fom.system, key, nothing)
         )
     end
-    return complete(reduced_system)
+    return complete(reduced)
+end
+
+function _deim(
+        sys::System, snapshot::AbstractMatrix, pod_dim::Integer, deim_dim::Integer,
+        name::Symbol; snapshot_times = nothing, training_parameters = Dict{Any, Any}(),
+        kwargs...
+    )
+    rows = length(ModelingToolkit.unknowns(sys))
+    size(snapshot, 1) == rows || throw(
+        DimensionMismatch(
+            "the snapshot has $(size(snapshot, 1)) rows, but the source system has $rows unknowns"
+        )
+    )
+    isnothing(snapshot_times) || length(snapshot_times) == size(snapshot, 2) ||
+        throw(DimensionMismatch("snapshot_times must contain one time per snapshot column"))
+
+    fom = FullOrderModel(sys; training_parameters)
+    states = Matrix{Float64}(snapshot[fom.rows, :])
+    state_basis = _pod_basis(states, pod_dim)
+    nonlinear_snapshot = _evaluate(
+        fom.nonlinear, fom.unknowns, states, fom.parameter_values, fom.iv, snapshot_times;
+        kwargs...
+    )
+    nonlinear_basis = _pod_basis(nonlinear_snapshot, deim_dim)
+    return _reduced_system(
+        fom, snapshot, state_basis, nonlinear_basis, name; times = snapshot_times, kwargs...
+    )
 end
 
 """
     $(FUNCTIONNAME)(
-        sys::ModelingToolkit.ODESystem,
+        sys::ModelingToolkit.System,
         snapshot::AbstractMatrix,
         pod_dim::Integer;
         deim_dim::Integer = pod_dim,
         name::Symbol = Symbol(nameof(sys), :_deim),
         snapshot_times = nothing,
         kwargs...
-    ) -> ModelingToolkit.ODESystem
+    ) -> ModelingToolkit.System
 
-Reduce a `ModelingToolkit.ODESystem` using the Proper Orthogonal Decomposition (POD) with
-the Discrete Empirical Interpolation Method (DEIM).
+Reduce a first-order `ModelingToolkit.System` with Proper Orthogonal Decomposition (POD)
+and the Discrete Empirical Interpolation Method (DEIM).
 
-`snapshot` should be a matrix with the data of each time instance as a column.
+The rows of `snapshot` follow `ModelingToolkit.unknowns(sys)` and each column is one
+time instance. The state basis is the POD basis of `snapshot`, and the DEIM basis is the
+POD basis of the nonlinear terms evaluated at the snapshot columns. Both bases are
+computed with [`TSVD`](@ref).
 
-The LHS of equations in `sys` are all assumed to be 1st order derivatives. Use
-`ModelingToolkit.ode_order_lowering` to transform higher order ODEs before applying DEIM.
+`sys` may contain algebraic equations or array equations. It is structurally simplified
+as needed, which may scalarize the equations offline, but the returned system always has
+one array differential equation for the reduced state and one reconstruction observed
+equation per source field. Full-grid reconstruction coefficients are stored in one array
+parameter. Unknowns eliminated during simplification are reconstructed by a least-squares
+fit to `snapshot`. Terms that are linear in the unknowns with numeric coefficients are
+projected exactly; every other state-dependent term is interpolated by DEIM. Pass
+MethodOfLines `symbolic_discretize` systems before structural simplification so every
+element of each field is available for reconstruction.
 
-`sys` is assumed to have no internal systems. MOR performs structural compilation as needed.
-Compilation may scalarize the input during offline analysis, but the returned reduced
-dynamics are always represented by one symbolic array equation. MethodOfLines v1
-`symbolic_discretize` systems should be passed before structural compilation so their full
-array reconstruction metadata remains available. The rows of `snapshot` must follow
-`ModelingToolkit.unknowns(sys)`. Nonlinear training uses numeric parameter defaults.
-Use the problem/solution overload for time-dependent nonlinear terms and problem-specific
-parameter values. Construct a `DAEProblem` from the returned system to retain array
-code generation. Eliminated algebraic states use a least-squares reconstruction from
-the training snapshots.
+Nonlinear terms are evaluated at the numeric parameter defaults of `sys`. Use the
+problem/solution method for problem-specific parameter values. The reduced state and its
+derivative at the first snapshot column are stored as initial conditions.
 
-The POD basis used for DEIM interpolation is obtained from the snapshot matrix of the
-nonlinear terms. It is evaluated symbolically so the offline reduction never generates a
-full-order scalar function.
+Construct a `DAEProblem` with `build_initializeprob = false` from the returned system
+to keep array code generation, or call `ModelingToolkit.mtkcompile` on it and construct
+an `ODEProblem` to generate scalar code for the reduced equation. Reconstruct fields with
+`SymbolicIndexingInterface.observed(reduced_system, field)`.
 
 # Arguments
-- `sys::ModelingToolkit.ODESystem`: first-order system without internal subsystems. Pass
-  MethodOfLines `symbolic_discretize` output before structural compilation.
+- `sys::ModelingToolkit.System`: first-order source system without subsystems.
 - `snapshot::AbstractMatrix`: state-by-time snapshot matrix for `sys`.
 - `pod_dim::Integer`: number of POD state modes to retain.
 
 # Keywords
-- `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
-- `name::Symbol = Symbol(nameof(sys), :_deim)`: name assigned to the reduced system.
-- `snapshot_times = nothing`: saved times corresponding to snapshot columns; required for
-  time-dependent expressions. The problem/solution overload supplies these automatically.
-- `kwargs...`: keyword arguments forwarded to symbolic substitutions.
+- `deim_dim::Integer = pod_dim`: number of DEIM modes for the nonlinear terms.
+- `name::Symbol = Symbol(nameof(sys), :_deim)`: name of the reduced system.
+- `snapshot_times = nothing`: time of each snapshot column; required when the equations
+  depend on the independent variable.
+- `kwargs...`: keyword arguments forwarded to `Symbolics.substitute`.
+
+# Returns
+- `ModelingToolkit.System`: the completed reduced system.
+
+# Throws
+- `DimensionMismatch`: if `snapshot` does not have one row per unknown of `sys`, or if
+  `snapshot_times` does not have one entry per column.
+- `ArgumentError`: if `sys` does not simplify to an explicit first-order ODE, or if a
+  nonlinear term cannot be evaluated numerically.
 
 # Examples
 ```julia
 reduced_system = deim(source_system, snapshots, 4; deim_dim = 6)
 ```
-
-# Returns
-- `ModelingToolkit.ODESystem`: the reduced and completed system.
-
-# Throws
-- `ArgumentError`: if the observed equations contain a dependency cycle.
-- `DimensionMismatch`: if a source system and its snapshot have different state
-  dimensions.
 """
 function deim(
-        sys::ODESystem, snapshot::AbstractMatrix, pod_dim::Integer;
+        sys::System, snapshot::AbstractMatrix, pod_dim::Integer;
         deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
-        snapshot_times = nothing,
-        kwargs...
-    )::ODESystem
-    return _array_deim(
-        sys, snapshot, pod_dim, deim_dim, name; snapshot_times, kwargs...
-    )
+        snapshot_times = nothing, kwargs...
+    )::System
+    return _deim(sys, snapshot, pod_dim, deim_dim, name; snapshot_times, kwargs...)
 end
+
+const SymbolicProblem = Union{SciMLBase.AbstractODEProblem, SciMLBase.AbstractDAEProblem}
 
 """
     $(FUNCTIONNAME)(
-        prob::SciMLBase.DAEProblem,
+        prob::Union{SciMLBase.AbstractODEProblem, SciMLBase.AbstractDAEProblem},
         sol,
         pod_dim::Integer;
         deim_dim::Integer = pod_dim,
         name::Union{Nothing, Symbol} = nothing,
         kwargs...
-    ) -> ModelingToolkit.ODESystem
+    ) -> ModelingToolkit.System
 
-Reduce a first-order symbolic `DAEProblem` and one of its saved solutions using POD-DEIM.
+Reduce the symbolic system behind `prob` with POD-DEIM, using one of its saved solutions
+`sol` as the training snapshot.
 
-This method is intended for array-form problems such as those produced by MethodOfLines v1.
-It supports DAEs that become explicit first-order ODEs after algebraic elimination;
-it does not project general descriptor or differential-algebraic residual systems.
-The full-order solve retains its array-form DAE compilation path. For the symbolic reduction,
-ModelingToolkit tearing eliminates algebraic unknowns and isolates the differential equations
-without constructing or compiling a full-order `ODEProblem`. The returned system has one array differential equation and one reconstruction array per
-source field. Construct a `DAEProblem` with `build_initializeprob = false` from it
-to retain array code generation. Consistent state and derivative initial values are
-computed at the first training snapshot.
-
-For fixed POD/DEIM dimensions, field count, forcing expression count, and bounded nonlinear stencil size, the
-returned symbolic graph is independent of the full-order grid. Offline structural
-elimination, snapshot evaluation, basis construction, and reconstruction storage still
-scale with grid size. Eliminated algebraic states are reconstructed by a least-squares
-fit to the training snapshots, so their constraints need not hold exactly away from
-those snapshots. Parameters are trained at `prob`'s values, which become the ROM defaults.
-
-`sol` may be the `SciMLBase.PDETimeSeriesSolution` returned by MethodOfLines or its underlying
-`SciMLBase.AbstractODESolution`.
+`prob` must have been constructed from a `ModelingToolkit.System`, such as the array-form
+`DAEProblem` returned by MethodOfLines. The saved states are the snapshot columns, the
+saved times supply the independent variable for time-dependent terms, and the parameter
+values of `prob` are used for training and become the defaults of the reduced system.
+`sol` may be the `SciMLBase.PDETimeSeriesSolution` returned by MethodOfLines or its
+underlying `SciMLBase.AbstractODESolution`. See the system method for the reduction
+itself and for how to construct problems from the returned system.
 
 # Arguments
-- `prob::SciMLBase.DAEProblem`: symbolic first-order DAE problem whose function stores its
-  ModelingToolkit system in `prob.f.sys`.
+- `prob`: symbolic first-order problem whose function stores a `ModelingToolkit.System`.
 - `sol`: saved solution obtained from `prob`.
 - `pod_dim::Integer`: number of POD state modes to retain.
 
 # Keywords
-- `deim_dim::Integer = pod_dim`: number of DEIM modes for nonlinear terms.
-- `name::Union{Nothing, Symbol} = nothing`: name assigned to the reduced system. The default
-  appends `_deim` to the full system's name.
-- `kwargs...`: keyword arguments forwarded to ModelingToolkit transformations and symbolic
-  substitutions.
+- `deim_dim::Integer = pod_dim`: number of DEIM modes for the nonlinear terms.
+- `name::Union{Nothing, Symbol} = nothing`: name of the reduced system. The default appends
+  `_deim` to the name of the full system.
+- `kwargs...`: keyword arguments forwarded to `Symbolics.substitute`.
+
+# Returns
+- `ModelingToolkit.System`: the completed reduced system.
+
+# Throws
+- `ArgumentError`: if `prob` has no symbolic system, if `sol` was not obtained from `prob`
+  or does not start at the beginning of `prob`, or if the system does not simplify to an
+  explicit first-order ODE.
+- `DimensionMismatch`: if the saved states do not match the unknowns of the system.
 
 # Examples
 ```julia
@@ -543,47 +300,37 @@ reduced_problem = DAEProblem(
     reduced_system, nothing, full_problem.tspan; build_initializeprob = false
 )
 ```
-
-# Returns
-- `ModelingToolkit.ODESystem`: the reduced and completed explicit ODE system.
-
-# Throws
-- `ArgumentError`: if `sol` is not from `prob`, does not start at the beginning of the problem,
-  or the DAE cannot be torn into an explicit ODE whose unknowns match the saved states.
-- `DimensionMismatch`: if the saved solution does not match the DAE system.
 """
 function deim(
-        prob::SciMLBase.DAEProblem, sol::SciMLBase.AbstractODESolution,
-        pod_dim::Integer; deim_dim::Integer = pod_dim,
-        name::Union{Nothing, Symbol} = nothing, kwargs...
-    )::ODESystem
-    raw_sys = SymbolicIndexingInterface.symbolic_container(prob.f)
-    raw_sys isa ODESystem ||
-        throw(ArgumentError("the DAE problem must contain a symbolic ModelingToolkit system"))
-    SymbolicIndexingInterface.symbolic_container(sol.prob.f) === raw_sys ||
-        throw(ArgumentError("the solution must have been obtained from the supplied DAE problem"))
+        prob::SymbolicProblem, sol::SciMLBase.AbstractODESolution, pod_dim::Integer;
+        deim_dim::Integer = pod_dim, name::Union{Nothing, Symbol} = nothing, kwargs...
+    )::System
+    sys = SymbolicIndexingInterface.symbolic_container(prob.f)
+    sys isa System ||
+        throw(ArgumentError("the problem must contain a symbolic ModelingToolkit system"))
+    SymbolicIndexingInterface.symbolic_container(sol.prob.f) === sys ||
+        throw(ArgumentError("the solution must have been obtained from the supplied problem"))
     first(sol.t) == first(prob.tspan) ||
-        throw(ArgumentError("the solution must save the state at the start of the DAE problem"))
-    raw_variables = ModelingToolkit.unknowns(raw_sys)
-    full_snapshot = Array(sol)
-    size(full_snapshot, 1) == length(raw_variables) ||
-        throw(DimensionMismatch("solution states must match the DAE system unknowns"))
+        throw(ArgumentError("the solution must save the state at the start of the problem"))
+    snapshot = Array(sol)
+    size(snapshot, 1) == length(ModelingToolkit.unknowns(sys)) ||
+        throw(DimensionMismatch("solution states must match the system unknowns"))
 
     training_parameters = Dict{Any, Any}()
-    for parameter in ModelingToolkit.parameters(raw_sys)
+    for parameter in ModelingToolkit.parameters(sys)
         ModelingToolkit.isinitial(parameter) && continue
         training_parameters[Symbolics.unwrap(parameter)] = prob.ps[parameter]
     end
-    reduced_name = isnothing(name) ? Symbol(nameof(raw_sys), :_deim) : name
-    return _array_deim(
-        raw_sys, full_snapshot, pod_dim, deim_dim, reduced_name;
+    reduced_name = isnothing(name) ? Symbol(nameof(sys), :_deim) : name
+    return _deim(
+        sys, snapshot, pod_dim, deim_dim, reduced_name;
         snapshot_times = sol.t, training_parameters, kwargs...
     )
 end
 
 function deim(
-        prob::SciMLBase.DAEProblem, sol::SciMLBase.PDETimeSeriesSolution,
-        pod_dim::Integer; kwargs...
-    )::ODESystem
+        prob::SymbolicProblem, sol::SciMLBase.PDETimeSeriesSolution, pod_dim::Integer;
+        kwargs...
+    )::System
     return deim(prob, sol.original_sol, pod_dim; kwargs...)
 end

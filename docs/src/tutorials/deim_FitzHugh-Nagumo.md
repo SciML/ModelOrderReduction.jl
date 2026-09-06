@@ -149,8 +149,11 @@ nothing # hide
 
 The ROM retains one array differential equation and one reconstruction array per PDE
 field. For fixed POD/DEIM dimensions, field count, forcing expression count, and local nonlinear stencil size,
-the generated symbolic graph is independent of the spatial grid. Use `DAEProblem`
-for array code generation; scalarizing the returned system loses that property.
+the generated symbolic graph is independent of the spatial grid. A `DAEProblem` with
+`build_initializeprob = false` generates array code directly from that graph.
+Alternatively, call `mtkcompile` on the reduced system and construct an `ODEProblem`;
+this scalarizes the reduced differential equation, whose size is fixed by the POD
+dimension, while the array reconstruction equations are kept.
 
 This compilation bound does not cover offline structural elimination, POD/DEIM training,
 problem construction, or full-field evaluation. The reconstruction matrix requires

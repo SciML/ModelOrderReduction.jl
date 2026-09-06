@@ -12,3 +12,15 @@
 - Array-form regression coverage must check both generated graph size across grids
   and numerical dynamics/reconstruction. Equation counts alone do not establish
   numerical correctness or constant compilation cost.
+- Term separation goes through `Symbolics.semilinear_form`. Only linear terms with numeric
+  coefficients are projected exactly; every other state-dependent term, including linear
+  terms with parameter or time-dependent coefficients, is DEIM-sampled. Keep it that way
+  unless an affine parameter decomposition is implemented, because symbolic coefficients in
+  the projected matrix make the reduced graph grow with the grid.
+- Source systems must list scalar unknowns (scalarized array elements or `mtkcompile`
+  output). A `System` built without explicit unknowns collects both an array variable and
+  its indexed elements, which no problem constructor accepts either.
+- Both `DAEProblem(rom, nothing, tspan; build_initializeprob = false)` and
+  `ODEProblem(mtkcompile(rom), nothing, tspan; build_initializeprob = false)` are supported
+  and tested. Reconstruct fields with `SymbolicIndexingInterface.observed`; the `sol[field]`
+  convenience path hits https://github.com/SciML/ModelingToolkit.jl/issues/5072.

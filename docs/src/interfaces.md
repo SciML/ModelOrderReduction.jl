@@ -34,6 +34,25 @@ julia> reduce!(pod, SVD()); pod.nmodes
 1
 ```
 
+## Reduction pipeline
+
+[`deim`](@ref) reduces a system in three internal steps. The source system is first
+brought into the explicit first-order form described by
+[`ModelOrderReduction.FullOrderModel`](@ref), whose right-hand sides are split by
+[`ModelOrderReduction.separate_terms`](@ref) into a numeric linear part, forcing terms,
+and the state-dependent terms handled by interpolation. The POD state basis and the DEIM
+basis are then computed from the snapshot and from the interpolated terms evaluated at the
+snapshot. Finally, the reduced system is assembled with one array differential equation
+for the reduced state and one reconstruction equation per
+[`ModelOrderReduction.SourceField`](@ref). These types and functions are internal and
+may change without notice.
+
+```@docs
+ModelOrderReduction.FullOrderModel
+ModelOrderReduction.SourceField
+ModelOrderReduction.separate_terms
+```
+
 ## Internal type hierarchy
 
 The following abstract types are implementation details. They are documented so that
@@ -42,7 +61,6 @@ stable extension points:
 
 ```@docs
 ModelOrderReduction.AbstractReductionProblem
-ModelOrderReduction.AbstractMORProblem
 ModelOrderReduction.AbstractDRProblem
 ModelOrderReduction.AbstractSVD
 ```
