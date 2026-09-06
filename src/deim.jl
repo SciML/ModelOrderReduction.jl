@@ -34,47 +34,158 @@ function _pod_basis(snapshot::AbstractMatrix, dim::Integer)
 end
 
 """
-$(TYPEDSIGNATURES)
+    $(TYPEDEF)
 
-Galerkin-project the right-hand side of `fom` onto the state basis `V`, approximating the
-nonlinear part by DEIM in the basis `U`.
+Numeric POD-DEIM projection of a [`FullOrderModel`](@ref).
 
-With the DEIM interpolation indices ``\\rho_1,\\dots,\\rho_m`` of ``U`` and the
-selection matrix ``P=[\\mathbf e_{\\rho_1},\\dots,\\mathbf e_{\\rho_m}]``, the full-order
-model
+With the DEIM interpolation indices ``\\rho_1,\\dots,\\rho_m`` of the nonlinear basis
+``U`` and the selection matrix ``P=[\\mathbf e_{\\rho_1},\\dots,\\mathbf e_{\\rho_m}]``,
+the full-order model
 ```math
 \\frac{d}{dt}\\mathbf y(t)=A\\mathbf y(t)+\\mathbf g(t)+\\mathbf F(\\mathbf y(t),t)
 ```
-becomes
+is projected onto the state basis ``V`` as
 ```math
 \\frac{d}{dt}\\hat{\\mathbf y}(t)=\\underbrace{V^TAV}_{k\\times k}\\hat{\\mathbf y}(t)+V^T
 \\mathbf g(t)+\\underbrace{V^TU(P^TU)^{-1}}_{k\\times m}\\underbrace{P^T\\mathbf F(V
 \\hat{\\mathbf y}(t),t)}_{m\\times1}.
 ```
-Only the ``m`` sampled entries of ``\\mathbf F`` are lifted to the reduced state
-`reduced_state`, so the returned array expression does not grow with the full-order
-dimension. `kwargs` are forwarded to `Symbolics.substitute`.
+Only the rows of ``V`` referenced by the sampled entries of ``\\mathbf F`` (the stencil)
+and the distinct symbolic expressions in ``\\mathbf g`` enter the reduced model, so its
+size is independent of the full-order dimension.
+
+# Fields
+$(TYPEDFIELDS)
 """
-function _reduced_rhs(
-        fom::FullOrderModel, reduced_state, V::AbstractMatrix, U::AbstractMatrix; kwargs...
-    )
+struct Projection
+    "state basis ``V``"
+    state_basis::Matrix{Float64}
+    "projected linear coefficients ``V^TAV``"
+    linear::Matrix{Float64}
+    "projection ``V^T\\mathbf g`` of the numeric forcing entries"
+    forcing::Vector{Float64}
+    "distinct symbolic forcing expressions"
+    forcing_terms::Vector{Num}
+    "column ``j`` sums the rows of ``V`` carrying `forcing_terms[j]`"
+    forcing_map::Matrix{Float64}
+    "DEIM interpolation indices"
+    indices::Vector{Int}
+    "dynamic unknowns referenced by the sampled nonlinear terms"
+    stencil::Vector{Int}
+    "DEIM projector ``V^TU(P^TU)^{-1}``"
+    projector::Matrix{Float64}
+end
+
+function Projection(fom::FullOrderModel, V::AbstractMatrix, U::AbstractMatrix)
     indices = deim_interpolation_indices(U)
-    sampled = fom.nonlinear[indices]
     column = Dict{Any, Int}(unknown => j for (j, unknown) in enumerate(fom.unknowns))
-    lift = Dict{Any, Any}()
-    for expression in sampled, variable in Symbolics.get_variables(expression)
-        variable = Symbolics.unwrap(variable)
-        j = get(column, variable, 0)
-        iszero(j) && continue
-        lift[variable] = sum(V[j, l] * reduced_state[l] for l in axes(V, 2))
+    stencil = Int[]
+    for i in indices, variable in Symbolics.get_variables(fom.nonlinear[i])
+        j = get(column, Symbolics.unwrap(variable), 0)
+        iszero(j) || j in stencil || push!(stencil, j)
     end
-    sampled = [substitute(expression, lift; kwargs...) for expression in sampled]
     projector = ((@view U[indices, :])' \ (U' * V))'
 
-    rhs = (V' * fom.linear * V) * reduced_state
-    forcing = V' * fom.forcing
-    all(iszero, forcing) || (rhs += forcing)
-    return Symbolics.wrap(rhs + projector * sampled)
+    numeric_forcing = zeros(length(fom.forcing))
+    forcing_terms = Num[]
+    forcing_map = zeros(size(V, 2), 0)
+    term_columns = Dict{Num, Int}()
+    for (row, term) in enumerate(fom.forcing)
+        value = SymbolicUtils.unwrap_const(Symbolics.unwrap(term))
+        if value isa Number
+            numeric_forcing[row] = value
+            continue
+        end
+        column = get(term_columns, term, 0)
+        if iszero(column)
+            push!(forcing_terms, term)
+            forcing_map = [forcing_map zeros(size(V, 2))]
+            column = term_columns[term] = length(forcing_terms)
+        end
+        forcing_map[:, column] += V[row, :]
+    end
+    return Projection(
+        Matrix{Float64}(V), Matrix{Float64}(V' * fom.linear * V), V' * numeric_forcing,
+        forcing_terms, forcing_map, indices, stencil, Matrix{Float64}(projector)
+    )
+end
+
+function _array_parameter(base::Symbol, value::AbstractArray)
+    name = gensym(base)
+    parameter = if ndims(value) == 1
+        (@parameters $name[1:length(value)])[1]
+    else
+        (@parameters $name[1:size(value, 1), 1:size(value, 2)])[1]
+    end
+    return parameter, Symbolics.unwrap(parameter) => value
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Build the symbolic right-hand side of the reduced model for `projection` as array linear
+algebra in the reduced state `reduced_state`.
+
+The projected matrices become array parameters of the reduced system, so the expression
+reads `A*ŷ + g + G*forcing + C*F`, where `forcing` holds the distinct symbolic forcing
+expressions and `F` the sampled nonlinear terms evaluated at the stencil rows of `V*ŷ`.
+Returns the expression together with the array parameters and their values. `kwargs` are
+forwarded to `Symbolics.substitute`.
+"""
+function _reduced_rhs(fom::FullOrderModel, projection::Projection, reduced_state; kwargs...)
+    parameters = Any[]
+    values = Dict{Any, Any}()
+    function array_parameter(base, value)
+        parameter, pair = _array_parameter(base, value)
+        push!(parameters, first(pair))
+        push!(values, pair)
+        return parameter
+    end
+
+    rhs = array_parameter(:A, projection.linear) * reduced_state
+    if any(!iszero, projection.forcing)
+        rhs += array_parameter(:g, projection.forcing)
+    end
+    if !isempty(projection.forcing_terms)
+        rhs += array_parameter(:G, projection.forcing_map) *
+            Symbolics.wrap(projection.forcing_terms)
+    end
+    lifted = array_parameter(:V, projection.state_basis[projection.stencil, :]) * reduced_state
+    replacements = Dict{Any, Any}(
+        fom.unknowns[j] => lifted[i] for (i, j) in enumerate(projection.stencil)
+    )
+    sampled = [
+        substitute(fom.nonlinear[i], replacements; kwargs...) for i in projection.indices
+    ]
+    rhs += array_parameter(:C, projection.projector) * Symbolics.wrap(sampled)
+    return rhs, parameters, values
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate the reduced right-hand side of `projection` at the reduced state `reduced_state`
+and time `time` (`nothing` for autonomous models) without generating code.
+"""
+function _reduced_derivative(
+        fom::FullOrderModel, projection::Projection, reduced_state::AbstractVector, time;
+        kwargs...
+    )
+    lifted = reshape(projection.state_basis * reduced_state, :, 1)
+    times = isnothing(time) ? nothing : [time]
+    derivative = projection.linear * reduced_state + projection.forcing
+    if !isempty(projection.forcing_terms)
+        forcing = _evaluate(
+            projection.forcing_terms, fom.unknowns, lifted, fom.parameter_values, fom.iv,
+            times; kwargs...
+        )
+        derivative += projection.forcing_map * vec(forcing)
+    end
+    sampled = _evaluate(
+        fom.nonlinear[projection.indices], fom.unknowns, lifted, fom.parameter_values, fom.iv,
+        times; kwargs...
+    )
+    return derivative + projection.projector * vec(sampled)
 end
 
 """
@@ -85,7 +196,8 @@ the training `snapshot` whose rows follow the source unknowns.
 
 The system has one array differential equation for the reduced state, one array (or
 scalar) reconstruction observed equation per source field, and the source observed
-equations rewritten in terms of the reduced state. Dynamic source unknowns are
+equations rewritten in terms of the reduced state. The projected matrices and the
+full-grid reconstruction coefficients are array parameters. Dynamic source unknowns are
 reconstructed with `V`; unknowns eliminated by structural simplification use a
 least-squares fit to the training snapshot. The initial state and derivative are taken at
 the first snapshot column, whose time is `first(times)` when `times` is given.
@@ -99,14 +211,14 @@ function _reduced_system(
     dim = size(V, 2)
     state_name = gensym(:ŷ)
     reduced_state = (@variables $state_name(iv)[1:dim])[1]
-    rhs = _reduced_rhs(fom, reduced_state, V, U; kwargs...)
+    projection = Projection(fom, V, U)
+    rhs, array_parameters, array_values = _reduced_rhs(fom, projection, reduced_state; kwargs...)
 
     reduced_snapshot = V' * Matrix{Float64}(snapshot[fom.rows, :])
     lift = Matrix{Float64}(snapshot) / reduced_snapshot
     lift[fom.rows, :] = V
     lift = lift[reduce(vcat, (field.rows for field in fom.fields)), :]
-    lift_name = gensym(:lift)
-    lift_parameter = (@parameters $lift_name[1:length(fom.source_unknowns), 1:dim])[1]
+    lift_parameter, lift_value = _array_parameter(:lift, lift)
 
     replacements = Dict{Any, Any}()
     reconstruction = Equation[]
@@ -125,19 +237,17 @@ function _reduced_system(
     end
 
     initial_state = reduced_snapshot[:, 1]
-    initial_derivative = _evaluate(
-        Symbolics.scalarize(rhs), Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
-        reshape(initial_state, :, 1), fom.parameter_values, iv,
-        isnothing(times) ? nothing : times[1:1]; kwargs...
-    )
     initial_conditions = Dict{Any, Any}(fom.parameter_values)
+    merge!(initial_conditions, array_values)
+    push!(initial_conditions, lift_value)
     initial_conditions[Symbolics.unwrap(reduced_state)] = initial_state
-    initial_conditions[Symbolics.unwrap(D(reduced_state))] = vec(initial_derivative)
-    initial_conditions[Symbolics.unwrap(lift_parameter)] = lift
+    initial_conditions[Symbolics.unwrap(D(reduced_state))] = _reduced_derivative(
+        fom, projection, initial_state, isnothing(times) ? nothing : first(times); kwargs...
+    )
 
     reduced = System(
         [D(reduced_state) ~ rhs], iv, Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
-        [fom.parameters; Symbolics.unwrap(lift_parameter)];
+        [fom.parameters; array_parameters; first(lift_value)];
         name, observed = [reconstruction; preserved], initial_conditions
     )
     for key in (ModelingToolkit.ProblemTypeCtx, ModelingToolkit.MiscSystemData)
@@ -198,8 +308,11 @@ computed with [`TSVD`](@ref).
 `sys` may contain algebraic equations or array equations. It is structurally simplified
 as needed, which may scalarize the equations offline, but the returned system always has
 one array differential equation for the reduced state and one reconstruction observed
-equation per source field. Full-grid reconstruction coefficients are stored in one array
-parameter. Unknowns eliminated during simplification are reconstructed by a least-squares
+equation per source field. The reduced equation is array linear algebra in the reduced
+state: the projected matrices, the stencil rows of the state basis, and the full-grid
+reconstruction coefficients are array parameters of the reduced system, and only the
+DEIM-sampled nonlinear terms are scalar expressions. Unknowns eliminated during
+simplification are reconstructed by a least-squares
 fit to `snapshot`. Terms that are linear in the unknowns with numeric coefficients are
 projected exactly; every other state-dependent term is interpolated by DEIM. Pass
 MethodOfLines `symbolic_discretize` systems before structural simplification so every
