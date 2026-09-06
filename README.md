@@ -31,10 +31,11 @@ the documentation, which contains the unreleased features.
 
 ```julia
 using ModelingToolkit, MethodOfLines, DifferentialEquations, ModelOrderReduction
-using SciMLBase: symbolic_discretize
+using SciMLBase: discretize
 
 # firstly construct a ModelingToolkit.PDESystem for the FitzHugh-Nagumo model
-@variables x t v(..) w(..)
+@independent_variables x t
+@variables v(..) w(..)
 Dx = Differential(x)
 Dxx = Dx^2
 Dt = Differential(t)
@@ -53,25 +54,22 @@ ivs = [x, t]
 dvs = [v(x, t), w(x, t)]
 pde_sys = PDESystem(eqs, bcs, domains, ivs, dvs; name = Symbol("FitzHugh-Nagumo"))
 
-# transfer to a ModelingToolkit.ODESystem by automated discretization via MethodOfLines
+# discretize to MethodOfLines v1's array-form DAEProblem
 N = 15 # equidistant discretization intervals
 dx = (L - 0.0) / N
 dxs = [x => dx]
 discretization = MOLFiniteDifference(dxs, t)
-ode_sys, tspan = symbolic_discretize(pde_sys, discretization)
-simp_sys = structural_simplify(ode_sys)
-ode_prob = ODEProblem(simp_sys, nothing, tspan)
+full_prob = discretize(pde_sys, discretization; fallback = false)
 
 # solve the full-order model to get snapshots
-sol = solve(ode_prob, Tsit5())
-snapshot_simpsys = Array(sol.original_sol)
+sol = solve(full_prob)
 
 # set POD and DEIM dimensions
 # apply POD-DEIM to obtain the reduced-order model
 pod_dim = deim_dim = 5
-deim_sys = deim(simp_sys, snapshot_simpsys, pod_dim; deim_dim = deim_dim)
-deim_prob = ODEProblem(deim_sys, nothing, tspan)
-deim_sol = solve(deim_prob, Tsit5())
+deim_sys = deim(full_prob, sol, pod_dim; deim_dim = deim_dim)
+deim_prob = DAEProblem(deim_sys, nothing, full_prob.tspan; build_initializeprob = false)
+deim_sol = solve(deim_prob)
 
 # retrieve the approximate solution of the original full-order model
 sol_deim_x = deim_sol[x]
@@ -82,3 +80,8 @@ sol_deim_w = deim_sol[w(x, t)]
 The following figure shows the comparison of the solutions of the 32-dimension full-order model and the POD5-DEIM5 reduced-order model.
 
 ![comparison](https://user-images.githubusercontent.com/45696147/195765614-df9092a2-4fca-4602-bb15-81e65b2b572e.svg)
+
+For fixed reduced dimensions, field and forcing structure, and local nonlinear stencils,
+the reduced dynamics and field reconstruction use a grid-independent symbolic array graph. Offline reduction
+and full-field reconstruction still scale with the grid. See the tutorial for the
+algebraic reconstruction approximation and supported DAE scope.

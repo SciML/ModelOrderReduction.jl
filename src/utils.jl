@@ -12,7 +12,10 @@ the left hand side, which is typically the result of `ModelingToolkit.mtkcompile
 Equations from subsystems are not included.
 """
 function get_deqs(sys::ODESystem)::Tuple{Vector{Equation}, Vector{Equation}}
-    eqs = ModelingToolkit.get_eqs(sys)
+    return get_deqs(ModelingToolkit.equations(sys))
+end
+
+function get_deqs(eqs::AbstractVector{Equation})
     deqs = Equation[]
     others = Equation[]
     for eq in eqs
