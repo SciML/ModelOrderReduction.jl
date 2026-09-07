@@ -29,3 +29,10 @@
   DEIM-sampled nonlinear terms are scalar expressions. Numeric matrices embedded as literals
   in a sum of array terms break `mtkcompile` (SymbolicUtils sorts them with `isless`), so
   keep them as parameters.
+- Generated symbol names must stay deterministic. `gensym` gives every reduced model fresh
+  names, so equivalent models never share generated code and each one recompiles. Names are
+  built from a fixed base plus `ModelOrderReduction.GENERATED_SUFFIX`, which contains `ˍ`
+  (U+02CD, the modifier letter ModelingToolkit uses for names like `xˍt`) so it cannot
+  collide with a name a user typed. Collisions with names inherited from the source system,
+  which happens when reducing an already-reduced model, are resolved by appending a counter.
+  Closes https://github.com/SciML/ModelOrderReduction.jl/issues/28.

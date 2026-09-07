@@ -110,8 +110,58 @@ function Projection(fom::FullOrderModel, V::AbstractMatrix, U::AbstractMatrix)
     )
 end
 
-function _array_parameter(base::Symbol, value::AbstractArray)
-    name = gensym(base)
+"""
+Suffix marking the symbols this package generates.
+
+`ˍ` (U+02CD) is the modifier letter ModelingToolkit already uses for generated names such
+as `xˍt`. Using it keeps generated names out of the space of names a user is likely to
+type, while keeping them stable across calls so that equivalent reduced models share
+generated code instead of recompiling.
+"""
+const GENERATED_SUFFIX = "ˍmor"
+
+"""
+$(TYPEDSIGNATURES)
+
+Return a deterministic name derived from `base` that is not in `taken`, and reserve it.
+"""
+function _generated_name(base::Symbol, taken::Set{Symbol})
+    name = Symbol(base, GENERATED_SUFFIX)
+    index = 1
+    while name in taken
+        index += 1
+        name = Symbol(base, GENERATED_SUFFIX, index)
+    end
+    push!(taken, name)
+    return name
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the names of `fom` that the reduced system inherits, so generated names can avoid
+them. Reducing an already-reduced system is the case that makes this necessary.
+"""
+function _reserved_names(fom::FullOrderModel)
+    names = Set{Symbol}()
+    inherited = Iterators.flatten(
+        (
+            fom.parameters, (field.variable for field in fom.fields),
+            (equation.lhs for equation in fom.observed),
+        )
+    )
+    for item in inherited
+        value = Symbolics.unwrap(item)
+        if SymbolicUtils.iscall(value) && SymbolicUtils.operation(value) === getindex
+            value = first(SymbolicUtils.arguments(value))
+        end
+        push!(names, SymbolicIndexingInterface.getname(value))
+    end
+    return names
+end
+
+function _array_parameter(base::Symbol, value::AbstractArray, taken::Set{Symbol})
+    name = _generated_name(base, taken)
     parameter = if ndims(value) == 1
         (@parameters $name[1:length(value)])[1]
     else
@@ -129,14 +179,18 @@ algebra in the reduced state `reduced_state`.
 The projected matrices become array parameters of the reduced system, so the expression
 reads `A*ŷ + g + G*forcing + C*F`, where `forcing` holds the distinct symbolic forcing
 expressions and `F` the sampled nonlinear terms evaluated at the stencil rows of `V*ŷ`.
-Returns the expression together with the array parameters and their values. `kwargs` are
-forwarded to `Symbolics.substitute`.
+Returns the expression together with the array parameters and their values. Generated
+names avoid `taken` and are added to it. `kwargs` are forwarded to
+`Symbolics.substitute`.
 """
-function _reduced_rhs(fom::FullOrderModel, projection::Projection, reduced_state; kwargs...)
+function _reduced_rhs(
+        fom::FullOrderModel, projection::Projection, reduced_state, taken::Set{Symbol};
+        kwargs...
+    )
     parameters = Any[]
     values = Dict{Any, Any}()
     function array_parameter(base, value)
-        parameter, pair = _array_parameter(base, value)
+        parameter, pair = _array_parameter(base, value, taken)
         push!(parameters, first(pair))
         push!(values, pair)
         return parameter
@@ -209,16 +263,19 @@ function _reduced_system(
     iv = fom.iv
     D = Differential(iv)
     dim = size(V, 2)
-    state_name = gensym(:ŷ)
+    taken = _reserved_names(fom)
+    state_name = _generated_name(:ŷ, taken)
     reduced_state = (@variables $state_name(iv)[1:dim])[1]
     projection = Projection(fom, V, U)
-    rhs, array_parameters, array_values = _reduced_rhs(fom, projection, reduced_state; kwargs...)
+    rhs, array_parameters, array_values = _reduced_rhs(
+        fom, projection, reduced_state, taken; kwargs...
+    )
 
     reduced_snapshot = V' * Matrix{Float64}(snapshot[fom.rows, :])
     lift = Matrix{Float64}(snapshot) / reduced_snapshot
     lift[fom.rows, :] = V
     lift = lift[reduce(vcat, (field.rows for field in fom.fields)), :]
-    lift_parameter, lift_value = _array_parameter(:lift, lift)
+    lift_parameter, lift_value = _array_parameter(:lift, lift, taken)
 
     replacements = Dict{Any, Any}()
     reconstruction = Equation[]

@@ -1,4 +1,5 @@
 using Test, ModelOrderReduction, ModelingToolkit
+import SymbolicIndexingInterface as SII
 
 @independent_variables t
 @variables u(t)[1:4]
@@ -35,6 +36,31 @@ snapshot = [sin(0.3 * i * j) + cos(0.2 * i * (j + 1)) for i in 1:4, j in 1:8]
             return tree_size(equation.lhs) + tree_size(equation.rhs)
         end
         @test graph_size(4) == graph_size(12)
+    end
+    @testset "deterministic generated names" begin
+        @mtkcompile sys = System([D(u) ~ -u - u .^ 3], t)
+        first_rom = deim(sys, snapshot, 2)
+        second_rom = deim(sys, snapshot, 2)
+        state_name(rom) = SII.getname(first(unknowns(rom)))
+        @test occursin(ModelOrderReduction.GENERATED_SUFFIX, String(state_name(first_rom)))
+        @test state_name(first_rom) == state_name(second_rom)
+        # Equal equations and parameters mean equal generated code, so a second reduction
+        # reuses the first one's compiled functions instead of recompiling.
+        @test isequal(only(equations(first_rom)), only(equations(second_rom)))
+        @test isequal(only(observed(first_rom)), only(observed(second_rom)))
+        @test isequal(parameters(first_rom), parameters(second_rom))
+    end
+    @testset "generated names avoid source names" begin
+        taken = Set([Symbol(:ŷ, ModelOrderReduction.GENERATED_SUFFIX)])
+        @test ModelOrderReduction._generated_name(:ŷ, taken) ==
+            Symbol(:ŷ, ModelOrderReduction.GENERATED_SUFFIX, 2)
+
+        @parameters ŷˍmor = 2.0
+        @mtkcompile sys = System([D(u) ~ -u - ŷˍmor * u .^ 3], t)
+        rom = deim(sys, snapshot, 2)
+        @test SII.getname(first(unknowns(rom))) ==
+            Symbol(:ŷ, ModelOrderReduction.GENERATED_SUFFIX, 2)
+        @test any(isequal(Symbolics.unwrap(ŷˍmor)), parameters(rom))
     end
     @testset "scalar input" begin
         @variables z₁(t) z₂(t)
