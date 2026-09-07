@@ -70,5 +70,31 @@ snapshot = [sin(0.3 * i * j) + cos(0.2 * i * (j + 1)) for i in 1:4, j in 1:8]
         @test isempty(guesses(rom))
         @test isempty(initialization_equations(rom))
     end
-
+    @testset "POD array Galerkin structure" begin
+        @variables z(t)[1:4]
+        z_scalars = Symbolics.unwrap.(Symbolics.scalarize(z))
+        @named sys = System([D(z) ~ -z - z .^ 3], t, z_scalars, [])
+        rom = pod(complete(sys), snapshot, 2)
+        @test length(equations(rom)) == 1
+        @test length(observed(rom)) == 1
+        tree_size(expression) = (
+            value = Symbolics.unwrap(expression);
+            SymbolicUtils.iscall(value) ?
+                1 + sum(tree_size, SymbolicUtils.arguments(value); init = 0) : 1
+        )
+        function pod_graph_size(n)
+            @variables q(t)[1:n]
+            qs = Symbolics.unwrap.(Symbolics.scalarize(q))
+            @named local_sys = System([D(q) ~ -q - q .^ 3], t, qs, [])
+            local_snapshot = [sin(0.3 * i * j) + cos(0.2 * i * (j + 1)) for i in 1:n, j in 1:8]
+            local_rom = pod(complete(local_sys), local_snapshot, 2)
+            local_equation = only(equations(local_rom))
+            return tree_size(local_equation.lhs) + tree_size(local_equation.rhs)
+        end
+        @test pod_graph_size(4) == pod_graph_size(12)
+        @test occursin(
+            ModelOrderReduction.GENERATED_SUFFIX,
+            String(SII.getname(first(unknowns(rom)))),
+        )
+    end
 end

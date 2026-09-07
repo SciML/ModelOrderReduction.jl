@@ -1,8 +1,13 @@
 # ModelOrderReduction development
 
-- High-level `deim` must preserve array-valued reduced dynamics and array-valued field
-  reconstruction. Keep full-grid reconstruction coefficients in array parameters;
+- High-level `deim` and `pod` must preserve array-valued reduced dynamics and array-valued
+  field reconstruction. Keep full-grid reconstruction coefficients in array parameters;
   scalar reconstruction equations make the generated graph grow with the grid.
+- `pod` prefers Galerkin projection of source field/array equations
+  (`V' * f(V*ŷ)` with `V` and `V'` as array parameters) so the generated residual stays
+  grid-independent. The scalarized fallback projects every nonlinear residual row and
+  therefore scales online with the full-order dimension; use `deim` when hyper-reduction
+  is required.
 - Compilation complexity claims apply at fixed reduced dimensions, field count, count of
   distinct symbolic forcing expressions, and nonlinear stencil size. Offline reduction, problem construction, reconstruction
   storage, and field evaluation can still scale with the full-order dimension.
