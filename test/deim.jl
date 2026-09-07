@@ -4,7 +4,7 @@ using ModelingToolkit, MethodOfLines, OrdinaryDiffEq
 using LinearAlgebra: norm, svd
 using SciMLBase: successful_retcode, symbolic_discretize
 
-# construct an ModelingToolkit.ODESystem with non-empty field substitutions
+# construct an ModelingToolkit.System with non-empty field substitutions
 @independent_variables x t
 @variables v(..) w(..)
 Dx = Differential(x)
@@ -54,8 +54,7 @@ deim_sys = @test_nowarn deim(full_prob, sol, pod_dim)
 
 function is_symbolic_array(expression)
     value = ModelingToolkit.Symbolics.unwrap(expression)
-    return value isa AbstractArray ||
-        ModelingToolkit.SymbolicUtils.symtype(value) <: AbstractArray
+    return ModelingToolkit.SymbolicUtils.symtype(value) <: AbstractArray
 end
 
 reduced_equations = ModelingToolkit.get_eqs(deim_sys)
@@ -294,4 +293,76 @@ end
         ]
     )
     @test norm(reconstruction - truth) / norm(truth) < 0.01
+end
+
+@testset "ODEProblem sources and scalar code generation" begin
+    @variables r(t)[1:4]
+    r0 = [0.4, 0.3, 0.2, 0.1]
+    @mtkcompile ode_source = System([Dt(r) ~ -r - r .^ 3], t)
+    ode_problem = ODEProblem(ode_source, [r => r0], (0.0, 0.5))
+    ode_solution = solve(ode_problem, Tsit5(); saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(ode_solution)
+    rom = deim(ode_problem, ode_solution, 2)
+    @test length(ModelingToolkit.get_eqs(rom)) == 1
+    @test is_symbolic_array(only(ModelingToolkit.get_eqs(rom)).rhs)
+    # `mtkcompile` permutes the scalarized unknowns; index by `r` for canonical order.
+    truth = reduce(hcat, ode_solution[r])
+
+    dae_problem = DAEProblem(rom, nothing, ode_problem.tspan; build_initializeprob = false)
+    dae_solution = solve(dae_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(dae_solution)
+    dae_reconstruction = reduce(
+        hcat, [
+            SII.observed(rom, r)(state, dae_problem.p, time)
+                for (state, time) in zip(dae_solution.u, dae_solution.t)
+        ]
+    )
+    @test norm(dae_reconstruction - truth) / norm(truth) < 0.01
+
+    compiled = mtkcompile(rom)
+    @test length(ModelingToolkit.get_eqs(compiled)) == 2
+    @test length(ModelingToolkit.get_observed(compiled)) == 1
+    scalar_problem = ODEProblem(compiled, nothing, ode_problem.tspan; build_initializeprob = false)
+    scalar_solution = solve(scalar_problem, Tsit5(); saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(scalar_solution)
+    scalar_reconstruction = reduce(
+        hcat, [
+            SII.observed(compiled, r)(state, scalar_problem.p, time)
+                for (state, time) in zip(scalar_solution.u, scalar_solution.t)
+        ]
+    )
+    @test norm(scalar_reconstruction - dae_reconstruction) / norm(truth) < 1.0e-6
+end
+
+@testset "nonautonomous linear terms" begin
+    # Two distinct decay rates give rank-two state and nonlinear snapshots, so two POD
+    # and DEIM modes reproduce the full model up to solver tolerance.
+    @variables s(t)[1:6]
+    s0 = [0.4, 0.3, 0.2, 0.1, -0.2, 0.5]
+    rates = [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
+    s_scalars = ModelingToolkit.Symbolics.unwrap.(ModelingToolkit.Symbolics.scalarize(s))
+    @named forced_system = System(
+        [Dt(s) ~ -(rates .+ sin(t)) .* s], t, s_scalars, [];
+        initial_conditions = [s => s0, Dt(s) => -rates .* s0],
+    )
+    forced_problem = DAEProblem(
+        complete(forced_system), nothing, (0.0, 0.5); build_initializeprob = false
+    )
+    forced_solution = solve(forced_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(forced_solution)
+    fom = ModelOrderReduction.FullOrderModel(forced_problem.f.sys)
+    @test all(iszero, fom.forcing)
+    @test all(!iszero, fom.nonlinear)
+    rom = deim(forced_problem, forced_solution, 2)
+    rom_problem = DAEProblem(rom, nothing, forced_problem.tspan; build_initializeprob = false)
+    rom_solution = solve(rom_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(rom_solution)
+    truth = Array(forced_solution)
+    reconstruction = reduce(
+        hcat, [
+            SII.observed(rom, s)(state, rom_problem.p, time)
+                for (state, time) in zip(rom_solution.u, rom_solution.t)
+        ]
+    )
+    @test norm(reconstruction - truth) / norm(truth) < 1.0e-6
 end

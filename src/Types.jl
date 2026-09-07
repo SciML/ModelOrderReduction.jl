@@ -9,16 +9,6 @@ construct one of the documented concrete problem types instead.
 abstract type AbstractReductionProblem end
 
 """
-    AbstractMORProblem <: AbstractReductionProblem
-
-Internal marker type for model-order-reduction problems.
-
-This type is not exported and is not a supported extension point. Its hierarchy may
-change without a public API guarantee.
-"""
-abstract type AbstractMORProblem <: AbstractReductionProblem end
-
-"""
     AbstractDRProblem <: AbstractReductionProblem
 
 Internal marker type for data-reduction problems such as [`POD`](@ref).
