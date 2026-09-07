@@ -68,7 +68,7 @@ sol = solve(full_prob)
 # apply POD-DEIM to obtain the reduced-order model
 pod_dim = deim_dim = 5
 deim_sys = deim(full_prob, sol, pod_dim; deim_dim = deim_dim)
-deim_prob = DAEProblem(deim_sys, nothing, full_prob.tspan; build_initializeprob = false)
+deim_prob = DAEProblem(deim_sys, nothing; build_initializeprob = false)
 deim_sol = solve(deim_prob)
 
 # retrieve the approximate solution of the original full-order model

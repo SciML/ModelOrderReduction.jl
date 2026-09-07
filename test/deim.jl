@@ -366,3 +366,44 @@ end
     )
     @test norm(reconstruction - truth) / norm(truth) < 1.0e-6
 end
+
+@testset "the reduced system carries a tspan" begin
+    @variables p(t)[1:6]
+    p0 = [0.4, 0.3, 0.2, 0.1, -0.2, 0.5]
+    pstates = ModelingToolkit.Symbolics.unwrap.(ModelingToolkit.Symbolics.scalarize(p))
+    span = (0.0, 0.5)
+    @named source = System(
+        [Dt(p) ~ -p - p .^ 3], t, pstates, [];
+        initial_conditions = [p => p0, Dt(p) => -p0 - p0 .^ 3],
+    )
+    source_problem = DAEProblem(complete(source), nothing, span; build_initializeprob = false)
+    source_solution = solve(source_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(source_solution)
+
+    # The problem method trains on `prob`, so its interval is the reduced model's.
+    from_problem = deim(source_problem, source_solution, 3)
+    @test ModelingToolkit.get_tspan(from_problem) == span
+    reduced_problem = DAEProblem(from_problem, nothing; build_initializeprob = false)
+    @test reduced_problem.tspan == span
+    reduced_solution = solve(reduced_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(reduced_solution)
+    truth = reduce(hcat, source_solution[p])
+    reconstruction = reduce(
+        hcat, [
+            SII.observed(from_problem, p)(state, reduced_problem.p, time)
+                for (state, time) in zip(reduced_solution.u, reduced_solution.t)
+        ]
+    )
+    @test norm(reconstruction - truth) / norm(truth) < 1.0e-4
+
+    # The system method inherits whatever the source system stores.
+    snapshot = [sin(0.3 * i * j) + cos(0.2 * i * (j + 1)) for i in 1:6, j in 1:8]
+    @mtkcompile with_span = System([Dt(p) ~ -p - p .^ 3], t; tspan = span)
+    @test ModelingToolkit.get_tspan(deim(with_span, snapshot, 2)) == span
+
+    # A source system without one must not acquire a fabricated interval.
+    @mtkcompile without_span = System([Dt(p) ~ -p - p .^ 3], t)
+    bare = deim(without_span, snapshot, 2)
+    @test ModelingToolkit.get_tspan(bare) === nothing
+    @test DAEProblem(bare, nothing, span; build_initializeprob = false).tspan == span
+end
