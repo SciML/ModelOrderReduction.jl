@@ -2,7 +2,9 @@
 
 The supported user workflow is deliberately small: construct a [`POD`](@ref) from
 state snapshots, then call [`reduce!`](@ref) with one of the built-in backends,
-[`SVD`](@ref), [`TSVD`](@ref), or [`RSVD`](@ref). The public API does not require users
+[`SVD`](@ref), [`TSVD`](@ref), or [`RSVD`](@ref). Continuous-time LTI systems can be
+reduced with [`baltrunc`](@ref), and polynomial reduced models can be learned from
+snapshot/derivative data with [`opinf`](@ref). The public API does not require users
 to interact with the abstract types described below.
 
 ## POD reduction contract
