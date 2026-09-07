@@ -138,7 +138,7 @@ terms. This can be done by simply calling [`deim`](@ref).
 using ModelOrderReduction
 pod_dim = deim_dim = 5
 deim_sys = deim(full_prob, sol, pod_dim; deim_dim = deim_dim)
-deim_prob = DAEProblem(deim_sys, nothing, full_prob.tspan; build_initializeprob = false)
+deim_prob = DAEProblem(deim_sys, nothing; build_initializeprob = false)
 deim_sol = solve(deim_prob)
 nₜ_deim = length(deim_sol[t])
 sol_deim_x = deim_sol[x]

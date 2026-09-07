@@ -258,7 +258,7 @@ the first snapshot column, whose time is `first(times)` when `times` is given.
 """
 function _reduced_system(
         fom::FullOrderModel, snapshot::AbstractMatrix, V::AbstractMatrix, U::AbstractMatrix,
-        name::Symbol; times = nothing, kwargs...
+        name::Symbol; times = nothing, tspan = nothing, kwargs...
     )
     iv = fom.iv
     D = Differential(iv)
@@ -305,7 +305,7 @@ function _reduced_system(
     reduced = System(
         [D(reduced_state) ~ rhs], iv, Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
         [fom.parameters; array_parameters; first(lift_value)];
-        name, observed = [reconstruction; preserved], initial_conditions
+        name, observed = [reconstruction; preserved], initial_conditions, tspan
     )
     for key in (ModelingToolkit.ProblemTypeCtx, ModelingToolkit.MiscSystemData)
         SymbolicUtils.hasmetadata(fom.system, key) || continue
@@ -319,7 +319,7 @@ end
 function _deim(
         sys::System, snapshot::AbstractMatrix, pod_dim::Integer, deim_dim::Integer,
         name::Symbol; snapshot_times = nothing, training_parameters = Dict{Any, Any}(),
-        kwargs...
+        tspan = nothing, kwargs...
     )
     rows = length(ModelingToolkit.unknowns(sys))
     size(snapshot, 1) == rows || throw(
@@ -339,7 +339,8 @@ function _deim(
     )
     nonlinear_basis = _pod_basis(nonlinear_snapshot, deim_dim)
     return _reduced_system(
-        fom, snapshot, state_basis, nonlinear_basis, name; times = snapshot_times, kwargs...
+        fom, snapshot, state_basis, nonlinear_basis, name;
+        times = snapshot_times, tspan, kwargs...
     )
 end
 
@@ -379,6 +380,10 @@ Nonlinear terms are evaluated at the numeric parameter defaults of `sys`. Use th
 problem/solution method for problem-specific parameter values. The reduced state and its
 derivative at the first snapshot column are stored as initial conditions.
 
+The reduced system inherits the time span of `sys`, so a problem can be built from it
+without repeating one. Passing a time span explicitly still overrides it, and a source
+system without one produces a reduced system without one.
+
 Construct a `DAEProblem` with `build_initializeprob = false` from the returned system
 to keep array code generation, or call `ModelingToolkit.mtkcompile` on it and construct
 an `ODEProblem` to generate scalar code for the reduced equation. Reconstruct fields with
@@ -415,7 +420,10 @@ function deim(
         deim_dim::Integer = pod_dim, name::Symbol = Symbol(nameof(sys), :_deim),
         snapshot_times = nothing, kwargs...
     )::System
-    return _deim(sys, snapshot, pod_dim, deim_dim, name; snapshot_times, kwargs...)
+    return _deim(
+        sys, snapshot, pod_dim, deim_dim, name;
+        snapshot_times, tspan = ModelingToolkit.get_tspan(sys), kwargs...
+    )
 end
 
 const SymbolicProblem = Union{SciMLBase.AbstractODEProblem, SciMLBase.AbstractDAEProblem}
@@ -437,6 +445,8 @@ Reduce the symbolic system behind `prob` with POD-DEIM, using one of its saved s
 `DAEProblem` returned by MethodOfLines. The saved states are the snapshot columns, the
 saved times supply the independent variable for time-dependent terms, and the parameter
 values of `prob` are used for training and become the defaults of the reduced system.
+The reduced system also inherits the time span of `prob`, which is the interval it was
+trained on, so a problem can be built from it without repeating one.
 `sol` may be the `SciMLBase.PDETimeSeriesSolution` returned by MethodOfLines or its
 underlying `SciMLBase.AbstractODESolution`. See the system method for the reduction
 itself and for how to construct problems from the returned system.
@@ -466,9 +476,7 @@ itself and for how to construct problems from the returned system.
 full_problem = discretize(pde_system, discretization; fallback = false)
 full_solution = solve(full_problem)
 reduced_system = deim(full_problem, full_solution, 4)
-reduced_problem = DAEProblem(
-    reduced_system, nothing, full_problem.tspan; build_initializeprob = false
-)
+reduced_problem = DAEProblem(reduced_system, nothing; build_initializeprob = false)
 ```
 """
 function deim(
@@ -494,7 +502,7 @@ function deim(
     reduced_name = isnothing(name) ? Symbol(nameof(sys), :_deim) : name
     return _deim(
         sys, snapshot, pod_dim, deim_dim, reduced_name;
-        snapshot_times = sol.t, training_parameters, kwargs...
+        snapshot_times = sol.t, training_parameters, tspan = prob.tspan, kwargs...
     )
 end
 
