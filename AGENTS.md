@@ -36,8 +36,3 @@
   collide with a name a user typed. Collisions with names inherited from the source system,
   which happens when reducing an already-reduced model, are resolved by appending a counter.
   Closes https://github.com/SciML/ModelOrderReduction.jl/issues/28.
-- The reduced system inherits a time span: from `prob.tspan` for the problem method, and
-  from `get_tspan(sys)` for the system method. That needs the `tspan` field on
-  `ModelingToolkit.System`, added in ModelingToolkitBase 1.69.0 and guaranteed only from
-  ModelingToolkit 11.42.0, whose floor requires it. A source without a time span must yield
-  a reduced system without one rather than a fabricated interval.
