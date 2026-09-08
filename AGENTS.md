@@ -25,8 +25,8 @@
 - Source systems must list scalar unknowns (scalarized array elements or `mtkcompile`
   output). A `System` built without explicit unknowns collects both an array variable and
   its indexed elements, which no problem constructor accepts either.
-- Both `DAEProblem(rom, nothing, tspan; build_initializeprob = false)` and
-  `ODEProblem(mtkcompile(rom), nothing, tspan; build_initializeprob = false)` are supported
+- Both `DAEProblem(rom, nothing; build_initializeprob = false)` and
+  `ODEProblem(mtkcompile(rom), nothing; build_initializeprob = false)` are supported
   and tested. Reconstruct fields with `SymbolicIndexingInterface.observed`; the `sol[field]`
   convenience path hits https://github.com/SciML/ModelingToolkit.jl/issues/5072.
 - The reduced equation is array linear algebra: projected matrices, the stencil rows of the
@@ -41,3 +41,10 @@
   collide with a name a user typed. Collisions with names inherited from the source system,
   which happens when reducing an already-reduced model, are resolved by appending a counter.
   Closes https://github.com/SciML/ModelOrderReduction.jl/issues/28.
+- The reduced system inherits a time span, for both `deim` and `pod`: from `prob.tspan` for
+  the problem method, and from `get_tspan(sys)` for the system method. A source without a
+  time span must yield a reduced system without one rather than a fabricated interval, and a
+  new reduction entry point has to thread `tspan` into `_assemble_reduced_system` the same
+  way. This needs the `tspan` field on `ModelingToolkit.System`, added in
+  ModelingToolkitBase 1.69.0 and guaranteed only from ModelingToolkit 11.42.0.
+  Closes https://github.com/SciML/ModelOrderReduction.jl/issues/29.

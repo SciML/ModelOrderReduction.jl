@@ -307,7 +307,8 @@ end
 
 function _pod(
         sys::System, snapshot::AbstractMatrix, pod_dim::Integer, name::Symbol;
-        snapshot_times = nothing, training_parameters = Dict{Any, Any}(), kwargs...
+        snapshot_times = nothing, training_parameters = Dict{Any, Any}(),
+        tspan = nothing, kwargs...
     )
     rows = length(ModelingToolkit.unknowns(sys))
     size(snapshot, 1) == rows || throw(
@@ -339,7 +340,7 @@ function _pod(
             )
             return _assemble_reduced_system(
                 fom, snapshot, state_basis, reduced_state, rhs, array_parameters,
-                array_values, taken, name, initial_derivative; kwargs...
+                array_values, taken, name, initial_derivative; tspan, kwargs...
             )
         end
     end
@@ -353,7 +354,7 @@ function _pod(
     )
     return _assemble_reduced_system(
         fom, snapshot, state_basis, reduced_state, rhs, array_parameters, array_values,
-        taken, name, initial_derivative; kwargs...
+        taken, name, initial_derivative; tspan, kwargs...
     )
 end
 
@@ -386,6 +387,10 @@ scales with the full-order dimension (use [`deim`](@ref) to hyper-reduce it).
 needed. The returned system always has one array differential equation for the reduced
 state and one reconstruction observed equation per source field. Unknowns eliminated during
 simplification are reconstructed by a least-squares fit to `snapshot`.
+
+The reduced system inherits the time span of `sys`, so a problem can be built from it
+without repeating one. Passing a time span explicitly still overrides it, and a source
+system without one produces a reduced system without one.
 
 Construct a `DAEProblem` with `build_initializeprob = false` from the returned system to
 keep array code generation, or call `ModelingToolkit.mtkcompile` on it and construct an
@@ -421,7 +426,10 @@ function pod(
         sys::System, snapshot::AbstractMatrix, pod_dim::Integer;
         name::Symbol = Symbol(nameof(sys), :_pod), snapshot_times = nothing, kwargs...
     )::System
-    return _pod(sys, snapshot, pod_dim, name; snapshot_times, kwargs...)
+    return _pod(
+        sys, snapshot, pod_dim, name;
+        snapshot_times, tspan = ModelingToolkit.get_tspan(sys), kwargs...
+    )
 end
 
 """
@@ -440,6 +448,8 @@ saved solutions `sol` as the training snapshot.
 `DAEProblem` returned by MethodOfLines. The saved states are the snapshot columns, the
 saved times supply the independent variable for time-dependent terms, and the parameter
 values of `prob` are used for training and become the defaults of the reduced system.
+The reduced system also inherits the time span of `prob`, which is the interval it was
+trained on, so a problem can be built from it without repeating one.
 `sol` may be the `SciMLBase.PDETimeSeriesSolution` returned by MethodOfLines or its
 underlying `SciMLBase.AbstractODESolution`. See the system method for the reduction itself
 and for how to construct problems from the returned system.
@@ -469,7 +479,7 @@ full_problem = discretize(pde_system, discretization; fallback = false)
 full_solution = solve(full_problem)
 reduced_system = pod(full_problem, full_solution, 4)
 reduced_problem = DAEProblem(
-    reduced_system, nothing, full_problem.tspan; build_initializeprob = false
+    reduced_system, nothing; build_initializeprob = false
 )
 ```
 """
@@ -496,7 +506,7 @@ function pod(
     reduced_name = isnothing(name) ? Symbol(nameof(sys), :_pod) : name
     return _pod(
         sys, snapshot, pod_dim, reduced_name;
-        snapshot_times = sol.t, training_parameters, kwargs...
+        snapshot_times = sol.t, training_parameters, tspan = prob.tspan, kwargs...
     )
 end
 

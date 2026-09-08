@@ -128,3 +128,28 @@ end
     )
     @test norm(reconstruction - truth) / norm(truth) < 0.01
 end
+
+@testset "the POD reduced system carries a tspan" begin
+    @variables g(t)[1:6]
+    g0 = [0.4, 0.3, 0.2, 0.1, -0.2, 0.5]
+    gstates = ModelingToolkit.Symbolics.unwrap.(ModelingToolkit.Symbolics.scalarize(g))
+    span = (0.0, 0.5)
+    @named source = System(
+        [D(g) ~ -g - g .^ 3], t, gstates, [];
+        initial_conditions = [g => g0, D(g) => -g0 - g0 .^ 3],
+    )
+    source_problem = DAEProblem(complete(source), nothing, span; build_initializeprob = false)
+    source_solution = solve(source_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(source_solution)
+
+    from_problem = pod(source_problem, source_solution, 3)
+    @test ModelingToolkit.get_tspan(from_problem) == span
+    @test DAEProblem(from_problem, nothing; build_initializeprob = false).tspan == span
+
+    snapshot = [sin(0.3 * i * j) + cos(0.2 * i * (j + 1)) for i in 1:6, j in 1:8]
+    @mtkcompile with_span = System([D(g) ~ -g - g .^ 3], t; tspan = span)
+    @test ModelingToolkit.get_tspan(pod(with_span, snapshot, 2)) == span
+
+    @mtkcompile without_span = System([D(g) ~ -g - g .^ 3], t)
+    @test ModelingToolkit.get_tspan(pod(without_span, snapshot, 2)) === nothing
+end
