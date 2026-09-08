@@ -21,6 +21,9 @@ include("full_order.jl")
 include("deim.jl")
 export deim
 
+include("pod.jl")
+export pod
+
 include("precompile.jl")
 
 end

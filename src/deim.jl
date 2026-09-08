@@ -245,31 +245,22 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Assemble the reduced system for `fom` from the state basis `V`, the DEIM basis `U`, and
-the training `snapshot` whose rows follow the source unknowns.
+Assemble a reduced `System` with one array differential equation `D(reduced_state) ~ rhs`,
+array-valued field reconstruction, and the source observed equations rewritten in terms of
+the reduced state.
 
-The system has one array differential equation for the reduced state, one array (or
-scalar) reconstruction observed equation per source field, and the source observed
-equations rewritten in terms of the reduced state. The projected matrices and the
-full-grid reconstruction coefficients are array parameters. Dynamic source unknowns are
-reconstructed with `V`; unknowns eliminated by structural simplification use a
-least-squares fit to the training snapshot. The initial state and derivative are taken at
-the first snapshot column, whose time is `first(times)` when `times` is given.
+Dynamic source unknowns are reconstructed with `V`; unknowns eliminated by structural
+simplification use a least-squares fit to the training `snapshot`. The initial reduced
+state is the first column of `V' * snapshot[fom.rows, :]`, and its derivative is
+`initial_derivative`.
 """
-function _reduced_system(
-        fom::FullOrderModel, snapshot::AbstractMatrix, V::AbstractMatrix, U::AbstractMatrix,
-        name::Symbol; times = nothing, tspan = nothing, kwargs...
+function _assemble_reduced_system(
+        fom::FullOrderModel, snapshot::AbstractMatrix, V::AbstractMatrix, reduced_state,
+        rhs, array_parameters, array_values, taken::Set{Symbol}, name::Symbol,
+        initial_derivative::AbstractVector; tspan = nothing, kwargs...
     )
     iv = fom.iv
     D = Differential(iv)
-    dim = size(V, 2)
-    taken = _reserved_names(fom)
-    state_name = _generated_name(:ŷ, taken)
-    reduced_state = (@variables $state_name(iv)[1:dim])[1]
-    projection = Projection(fom, V, U)
-    rhs, array_parameters, array_values = _reduced_rhs(
-        fom, projection, reduced_state, taken; kwargs...
-    )
 
     reduced_snapshot = V' * Matrix{Float64}(snapshot[fom.rows, :])
     lift = Matrix{Float64}(snapshot) / reduced_snapshot
@@ -298,9 +289,7 @@ function _reduced_system(
     merge!(initial_conditions, array_values)
     push!(initial_conditions, lift_value)
     initial_conditions[Symbolics.unwrap(reduced_state)] = initial_state
-    initial_conditions[Symbolics.unwrap(D(reduced_state))] = _reduced_derivative(
-        fom, projection, initial_state, isnothing(times) ? nothing : first(times); kwargs...
-    )
+    initial_conditions[Symbolics.unwrap(D(reduced_state))] = initial_derivative
 
     reduced = System(
         [D(reduced_state) ~ rhs], iv, Symbolics.unwrap.(Symbolics.scalarize(reduced_state)),
@@ -314,6 +303,42 @@ function _reduced_system(
         )
     end
     return complete(reduced)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Assemble the reduced system for `fom` from the state basis `V`, the DEIM basis `U`, and
+the training `snapshot` whose rows follow the source unknowns.
+
+The system has one array differential equation for the reduced state, one array (or
+scalar) reconstruction observed equation per source field, and the source observed
+equations rewritten in terms of the reduced state. The projected matrices and the
+full-grid reconstruction coefficients are array parameters. Dynamic source unknowns are
+reconstructed with `V`; unknowns eliminated by structural simplification use a
+least-squares fit to the training snapshot. The initial state and derivative are taken at
+the first snapshot column, whose time is `first(times)` when `times` is given.
+"""
+function _reduced_system(
+        fom::FullOrderModel, snapshot::AbstractMatrix, V::AbstractMatrix, U::AbstractMatrix,
+        name::Symbol; times = nothing, tspan = nothing, kwargs...
+    )
+    dim = size(V, 2)
+    taken = _reserved_names(fom)
+    state_name = _generated_name(:ŷ, taken)
+    reduced_state = (@variables $state_name(fom.iv)[1:dim])[1]
+    projection = Projection(fom, V, U)
+    rhs, array_parameters, array_values = _reduced_rhs(
+        fom, projection, reduced_state, taken; kwargs...
+    )
+    initial_state = V' * Matrix{Float64}(snapshot[fom.rows, :])[:, 1]
+    initial_derivative = _reduced_derivative(
+        fom, projection, initial_state, isnothing(times) ? nothing : first(times); kwargs...
+    )
+    return _assemble_reduced_system(
+        fom, snapshot, V, reduced_state, rhs, array_parameters, array_values, taken, name,
+        initial_derivative; tspan, kwargs...
+    )
 end
 
 function _deim(

@@ -36,16 +36,22 @@ julia> reduce!(pod, SVD()); pod.nmodes
 
 ## Reduction pipeline
 
-[`deim`](@ref) reduces a system in three internal steps. The source system is first
-brought into the explicit first-order form described by
+[`deim`](@ref) and [`pod`](@ref) reduce a system in three internal steps. The source system
+is first brought into the explicit first-order form described by
 [`ModelOrderReduction.FullOrderModel`](@ref), whose right-hand sides are split by
 [`ModelOrderReduction.separate_terms`](@ref) into a numeric linear part, forcing terms,
-and the state-dependent terms handled by interpolation. The POD state basis and the DEIM
-basis are then computed from the snapshot and from the interpolated terms evaluated at the
-snapshot. Finally, the reduced system is assembled with one array differential equation
-for the reduced state and one reconstruction equation per
-[`ModelOrderReduction.SourceField`](@ref). These types and functions are internal and
-may change without notice.
+and the state-dependent terms handled by interpolation or Galerkin projection. The POD
+state basis (and, for DEIM, the nonlinear basis) are then computed from the snapshot.
+Finally, the reduced system is assembled with one array differential equation for the
+reduced state and one reconstruction equation per
+[`ModelOrderReduction.SourceField`](@ref).
+
+[`pod`](@ref) applies plain Galerkin projection ``V^T f(V\\hat y)``. When the source
+equations are written as array (or field) residuals, that projection is kept as array
+linear algebra so the generated graph does not grow with the grid. [`deim`](@ref) adds
+hyper-reduction of the nonlinear residual so the online cost stays independent of the
+full-order dimension as well. These types and functions are internal and may change
+without notice.
 
 ```@docs
 ModelOrderReduction.FullOrderModel

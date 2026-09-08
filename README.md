@@ -27,6 +27,34 @@ the documentation, which contains the unreleased features.
 
 ## Example
 
+#### Proper Orthogonal Decomposition (POD) Galerkin on an array ODE
+
+```julia
+using ModelingToolkit, OrdinaryDiffEq, ModelOrderReduction
+import SymbolicIndexingInterface as SII
+
+@independent_variables t
+@variables z(t)[1:32]
+z_scalars = ModelingToolkit.Symbolics.value.(ModelingToolkit.Symbolics.scalarize(z))
+D = Differential(t)
+z0 = [sin(0.3 * i) for i in 1:32]
+@named sys = System(
+    [D(z) ~ -z - z .^ 3], t, z_scalars, [];
+    initial_conditions = [z => z0, D(z) => -z0 - z0 .^ 3],
+)
+full_prob = DAEProblem(complete(sys), nothing, (0.0, 1.0); build_initializeprob = false)
+sol = solve(full_prob)
+
+# POD Galerkin: one array reduced equation, O(1) symbolic residual in the grid size
+rom = pod(full_prob, sol, 4)
+rom_prob = DAEProblem(rom, nothing, full_prob.tspan; build_initializeprob = false)
+rom_sol = solve(rom_prob)
+z_approx = [SII.observed(rom, z)(u, rom_prob.p, tt) for (u, tt) in zip(rom_sol.u, rom_sol.t)]
+```
+
+For nonlinear systems where the online residual must also stay independent of the grid,
+use `deim` (POD with Discrete Empirical Interpolation).
+
 #### Proper Orthogonal Decomposition and Discrete Empirical Interpolation Method (POD-DEIM) on the FitzHugh-Nagumo system
 
 ```julia
