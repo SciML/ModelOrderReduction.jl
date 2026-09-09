@@ -10,3 +10,5 @@ ispcs = "ispcs"
 eqs = "eqs"
 rhs = "rhs"
 MTK = "MTK"
+# `Ot` is the transpose of the operator matrix `O` in operator inference.
+Ot = "Ot"
