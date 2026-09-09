@@ -1321,7 +1321,7 @@ version = "1.11.0"
 
 [[deps.ModelOrderReduction]]
 deps = ["DocStringExtensions", "LinearAlgebra", "ModelingToolkit", "PrecompileTools", "RandomizedLinAlg", "SciMLBase", "SparseArrays", "SymbolicIndexingInterface", "TSVD"]
-path = "/home/runner/_work/ModelOrderReduction.jl/ModelOrderReduction.jl"
+path = "/home/runner/work/ModelOrderReduction.jl/ModelOrderReduction.jl"
 uuid = "207801d6-6cee-43a9-ad0c-f0c64933efa0"
 version = "1.0.0"
 
