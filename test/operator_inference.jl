@@ -9,7 +9,7 @@ using ModelOrderReduction
     Xdot = Matrix(Atrue) * X
     model = opinf(X, Xdot; basis = Matrix{Float64}(I, 3, 3))
     @test size(model.basis) == (3, 3)
-    @test model.A ≈ Matrix(Atrue) atol = 1e-8
+    @test model.A ≈ Matrix(Atrue) atol = 1.0e-8
     @test model.H === nothing
     @test model.B === nothing
     @test model.c === nothing
@@ -21,7 +21,7 @@ using ModelOrderReduction
     @test size(pod_model.A) == (2, 2)
     Xr = pod_model.basis' * X
     Rr = pod_model.basis' * Xdot
-    @test norm(Rr - pod_model.A * Xr) / norm(Rr) < 1e-2
+    @test norm(Rr - pod_model.A * Xr) / norm(Rr) < 1.0e-2
 end
 
 @testset "opinf: recovers quadratic system with identity basis" begin
@@ -30,9 +30,11 @@ end
     Atrue = [-2.0 0.0; 0.0 -1.0]
     # unique monomials [x1^2, x1*x2, x2^2]
     Htrue = [0.0 1.0 0.0; 0.0 0.0 1.0]
-    rng_states = [Float64[x1, x2]
-                  for x1 in range(-0.5, 0.5; length = 9),
-    x2 in range(-0.5, 0.5; length = 9)]
+    rng_states = [
+        Float64[x1, x2]
+            for x1 in range(-0.5, 0.5; length = 9),
+            x2 in range(-0.5, 0.5; length = 9)
+    ]
     X = reduce(hcat, vec(rng_states))
     Xdot = similar(X)
     for j in axes(X, 2)
@@ -40,9 +42,10 @@ end
         Xdot[:, j] = Atrue * x + Htrue * quadratic_monomials(x)
     end
     model = opinf(
-        X, Xdot; basis = Matrix{Float64}(I, 2, 2), linear = true, quadratic = true)
-    @test model.A ≈ Atrue atol = 1e-10
-    @test model.H ≈ Htrue atol = 1e-10
+        X, Xdot; basis = Matrix{Float64}(I, 2, 2), linear = true, quadratic = true
+    )
+    @test model.A ≈ Atrue atol = 1.0e-10
+    @test model.H ≈ Htrue atol = 1.0e-10
     x = [0.2, -0.3]
     @test reduced_dynamics(model, x) ≈ Atrue * x + Htrue * quadratic_monomials(x)
 end
@@ -54,8 +57,10 @@ end
     U = reshape([sin(4t) for t in ts], 1, :)
     # Integrate exactly for diagonal A with forcing: use discrete update from known ODE solution
     # Generate consistent (X, Xdot, U) pairs on a grid of states instead.
-    xs = [Float64[x1, x2]
-          for x1 in range(-1, 1; length = 7), x2 in range(-1, 1; length = 7)]
+    xs = [
+        Float64[x1, x2]
+            for x1 in range(-1, 1; length = 7), x2 in range(-1, 1; length = 7)
+    ]
     us = range(-1, 1; length = 5)
     cols_x = Vector{Float64}[]
     cols_dx = Vector{Float64}[]
@@ -70,14 +75,14 @@ end
     Xdot = reduce(hcat, cols_dx)
     Umat = reduce(hcat, cols_u)
     model = opinf(X, Xdot; basis = Matrix{Float64}(I, 2, 2), inputs = Umat)
-    @test model.A ≈ Atrue atol = 1e-10
-    @test model.B ≈ Btrue atol = 1e-10
+    @test model.A ≈ Atrue atol = 1.0e-10
+    @test model.B ≈ Btrue atol = 1.0e-10
 end
 
 @testset "opinf: vector-of-snapshots API and regularization" begin
     Xcols = [[exp(-0.5t), exp(-1.5t)] for t in 0:0.1:2]
     Xdotcols = [[-0.5 * exp(-0.5t), -1.5 * exp(-1.5t)] for t in 0:0.1:2]
-    model = opinf(Xcols, Xdotcols; nmodes = 2, λ = 1e-12)
+    model = opinf(Xcols, Xdotcols; nmodes = 2, λ = 1.0e-12)
     @test size(model.A) == (2, 2)
     @test size(model.basis, 2) == 2
 end
@@ -86,8 +91,10 @@ end
     Atrue = [-1.0 0.0; 0.0 -2.0]
     ctrue = [0.25, -0.5]
     Btrue = reshape([1.0, 0.5], 2, 1)
-    xs = [Float64[x1, x2]
-          for x1 in range(-1, 1; length = 6), x2 in range(-1, 1; length = 6)]
+    xs = [
+        Float64[x1, x2]
+            for x1 in range(-1, 1; length = 6), x2 in range(-1, 1; length = 6)
+    ]
     us = range(-1, 1; length = 5)
     cols_x = Vector{Float64}[]
     cols_dx = Vector{Float64}[]
@@ -107,9 +114,9 @@ end
         inputs = cols_u,
         constant = true
     )
-    @test model.A ≈ Atrue atol = 1e-10
-    @test model.B ≈ Btrue atol = 1e-10
-    @test model.c ≈ ctrue atol = 1e-10
+    @test model.A ≈ Atrue atol = 1.0e-10
+    @test model.B ≈ Btrue atol = 1.0e-10
+    @test model.c ≈ ctrue atol = 1.0e-10
     x = [0.2, -0.1]
     u = [0.3]
     @test reduced_dynamics(model, x, u) ≈ Atrue * x + Btrue * u + ctrue

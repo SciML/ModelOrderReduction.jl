@@ -79,7 +79,7 @@ function reduced_dynamics(
         model::OperatorInferenceModel{T},
         xr::AbstractVector,
         u::Union{AbstractVector, Nothing} = nothing
-) where {T}
+    ) where {T}
     length(xr) == size(model.basis, 2) ||
         throw(DimensionMismatch("reduced state has length $(length(xr)), expected $(size(model.basis, 2))"))
     Tv = promote_type(T, eltype(xr))
@@ -144,7 +144,7 @@ function _opinf_data_matrix(
         quadratic::Bool,
         inputs::Union{Nothing, AbstractMatrix{<:Number}},
         constant::Bool
-) where {T}
+    ) where {T}
     r, k = size(Xr)
     blocks = Matrix{T}[]
     widths = Int[]
@@ -191,7 +191,7 @@ function _unpack_opinf_operators(
         quadratic::Bool,
         has_inputs::Bool,
         constant::Bool
-) where {T}
+    ) where {T}
     offset = 0
     idx = 1
     c = nothing
@@ -306,7 +306,7 @@ function opinf(
         inputs = nothing,
         constant::Bool = false,
         λ::Real = 0
-)
+    )
     size(X) == size(Xdot) || throw(DimensionMismatch("X and Xdot must have the same size"))
     T = float(promote_type(eltype(X), eltype(Xdot)))
     T <: AbstractFloat ||
@@ -349,8 +349,9 @@ function opinf(
     Rt = Matrix{T}(Rr')
     p = size(D, 2)
     if size(D, 1) < p && λ == 0
-        @warn "Operator Inference least-squares problem is underdetermined (snapshots < features); consider more data, fewer terms, or λ > 0" snapshots=size(
-            D, 1) features=p
+        @warn "Operator Inference least-squares problem is underdetermined (snapshots < features); consider more data, fewer terms, or λ > 0" snapshots = size(
+            D, 1
+        ) features = p
     end
     if λ == 0
         Ot = qr(D, ColumnNorm()) \ Rt
@@ -382,7 +383,7 @@ function opinf(
         X::AbstractVector{<:AbstractVector},
         Xdot::AbstractVector{<:AbstractVector};
         kwargs...
-)
+    )
     Xm = reduce(hcat, X)
     Xdm = reduce(hcat, Xdot)
     return opinf(Xm, Xdm; kwargs...)

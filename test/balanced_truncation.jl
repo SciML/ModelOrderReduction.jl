@@ -12,16 +12,16 @@ using ModelOrderReduction
     @test bt.hsv[1] > 0
     @test size(bt.Tr) == (3, 1)
     @test size(bt.S) == (1, 3)
-    @test bt.S * bt.Tr ≈ I(1) atol = 1e-10
+    @test bt.S * bt.Tr ≈ I(1) atol = 1.0e-10
     # Dominant pole near -1
-    @test only(eigvals(bt.A)) ≈ -1.0 atol = 5e-2
+    @test only(eigvals(bt.A)) ≈ -1.0 atol = 5.0e-2
 end
 
 @testset "baltrunc: order selection by atol/rtol" begin
     A = Diagonal([-1.0, -2.0, -50.0])
     B = Matrix{Float64}(I, 3, 3)
     C = Matrix{Float64}(I, 3, 3)
-    bt = baltrunc(Matrix(A), B, C; atol = 1e-8, rtol = 1e-2)
+    bt = baltrunc(Matrix(A), B, C; atol = 1.0e-8, rtol = 1.0e-2)
     @test 1 <= size(bt.A, 1) <= 3
     @test issorted(bt.hsv; rev = true)
 end
@@ -36,8 +36,8 @@ end
     resid = baltrunc(A, B, C, D; n = 1, residual = true)
     trunc_dc = only(-trunc.C * (trunc.A \ trunc.B) + trunc.D)
     resid_dc = only(-resid.C * (resid.A \ resid.B) + resid.D)
-    @test abs(resid_dc - full_dc) <= abs(trunc_dc - full_dc) + 1e-12
-    @test resid_dc ≈ full_dc atol = 1e-10
+    @test abs(resid_dc - full_dc) <= abs(trunc_dc - full_dc) + 1.0e-12
+    @test resid_dc ≈ full_dc atol = 1.0e-10
 end
 
 @testset "baltrunc: dimension checks" begin

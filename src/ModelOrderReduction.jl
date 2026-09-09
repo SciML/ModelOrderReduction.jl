@@ -1,15 +1,15 @@
 module ModelOrderReduction
 
 using DocStringExtensions: DocStringExtensions, FUNCTIONNAME, TYPEDEF, TYPEDFIELDS,
-                           TYPEDSIGNATURES
+    TYPEDSIGNATURES
 
 using ModelingToolkit: ModelingToolkit, @parameters, @variables, Differential, Equation,
-                       Num,
-                       System, SymbolicUtils, Symbolics, complete, mtkcompile, substitute
+    Num,
+    System, SymbolicUtils, Symbolics, complete, mtkcompile, substitute
 using SciMLBase: SciMLBase
 using SymbolicIndexingInterface: SymbolicIndexingInterface
 using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd, lyap, Symmetric, Diagonal,
-                     eigen, eigvals, I, factorize, norm, ColumnNorm
+    eigen, eigvals, I, factorize, norm, ColumnNorm
 using SparseArrays: SparseArrays, SparseMatrixCSC, findnz, sparse
 
 include("Types.jl")

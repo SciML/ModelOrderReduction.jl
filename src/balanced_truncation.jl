@@ -155,7 +155,7 @@ function baltrunc(
         atol::Real = 0,
         rtol::Real = 1.0e-3,
         residual::Bool = false
-)
+    )
     TA = float(promote_type(eltype(A), eltype(B), eltype(C)))
     TA <: AbstractFloat ||
         throw(ArgumentError("baltrunc currently supports real floating-point systems only"))
