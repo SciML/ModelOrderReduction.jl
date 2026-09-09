@@ -71,10 +71,9 @@ reconstruction_parameters = filter(ModelingToolkit.get_ps(deim_sys)) do paramete
 end
 @test length(reconstruction_parameters) == 1
 
-deim_prob = DAEProblem(
-    deim_sys, nothing, full_prob.tspan;
-    build_initializeprob = false,
-)
+# No time span here: the reduced system carries the one it was trained on.
+deim_prob = DAEProblem(deim_sys, nothing; build_initializeprob = false)
+@test deim_prob.tspan == full_prob.tspan
 
 deim_sol = solve(deim_prob; saveat = 1.0)
 @test successful_retcode(deim_sol)

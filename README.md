@@ -47,7 +47,7 @@ sol = solve(full_prob)
 
 # POD Galerkin: one array reduced equation, O(1) symbolic residual in the grid size
 rom = pod(full_prob, sol, 4)
-rom_prob = DAEProblem(rom, nothing, full_prob.tspan; build_initializeprob = false)
+rom_prob = DAEProblem(rom, nothing; build_initializeprob = false)
 rom_sol = solve(rom_prob)
 z_approx = [SII.observed(rom, z)(u, rom_prob.p, tt) for (u, tt) in zip(rom_sol.u, rom_sol.t)]
 ```
