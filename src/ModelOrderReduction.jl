@@ -8,7 +8,7 @@ using ModelingToolkit: ModelingToolkit, @parameters, @variables, Differential, E
     System, SymbolicUtils, Symbolics, complete, mtkcompile, substitute
 using SciMLBase: SciMLBase
 using SymbolicIndexingInterface: SymbolicIndexingInterface
-using LinearAlgebra: LinearAlgebra, /, \, mul!, qr, svd, lyap, Symmetric, Diagonal,
+using LinearAlgebra: LinearAlgebra, mul!, qr, svd, lyap, Symmetric, Diagonal,
     eigen, eigvals, I, factorize, norm, ColumnNorm
 using SparseArrays: SparseArrays, SparseMatrixCSC, findnz, sparse
 
