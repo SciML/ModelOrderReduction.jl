@@ -11,10 +11,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 SymbolicIndexingInterface = "0.3"
-LinearAlgebra = "1"
+LinearAlgebra = "1, < 0.0.1"
 MethodOfLines = "1"
 ModelingToolkit = "11.42"
 OrdinaryDiffEq = "7"
 SafeTestsets = "0.1"
 SciMLBase = "3"
 SciMLTesting = "2.4"
+Test = "< 0.0.1, 1"
