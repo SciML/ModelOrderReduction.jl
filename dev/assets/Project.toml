@@ -10,12 +10,13 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [sources]
-ModelOrderReduction = {path = "/home/runner/work/ModelOrderReduction.jl/ModelOrderReduction.jl"}
+ModelOrderReduction = {path = "/home/runner/_work/ModelOrderReduction.jl/ModelOrderReduction.jl"}
 
 [compat]
 DifferentialEquations = "8"
 Documenter = "1"
 LaTeXStrings = "1.3"
+LinearAlgebra = "< 0.0.1, 1"
 MethodOfLines = "1"
 ModelOrderReduction = "1"
 ModelingToolkit = "11"
