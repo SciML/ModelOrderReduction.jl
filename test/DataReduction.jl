@@ -1,5 +1,7 @@
 using Test, ModelOrderReduction
+using LinearAlgebra: svdvals
 using OrdinaryDiffEq
+using Random: randn, seed!
 
 function lorenz_prob()
     function lorenz!(du, u, p, t)
@@ -64,4 +66,15 @@ end
     @test size(reducer.rbasis, 2) == reducer.nmodes
     @test size(reducer.rbasis, 1) == size(solution, 1)
     @test reducer.renergy > 0.7
+end
+
+@testset "POD - RSVD" begin
+    seed!(1)
+    A = randn(40, 3) * randn(3, 25)
+    pod = POD(A, 3)
+    reduce!(pod, RSVD(2))
+
+    @test pod.spectrum ≈ svdvals(A)[1:3] rtol = 1.0e-10
+    @test pod.rbasis * (pod.rbasis' * A) ≈ A rtol = 1.0e-10
+    @test_throws ArgumentError reduce!(POD(A[1:3, :], 3), RSVD(1))
 end

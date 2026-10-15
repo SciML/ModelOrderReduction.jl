@@ -1,5 +1,4 @@
 import TSVD as TruncatedSVD
-using RandomizedLinAlg: rsvd
 
 function matricize(VoV::Vector{Vector{T}})::Matrix{T} where {T}
     return reduce(hcat, VoV)
@@ -24,7 +23,14 @@ function _rsvd(data::Vector{Vector{T}}, n::Int, p::Int) where {T}
     return _rsvd(mat_data, n, p)
 end
 
-_rsvd(data, n::Int, p::Int) = rsvd(data, n, p)
+# Halko, Martinsson & Tropp (2011), Algorithms 4.1 and 5.1.
+function _rsvd(A, n::Int, p::Int)
+    l = n + p
+    l > size(A, 1) && throw(ArgumentError("Cannot find $l linearly independent vectors of $(size(A, 1)) x $(size(A, 2)) matrix"))
+    Q = Matrix(qr!(A * randn(size(A, 2), l)).Q)
+    F = svd!(Q' * A)
+    return (Q * F.U)[:, 1:n], F.S[1:n], F.V[:, 1:n]
+end
 
 """
     POD(snapshots; min_renergy = 1.0, min_nmodes = 1,
@@ -215,8 +221,8 @@ randomized SVD.
 - `nothing`: `pod` is updated in place.
 
 # Throws
-- An exception propagated by `RandomizedLinAlg.rsvd` if the snapshot matrix is not
-  accepted by the randomized SVD backend.
+- `ArgumentError`: if `pod.nmodes + alg.p` exceeds the number of rows of the snapshot
+  matrix.
 
 # Examples
 ```jldoctest
