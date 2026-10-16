@@ -90,7 +90,7 @@ end
 Randomized singular value decomposition backend for [`reduce!`](@ref).
 
 # Arguments
-- `p::Int = 0`: number of oversampling vectors used by `RandomizedLinAlg.rsvd`.
+- `p::Int = 0`: number of oversampling vectors used by the randomized range finder.
 
 # Fields
 - `p::Int`: the oversampling parameter.
