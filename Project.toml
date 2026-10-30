@@ -14,7 +14,7 @@ SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 TSVD = "9449cd9e-2762-5aa3-a617-5413e99d722e"
 
 [compat]
-DocStringExtensions = "0.9.5"
+DocStringExtensions = "0.9.5, 0.10"
 LinearAlgebra = "1"
 ModelingToolkit = "11.42"
 PrecompileTools = "1.2.1"
