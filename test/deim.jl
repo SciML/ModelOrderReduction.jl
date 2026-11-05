@@ -363,6 +363,36 @@ end
     @test norm(reconstruction - truth) / norm(truth) < 0.01
 end
 
+@testset "mixed scalar and array unknowns with an array reduction" begin
+    @variables a(t) u(t)[1:2, 1:2] v(t) w(t)[1:2, 1:3, 1:2]
+    a0 = 0.9; u0 = [0.1 0.3; 0.2 0.4]; v0 = 0.5; w0 = reshape(collect(1:12) ./ 100, 2, 3, 2)
+    @named mixed = System(
+        [Dt(a) ~ -a + v, Dt(u) ~ -u .^ 2 .+ a, Dt(v) ~ v + u[1, 1] - sum(w), Dt(w) ~ -w .+ v], t,
+        [a, u, v, w], [];
+        initial_conditions = [
+            a => a0, u => u0, v => v0, w => w0, Dt(a) => -a0 + v0, Dt(u) => -u0 .^ 2 .+ a0,
+            Dt(v) => v0 + u0[1, 1] - sum(w0), Dt(w) => -w0 .+ v0,
+        ],
+    )
+    full_problem = DAEProblem(complete(mixed), nothing, (0.0, 0.3); build_initializeprob = false)
+    full_solution = solve(full_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(full_solution)
+    rom = deim(full_problem, full_solution, 4)
+    rom_problem = DAEProblem(rom, nothing, full_problem.tspan; build_initializeprob = false)
+    rom_solution = solve(rom_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(rom_solution)
+    for variable in (a, u, v, w)
+        truth = reduce(hcat, [vcat(x...) for x in full_solution[variable]])
+        reconstruction = reduce(
+            hcat, [
+                vcat(SII.observed(rom, variable)(state, rom_problem.p, time)...)
+                    for (state, time) in zip(rom_solution.u, rom_solution.t)
+            ]
+        )
+        @test norm(reconstruction - truth) / norm(truth) < 1.0e-4
+    end
+end
+
 @testset "nonautonomous linear terms" begin
     # Two distinct decay rates give rank-two state and nonlinear snapshots, so two POD
     # and DEIM modes reproduce the full model up to solver tolerance.
