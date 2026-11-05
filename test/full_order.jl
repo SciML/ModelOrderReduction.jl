@@ -1,6 +1,7 @@
 using Test, ModelOrderReduction
 using ModelingToolkit
 using ModelingToolkit: Symbolics
+using SciMLBase: DAEProblem
 
 @independent_variables t
 @variables w(t) x(t) y(t) z(t)
@@ -73,4 +74,28 @@ end
         complete(sys); training_parameters = Dict(Symbolics.unwrap(β) => 5.0)
     )
     @test collect(values(fom.parameter_values)) == [5.0]
+end
+
+@testset "FullOrderModel with array-valued unknowns" begin
+    @variables u(t)[1:2, 1:2] v(t)
+    u_scalars = Symbolics.unwrap.(vec(Symbolics.scalarize(u)))
+    u0 = [0.4 0.2; 0.3 0.1]
+    @named sys = System(
+        [D(u) ~ -u .^ 2 .+ sin(t), D(v) ~ v + u[1, 1]], t, [u, v], [];
+        initial_conditions = [u => u0, v => 0.5, D(u) => -u0 .^ 2, D(v) => 0.5 + u0[1, 1]],
+    )
+    problem = DAEProblem(complete(sys), nothing, (0.0, 1.0); build_initializeprob = false)
+    @test problem.u0 == [vec(u0); 0.5]
+
+    fom = ModelOrderReduction.FullOrderModel(complete(sys))
+    @test all(isequal.(fom.source_unknowns, [u_scalars; Symbolics.unwrap(v)]))
+    @test length(fom.unknowns) == 5
+    @test all(isequal.(fom.source_unknowns[fom.rows], fom.unknowns))
+    @test fom.fields[1].shape == (2, 2)
+    @test all(isequal.(fom.source_unknowns[fom.fields[1].rows], u_scalars))
+
+    row_of(variable) = findfirst(isequal(Symbolics.unwrap(variable)), fom.unknowns)
+    @test fom.linear[row_of(v), row_of(u[1, 1])] == 1
+    @test all(symbolically_zero(fom.forcing[row_of(u[i, j])] - sin(t)) for i in 1:2, j in 1:2)
+    @test all(symbolically_zero(fom.nonlinear[row_of(u[i, j])] + u[i, j]^2) for i in 1:2, j in 1:2)
 end

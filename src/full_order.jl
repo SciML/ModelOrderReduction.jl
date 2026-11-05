@@ -59,11 +59,11 @@ struct FullOrderModel{S, T}
 end
 
 function FullOrderModel(source::System; training_parameters = Dict{Any, Any}())
-    source_unknowns = Any[Symbolics.unwrap(unknown) for unknown in ModelingToolkit.unknowns(source)]
+    source_unknowns = scalar_unknowns(source)
     fields = _source_fields(source_unknowns)
     sys = _explicit_ode(source)
     iv = ModelingToolkit.independent_variable(sys)
-    unknowns = Any[Symbolics.unwrap(unknown) for unknown in ModelingToolkit.unknowns(sys)]
+    unknowns = scalar_unknowns(sys)
 
     differential, algebraic = _split_equations(ModelingToolkit.full_equations(sys))
     isempty(algebraic) || throw(
@@ -121,6 +121,28 @@ function FullOrderModel(source::System; training_parameters = Dict{Any, Any}())
     )
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Scalar unknowns of `sys` in snapshot row order.
+
+Array-valued unknowns are expanded into their elements in column-major order, the order
+`ModelingToolkit` uses for `u0` and the solution rows. Scalar unknowns are kept as they are.
+"""
+function scalar_unknowns(sys::System)
+    unknowns = Any[]
+    for unknown in ModelingToolkit.unknowns(sys)
+        value = Symbolics.unwrap(unknown)
+        if SymbolicUtils.symtype(value) <: AbstractArray
+            elements = vec(Symbolics.scalarize(Symbolics.wrap(value)))
+            append!(unknowns, Symbolics.unwrap.(elements))
+        else
+            push!(unknowns, value)
+        end
+    end
+    return unknowns
+end
+
 _is_differential(equation::Equation) = (
     lhs = Symbolics.unwrap(equation.lhs);
     SymbolicUtils.iscall(lhs) && SymbolicUtils.operation(lhs) isa Differential
@@ -134,7 +156,7 @@ end
 
 function _explicit_ode(source::System)
     differential, algebraic = _split_equations(ModelingToolkit.equations(source))
-    if isempty(algebraic) && length(differential) == length(ModelingToolkit.unknowns(source))
+    if isempty(algebraic) && length(differential) == length(scalar_unknowns(source))
         return source
     end
     return mtkcompile(source)
