@@ -237,7 +237,9 @@ function reduced_system_size(intervals)
         [x => local_dx], t; approx_order = order
     )
     local_sys, _ = symbolic_discretize(pde_sys, local_discretization)
-    rows = length(ModelingToolkit.get_unknowns(local_sys))
+    rows = sum(ModelingToolkit.get_unknowns(local_sys); init = 0) do unknown
+        length(ModelingToolkit.Symbolics.scalarize(unknown))
+    end
     local_snapshot = [
         sin(0.13 * i * j) + cos(0.07 * i * (j + 1)) for i in 1:rows, j in 1:8
     ]
@@ -331,6 +333,34 @@ end
         ]
     )
     @test norm(scalar_reconstruction - dae_reconstruction) / norm(truth) < 1.0e-6
+end
+
+@testset "array-valued unknown sources" begin
+    @variables r(t)[1:4]
+    r0 = [0.4, 0.3, 0.2, 0.1]
+    @named array_source = System(
+        [Dt(r) ~ -r - r .^ 3], t, [r], [];
+        initial_conditions = [r => r0, Dt(r) => -r0 - r0 .^ 3],
+    )
+    full_problem = DAEProblem(
+        complete(array_source), nothing, (0.0, 0.5); build_initializeprob = false
+    )
+    full_solution = solve(full_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(full_solution)
+
+    rom = deim(full_problem, full_solution, 2)
+    @test length(ModelingToolkit.get_eqs(rom)) == 1
+    rom_problem = DAEProblem(rom, nothing, full_problem.tspan; build_initializeprob = false)
+    rom_solution = solve(rom_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(rom_solution)
+    truth = reduce(hcat, full_solution[r])
+    reconstruction = reduce(
+        hcat, [
+            SII.observed(rom, r)(state, rom_problem.p, time)
+                for (state, time) in zip(rom_solution.u, rom_solution.t)
+        ]
+    )
+    @test norm(reconstruction - truth) / norm(truth) < 0.01
 end
 
 @testset "nonautonomous linear terms" begin

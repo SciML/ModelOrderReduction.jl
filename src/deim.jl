@@ -346,7 +346,7 @@ function _deim(
         name::Symbol; snapshot_times = nothing, training_parameters = Dict{Any, Any}(),
         tspan = nothing, kwargs...
     )
-    rows = length(ModelingToolkit.unknowns(sys))
+    rows = length(scalar_unknowns(sys))
     size(snapshot, 1) == rows || throw(
         DimensionMismatch(
             "the snapshot has $(size(snapshot, 1)) rows, but the source system has $rows unknowns"
@@ -383,10 +383,10 @@ end
 Reduce a first-order `ModelingToolkit.System` with Proper Orthogonal Decomposition (POD)
 and the Discrete Empirical Interpolation Method (DEIM).
 
-The rows of `snapshot` follow `ModelingToolkit.unknowns(sys)` and each column is one
-time instance. The state basis is the POD basis of `snapshot`, and the DEIM basis is the
-POD basis of the nonlinear terms evaluated at the snapshot columns. Both bases are
-computed with [`TSVD`](@ref).
+The rows of `snapshot` follow the scalar unknowns of `sys` (array-valued unknowns expanded
+in column-major order) and each column is one time instance. The state basis is the POD
+basis of `snapshot`, and the DEIM basis is the POD basis of the nonlinear terms evaluated
+at the snapshot columns. Both bases are computed with [`TSVD`](@ref).
 
 `sys` may contain algebraic equations or array equations. It is structurally simplified
 as needed, which may scalarize the equations offline, but the returned system always has
@@ -516,7 +516,7 @@ function deim(
     first(sol.t) == first(prob.tspan) ||
         throw(ArgumentError("the solution must save the state at the start of the problem"))
     snapshot = Array(sol)
-    size(snapshot, 1) == length(ModelingToolkit.unknowns(sys)) ||
+    size(snapshot, 1) == length(scalar_unknowns(sys)) ||
         throw(DimensionMismatch("solution states must match the system unknowns"))
 
     training_parameters = Dict{Any, Any}()
