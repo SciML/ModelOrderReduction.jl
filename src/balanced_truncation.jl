@@ -1,16 +1,24 @@
 """
     $(TYPEDEF)
 
-Reduced continuous-time LTI model produced by [`baltrunc`](@ref).
+Reduced continuous-time LTI model produced by [`baltrunc`](@ref) or [`bpod`](@ref).
 
 The reduced dynamics are
 ```math
 \\dot x_r = A_r x_r + B_r u,\\qquad y = C_r x_r + D_r u,
 ```
 with reconstruction ``x \\approx T_r x_r`` and reduction ``x_r = S x`` for plain
-truncation. When residualization is used, ``T_r`` is still the balanced truncation
+truncation. [`baltrunc`](@ref) computes ``T_r``, ``S``, and the Hankel singular
+values `hsv` from factors of the controllability and observability Gramians.
+[`bpod`](@ref) computes the same projectors from already weighted snapshot
+factors, so its `hsv` approximates those Hankel singular values. The retained
+modes may change sign together in column ``j`` of ``T_r`` and row ``j`` of ``S``
+without changing the input-output map.
+
+When [`baltrunc`](@ref) residualizes, ``T_r`` is still the balanced truncation
 map for the retained states; the static contribution of the discarded states is folded
-into ``(A_r, B_r, C_r, D_r)`` rather than into ``T_r``.
+into ``(A_r, B_r, C_r, D_r)`` rather than into ``T_r``. [`bpod`](@ref) always
+returns plain truncation.
 
 # Fields
 $(TYPEDFIELDS)
@@ -24,7 +32,7 @@ struct BalancedTruncation{T <: AbstractFloat}
     C::Matrix{T}
     "feedthrough matrix ``D_r``"
     D::Matrix{T}
-    "retained Hankel singular values"
+    "retained Hankel singular values; approximate when returned by bpod"
     hsv::Vector{T}
     "right projector ``T_r`` with ``x \\approx T_r x_r`` under plain truncation"
     Tr::Matrix{T}

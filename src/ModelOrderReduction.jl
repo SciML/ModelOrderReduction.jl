@@ -29,6 +29,9 @@ export pod
 include("balanced_truncation.jl")
 export BalancedTruncation, baltrunc
 
+include("bpod.jl")
+export bpod
+
 include("operator_inference.jl")
 export OperatorInferenceModel, opinf, reduced_dynamics, quadratic_monomials
 
