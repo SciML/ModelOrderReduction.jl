@@ -310,7 +310,7 @@ function _pod(
         snapshot_times = nothing, training_parameters = Dict{Any, Any}(),
         tspan = nothing, kwargs...
     )
-    rows = length(ModelingToolkit.unknowns(sys))
+    rows = length(scalar_unknowns(sys))
     size(snapshot, 1) == rows || throw(
         DimensionMismatch(
             "the snapshot has $(size(snapshot, 1)) rows, but the source system has $rows unknowns"
@@ -371,8 +371,9 @@ end
 Reduce a first-order `ModelingToolkit.System` with Proper Orthogonal Decomposition (POD)
 Galerkin projection, without Discrete Empirical Interpolation (DEIM).
 
-The rows of `snapshot` follow `ModelingToolkit.unknowns(sys)` and each column is one time
-instance. The state basis is the POD basis of `snapshot`, computed with [`TSVD`](@ref).
+The rows of `snapshot` follow the scalar unknowns of `sys` (array-valued unknowns expanded
+in column-major order) and each column is one time instance. The state basis is the POD
+basis of `snapshot`, computed with [`TSVD`](@ref).
 
 When the source system is an explicit first-order model whose differential equations are
 written in terms of the source field variables (including array equations), the reduced
@@ -495,7 +496,7 @@ function pod(
     first(sol.t) == first(prob.tspan) ||
         throw(ArgumentError("the solution must save the state at the start of the problem"))
     snapshot = Array(sol)
-    size(snapshot, 1) == length(ModelingToolkit.unknowns(sys)) ||
+    size(snapshot, 1) == length(scalar_unknowns(sys)) ||
         throw(DimensionMismatch("solution states must match the system unknowns"))
 
     training_parameters = Dict{Any, Any}()

@@ -57,6 +57,34 @@ D = Differential(t)
     @test norm(reconstruction - truth) / norm(truth) < 0.01
 end
 
+@testset "array-valued unknown POD Galerkin" begin
+    @variables z(t)[1:4]
+    z0 = [0.4, 0.3, 0.2, 0.1]
+    @named array_system = System(
+        [D(z) ~ -z - z .^ 3], t, [z], [];
+        initial_conditions = [z => z0, D(z) => -z0 - z0 .^ 3],
+    )
+    full_problem = DAEProblem(
+        complete(array_system), nothing, (0.0, 0.5); build_initializeprob = false
+    )
+    full_solution = solve(full_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(full_solution)
+
+    rom = pod(full_problem, full_solution, 2)
+    @test length(ModelingToolkit.get_eqs(rom)) == 1
+    rom_problem = DAEProblem(rom, nothing, full_problem.tspan; build_initializeprob = false)
+    rom_solution = solve(rom_problem; saveat = 0.05, abstol = 1.0e-10, reltol = 1.0e-10)
+    @test successful_retcode(rom_solution)
+    truth = reduce(hcat, full_solution[z])
+    reconstruction = reduce(
+        hcat, [
+            SII.observed(rom, z)(state, rom_problem.p, time)
+                for (state, time) in zip(rom_solution.u, rom_solution.t)
+        ]
+    )
+    @test norm(reconstruction - truth) / norm(truth) < 0.01
+end
+
 @testset "POD graph size is grid-independent for array equations" begin
     function graph_size(n)
         @variables q(t)[1:n]
