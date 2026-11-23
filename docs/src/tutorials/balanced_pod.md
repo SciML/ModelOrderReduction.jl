@@ -19,8 +19,9 @@ quadrature weight at time `t_k`, the corresponding column of `X` is
 Applying the square-root weights a second time squares them.
 
 The product `Y' * X` is a dense matrix with one row per adjoint snapshot and one
-column per primal snapshot. Decomposing it dominates the cost after the factors
-exist. Sparse, diagonal, or banded `A`, `B`, and `C` do not change that product.
+column per primal snapshot. Forming it costs `O(nx * nY * nX)` and its SVD costs
+`O(nY * nX * min(nY, nX))`. Sparse, diagonal, or banded `A`, `B`, and `C` do not
+change that product.
 
 A finite horizon omits the tail of the impulse response, and the quadrature rule
 adds its own error. Both appear in the approximate Hankel singular values.

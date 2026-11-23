@@ -32,8 +32,8 @@ Repeated singular values fix only their subspace, which may be rotated. Changing
 the sign of column ``j`` of ``T_r`` and row ``j`` of ``S`` together leaves
 ``S T_r``, the Hankel values, and the input-output map unchanged.
 
-Forming `Y' * X` produces a dense `nY × nX` matrix, and decomposing it dominates
-the cost after the factors are available. That matrix has `nY * nX` entries
+Forming `Y' * X` costs `O(nx * nY * nX)` and produces a dense `nY × nX` matrix.
+Its SVD costs `O(nY * nX * min(nY, nX))`. The product has `nY * nX` entries
 whether or not `A`, `B`, and `C` use the sparse or banded storage below.
 
 Singular values no larger than `max(eps(T)^(2/3) * σ₁, atol)` are dropped before
@@ -89,7 +89,8 @@ dense `A`.
 - `ArgumentError`: if the inputs do not promote to a real floating-point type,
   contain a non-finite value, or have inconsistent dimensions; if `X` or `Y` has
   no columns; if `n` is invalid or larger than the number of singular values above
-  the cutoff; or if no positive Hankel singular values satisfy the tolerances.
+  the cutoff; if no positive Hankel singular values satisfy the tolerances; or if
+  projection produces non-finite coefficients.
 
 # Examples
 ```jldoctest
@@ -171,13 +172,12 @@ function bpod(
     σ = σ[keep]
     V = F.V[:, keep]
 
+    if n !== nothing && n > length(σ)
+        throw(ArgumentError("requested order n = $n exceeds the $(length(σ)) positive Hankel singular values"))
+    end
     r = _select_order(σ, n, atol, rtol)
     r == 0 &&
         throw(ArgumentError("no Hankel singular values satisfy the truncation tolerances"))
-    if n !== nothing && Int(n) > length(σ)
-        throw(ArgumentError("requested order n = $n exceeds the $(length(σ)) positive Hankel singular values"))
-    end
-
     σr = σ[1:r]
     Σinvsqrt = Diagonal(inv.(sqrt.(σr)))
     Tr = Matrix{T}(X * (V[:, 1:r] * Σinvsqrt))
@@ -186,8 +186,13 @@ function bpod(
     Ar = Matrix{T}(Sl * (A * Tr))
     Br = Matrix{T}(Sl * B)
     Cr = Matrix{T}(C * Tr)
+    for (name, matrix) in (("Tr", Tr), ("S", Sl), ("reduced A", Ar), ("reduced B", Br), ("reduced C", Cr))
+        _assert_finite(name, matrix)
+    end
     return BalancedTruncation{T}(Ar, Br, Cr, Matrix{T}(D), Vector{T}(σr), Tr, Sl)
 end
+
+_coerce_operator(A::AbstractVector, ::Type{T}) where {T <: AbstractFloat} = T.(A)
 
 function _coerce_operator(A::AbstractMatrix, ::Type{T}) where {T <: AbstractFloat}
     eltype(A) === T && return A
@@ -223,7 +228,7 @@ function _stored_entries_finite(A::AbstractArray)
     elseif A isa LinearAlgebra.Tridiagonal
         return all(isfinite, A.dl) && all(isfinite, A.d) && all(isfinite, A.du)
     elseif A isa LinearAlgebra.SymTridiagonal
-        return all(isfinite, A.dv) && all(isfinite, A.ev)
+        return all(isfinite, LinearAlgebra.diag(A)) && all(isfinite, LinearAlgebra.diag(A, 1))
     else
         return all(isfinite, A)
     end

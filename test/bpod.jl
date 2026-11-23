@@ -108,7 +108,10 @@ function h2_difference(A, B, C, Ar, Br, Cr)
     Be = [B; Br]
     Ce = [C -Cr]
     P = lyap(Ae, Be * Be')
-    return sqrt(abs(tr(Ce * P * Ce')))
+    energy = tr(Ce * P * Ce')
+    roundoff = 100 * eps(eltype(P)) * norm(Ce)^2 * norm(P)
+    energy >= -roundoff || error("negative H2 energy: $energy")
+    return sqrt(max(zero(energy), energy))
 end
 
 function align_signature(reference::BalancedTruncation, model::BalancedTruncation)
@@ -517,4 +520,23 @@ end
     )
     @test maximum(real, eigvals(A_PLANT)) < 0
     @test maximum(real, eigvals(reduced.A)) > 0
+end
+@testset "bpod: operator and overflow regressions" begin
+    A = [-1.0 0.0; 0.0 -2.0]
+    X = Y = Matrix{Float64}(I, 2, 2)
+    B = [1.0, 0.0]
+    reference = bpod(A, B, [1.0 0.0], X, Y; n = 2)
+    for C in (adjoint(Float32[1, 0]), transpose(Float32[1, 0]))
+        @test bpod(A, B, C, X, Y; n = 2).C ≈ reference.C
+    end
+    padded = SymTridiagonal(Float32[-1, -2], Float32[0.25, NaN])
+    @test bpod(padded, B, [1.0 0.0], X, Y; n = 2).A ≈
+        bpod(Matrix(padded), B, [1.0 0.0], X, Y; n = 2).A
+    @test_throws ArgumentError bpod(A, B, [1.0 0.0], X, Y; n = big(typemax(Int)) + 1)
+    scale = sqrt(2.0e300)
+    @test_throws ArgumentError bpod(
+        reshape([-1.0e300], 1, 1), [scale * 1.0e100],
+        reshape([scale * 1.0e-100], 1, 1), reshape([1.0e100], 1, 1),
+        reshape([1.0e-100], 1, 1); n = 1
+    )
 end
