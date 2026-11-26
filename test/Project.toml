@@ -1,6 +1,7 @@
 [deps]
 SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 MethodOfLines = "94925ecb-adb7-4558-8ed8-f975c56a0bf4"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
@@ -13,6 +14,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 SymbolicIndexingInterface = "0.3"
 LinearAlgebra = "1, < 0.0.1"
+SparseArrays = "1, < 0.0.1"
 MethodOfLines = "1"
 ModelingToolkit = "11.42"
 OrdinaryDiffEq = "7"

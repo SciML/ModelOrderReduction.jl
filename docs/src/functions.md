@@ -10,6 +10,7 @@ RSVD
 deim
 pod
 baltrunc
+bpod
 BalancedTruncation
 opinf
 OperatorInferenceModel
